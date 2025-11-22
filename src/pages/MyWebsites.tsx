@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Download, ExternalLink, Trash2, RefreshCw, Sparkles, X, Monitor, Tablet, Smartphone, Copy } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Download, ExternalLink, Trash2, RefreshCw, Sparkles, X, Monitor, Tablet, Smartphone, Copy, Check } from "lucide-react";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 
 type ViewMode = "desktop" | "tablet" | "mobile";
@@ -14,11 +12,29 @@ const MyWebsites = () => {
   const [websites, setWebsites] = useState<SavedWebsite[]>([]);
   const [previewWebsite, setPreviewWebsite] = useState<SavedWebsite | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("desktop");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [websiteToDelete, setWebsiteToDelete] = useState<SavedWebsite | "all" | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     loadWebsites();
   }, []);
+
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
+  const showNotification = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
+  };
 
   const loadWebsites = () => {
     try {
@@ -29,11 +45,7 @@ const MyWebsites = () => {
       }
     } catch (error) {
       console.error("Error loading websites:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load saved websites",
-        variant: "destructive",
-      });
+      showNotification("Failed to load saved websites");
     }
   };
 
@@ -48,10 +60,7 @@ const MyWebsites = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    toast({
-      title: "Downloaded!",
-      description: "Website HTML file has been downloaded",
-    });
+    showNotification("Website HTML file has been downloaded");
   };
 
   const openPreview = (website: SavedWebsite) => {
@@ -67,16 +76,26 @@ const MyWebsites = () => {
     if (!previewWebsite) return;
     
     await navigator.clipboard.writeText(previewWebsite.htmlCode);
-    toast({
-      title: "Copied!",
-      description: "HTML code copied to clipboard",
-    });
+    showNotification("HTML code copied to clipboard");
   };
 
-  const handleDeleteFromPreview = () => {
-    if (!previewWebsite) return;
-    deleteWebsite(previewWebsite.id);
-    closePreview();
+  const openDeleteModal = (website: SavedWebsite | "all") => {
+    setWebsiteToDelete(website);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setWebsiteToDelete(null);
+  };
+
+  const confirmDelete = () => {
+    if (websiteToDelete === "all") {
+      clearAll();
+    } else if (websiteToDelete) {
+      deleteWebsite(websiteToDelete.id);
+    }
+    closeDeleteModal();
   };
 
   const getIframeWidth = () => {
@@ -96,17 +115,14 @@ const MyWebsites = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       setWebsites(updated);
       
-      toast({
-        title: "Deleted",
-        description: "Website has been removed",
-      });
+      if (previewWebsite?.id === id) {
+        closePreview();
+      }
+      
+      showNotification("Website deleted successfully");
     } catch (error) {
       console.error("Error deleting website:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete website",
-        variant: "destructive",
-      });
+      showNotification("Failed to delete website");
     }
   };
 
@@ -115,17 +131,10 @@ const MyWebsites = () => {
       localStorage.removeItem(STORAGE_KEY);
       setWebsites([]);
       
-      toast({
-        title: "Cleared",
-        description: "All websites have been removed",
-      });
+      showNotification("All websites removed");
     } catch (error) {
       console.error("Error clearing websites:", error);
-      toast({
-        title: "Error",
-        description: "Failed to clear websites",
-        variant: "destructive",
-      });
+      showNotification("Failed to clear websites");
     }
   };
 
@@ -162,23 +171,12 @@ const MyWebsites = () => {
               Generate New
             </Button>
             {websites.length > 0 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive">Clear All</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all {websites.length} saved websites. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={clearAll}>Delete All</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <button
+                onClick={() => openDeleteModal("all")}
+                className="text-sm text-red-600 hover:underline cursor-pointer"
+              >
+                Clear All ({websites.length})
+              </button>
             )}
           </div>
         </div>
@@ -201,7 +199,7 @@ const MyWebsites = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {websites.map((website) => (
-              <Card key={website.id} className="hover:shadow-lg transition-shadow">
+              <Card key={website.id} className="hover:shadow-lg transition-all duration-300 opacity-100 scale-100">
                 <CardHeader>
                   <CardTitle className="line-clamp-1">{website.name}</CardTitle>
                   <CardDescription>
@@ -240,27 +238,14 @@ const MyWebsites = () => {
                   >
                     <RefreshCw className="h-3 w-3" />
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete website?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete "{website.name}". This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteWebsite(website.id)}>
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openDeleteModal(website)}
+                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
@@ -359,30 +344,65 @@ const MyWebsites = () => {
                 <Copy className="h-4 w-4" />
                 Copy Code
               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="gap-2">
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Website?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete "{previewWebsite?.name}". This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteFromPreview}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                onClick={() => previewWebsite && openDeleteModal(previewWebsite)}
+                variant="destructive"
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md w-full">
+            <div className="text-center mb-4">
+              <div className="text-4xl text-red-500 mb-2">⚠️</div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                {websiteToDelete === "all" 
+                  ? `Delete all ${websites.length} websites?`
+                  : `Delete ${websiteToDelete && typeof websiteToDelete !== 'string' ? websiteToDelete.name : 'website'}?`
+                }
+              </h2>
+              <p className="text-gray-600">
+                {websiteToDelete === "all"
+                  ? "This will permanently remove ALL your websites. This cannot be undone."
+                  : "This website will be permanently removed. This action cannot be undone."
+                }
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={closeDeleteModal}
+                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
+              >
+                Delete Forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
+          <div className="bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <Check className="h-5 w-5" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
