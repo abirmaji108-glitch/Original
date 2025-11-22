@@ -186,26 +186,29 @@ REQUIREMENTS:
 
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': import.meta.env.VITE_CLAUDE_API_KEY,
-    'anthropic-version': '2023-06-01'
+    'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
   },
   body: JSON.stringify({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
+    model: 'llama-3.3-70b-versatile',
     messages: [
       {
+        role: 'system',
+        content: 'You are an expert web developer who creates beautiful, modern, production-ready websites. You always return clean HTML code without any markdown formatting.'
+      },
+      {
         role: 'user',
-        content: `You are an expert web developer who creates beautiful, modern, production-ready websites. You always return clean HTML code without any markdown formatting.\n\n${prompt}`
+        content: prompt
       }
-    ]
+    ],
+    temperature: 0.7,
+    max_tokens: 4000
   }),
-        signal: abortControllerRef.current.signal
-      });
-
+  signal: abortControllerRef.current.signal
+});
       clearInterval(progressInterval);
 
       if (!response.ok) {
@@ -216,7 +219,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       }
 
       const data = await response.json();
-let htmlCode = data.content[0].text;
+let htmlCode = data.choices[0].message.content;
 
       // Remove markdown code blocks if present
       htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
