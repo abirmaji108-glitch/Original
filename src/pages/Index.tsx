@@ -196,6 +196,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 4096,
+    system: 'You are an expert web developer who creates beautiful, modern, production-ready websites. You always return clean HTML code without any markdown formatting.',
     messages: [
       {
         role: 'user',
@@ -213,7 +214,18 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         }
         throw new Error('Generation failed. Please try again.');
       }
-
+if (!response.ok) {
+  const errorText = await response.text();
+  console.error('Claude API Error:', response.status, errorText);
+  
+  if (response.status === 429) {
+    throw new Error('Too many requests. Please wait a moment.');
+  }
+  if (response.status === 401) {
+    throw new Error('Invalid API key. Please check your Claude API key.');
+  }
+  throw new Error(`API Error: ${response.status} - ${errorText}`);
+}
       const data = await response.json();
 let htmlCode = data.content[0].text;
       // Remove markdown code blocks if present
