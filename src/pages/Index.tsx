@@ -186,24 +186,12 @@ REQUIREMENTS:
 
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/generate', {
   method: 'POST',
   headers: {
-    'Content-Type': 'application/json',
-    'x-api-key': import.meta.env.VITE_CLAUDE_API_KEY,
-    'anthropic-version': '2023-06-01'
+    'Content-Type': 'application/json'
   },
-  body: JSON.stringify({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
-    system: 'You are an expert web developer who creates beautiful, modern, production-ready websites. You always return clean HTML code without any markdown formatting.',
-    messages: [
-      {
-        role: 'user',
-        content: prompt
-      }
-    ]
-  }),
+  body: JSON.stringify({ prompt }),
   signal: abortControllerRef.current?.signal
 });
       clearInterval(progressInterval);
@@ -226,20 +214,21 @@ if (!response.ok) {
   }
   throw new Error(`API Error: ${response.status} - ${errorText}`);
 }
-      const data = await response.json();
-let htmlCode = data.content[0].text;
-      // Remove markdown code blocks if present
-      htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+      if (!response.ok) {
+  const errorData = await response.json().catch(() => ({}));
+  console.error('Generation Error:', response.status, errorData);
+  
+  if (response.status === 429) {
+    throw new Error('Too many requests. Please wait a moment.');
+  }
+  if (response.status === 401) {
+    throw new Error('API authentication failed.');
+  }
+  throw new Error(errorData.error || 'Generation failed. Please try again.');
+}
 
-      // Validate it's HTML
-      if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<html')) {
-        throw new Error('Invalid HTML generated');
-      }
-
-      // Show 100% progress
-      setProgress(100);
-      setStatus("✅ Your website is ready!");
-      
+const data = await response.json();
+let htmlCode = data.htmlCode;
       // Show success state for 2 seconds
       setShowSuccess(true);
       
