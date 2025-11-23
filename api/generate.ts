@@ -25,7 +25,7 @@ export default async function handler(
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 2048,
         system: 'You are an expert web developer who creates beautiful, modern, production-ready websites. You always return clean HTML code without any markdown formatting.',
         messages: [
           {
