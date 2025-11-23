@@ -1,10 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+export const config = {
+  maxDuration: 60,
+};
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -25,12 +28,24 @@ export default async function handler(
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
-        system: 'You are an expert web developer who creates beautiful, modern, production-ready websites. You always return clean HTML code without any markdown formatting.',
+        max_tokens: 4096,
+        stream: false,
+        system: 'You are an expert web developer who creates beautiful, modern, production-ready websites. You always return ONLY complete HTML code starting with <!DOCTYPE html>. Never include markdown formatting, explanations, or code blocks - ONLY the raw HTML.',
         messages: [
           {
             role: 'user',
-            content: prompt
+            content: `Create a complete, fully-functional, professional single-page website for: ${prompt}
+
+CRITICAL REQUIREMENTS:
+- Return ONLY complete HTML starting with <!DOCTYPE html>
+- Include ALL content (hero, features, about, contact, footer)
+- Use modern CSS (gradients, animations, responsive)
+- Include placeholder images from unsplash.com
+- Make it visually stunning and professional
+- Ensure all sections are complete
+- Add smooth scroll and hover effects
+- Use professional color scheme
+- NO markdown, NO explanations, ONLY HTML`
           }
         ]
       })
@@ -46,7 +61,18 @@ export default async function handler(
     }
 
     const data = await response.json();
-    const htmlCode = data.content[0].text;
+    let htmlCode = data.content[0].text;
+
+    // Clean up any markdown artifacts
+    htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+
+    // Ensure it starts with DOCTYPE
+    if (!htmlCode.includes('<!DOCTYPE html>')) {
+      return res.status(400).json({ 
+        error: 'Invalid HTML generated',
+        message: 'Generated content does not include proper HTML structure' 
+      });
+    }
 
     return res.status(200).json({ htmlCode });
 
