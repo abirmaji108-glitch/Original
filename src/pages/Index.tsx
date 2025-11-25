@@ -37,19 +37,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
+
 const INDUSTRY_TEMPLATES: Record<string, string> = {
-  restaurant: "Professional restaurant website for [YourRestaurantName]. Hero: appetizing food photography from Unsplash. Menu: [8-12] signature dishes with prices and descriptions. About: cuisine story and chef bio. Features: location map, reservation form, gallery, testimonials. Colors: warm orange/red/brown palette. Mobile-optimized.",
- 
-  portfolio: "Professional [photographer/designer/developer] portfolio for [YourName]. Hero: striking headshot with bold tagline. Projects: [6-9] works with hover overlays. About: background, skills, process. Services: offerings with pricing. Testimonials: 3 client quotes. Contact: form with social links. Colors: [choose color]. Clean, minimal aesthetic.",
- 
-  coaching: "Authority coaching website for [YourName/Business]. Hero: transformation-focused headline with CTA. Programs: [3-4] offerings with outcomes and pricing. About: credentials, story, methodology. Proof: client results and testimonials. Lead magnet: free guide download. Booking: calendar integration placeholder. Colors: trust-building blue/green. Conversion-optimized.",
- 
-  salon: "Elegant salon website for [YourSalonName]. Hero: stunning before/after slider. Services: complete menu with durations and prices. Team: stylist profiles with specialties. Gallery: [12+] transformation photos. Booking: appointment form. Reviews: Google reviews showcase. Info: location, hours, policies. Colors: luxe pink/purple/rose-gold. Premium feel.",
- 
-  ecommerce: "Modern online store for [YourBrandName]. Hero: featured products with lifestyle shots. Shop: [12-16] product cards with images, prices, quick-add. Categories: intuitive navigation. Brand: story and values. Policies: shipping, returns, guarantees. CTA: WhatsApp instant checkout button. Colors: vibrant, energetic. Conversion-focused.",
- 
+  restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
+  
+  gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
+  
+  portfolio: "Build a professional portfolio for [YourName], a [profession]. Include: hero with photo and tagline, about section with skills and experience, projects showcase with 6-8 items in grid layout with hover effects, skills with visual representation, testimonials, contact form and social links. Modern minimalist design with bold accents. Smooth scrolling and animations.",
+  
+  ecommerce: "Create an e-commerce site for [StoreName] selling [products]. Include: hero with featured products and promo banner, product grid with 8-12 items showing images/prices/'Add to Cart', category navigation, bestsellers section, trust badges (shipping, returns, payment), newsletter signup, footer with customer service. Clean conversion-focused design with prominent CTAs.",
+  
+  agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
+
   custom: "",
 };
+
 type ViewMode = "desktop" | "tablet" | "mobile";
 const Index = () => {
   const navigate = useNavigate();
@@ -105,10 +107,10 @@ const Index = () => {
   const saveWebsite = (htmlCode: string) => {
     try {
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-     
+    
       // Extract title from description or use default
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
-     
+    
       const newWebsite: SavedWebsite = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
@@ -117,15 +119,15 @@ const Index = () => {
         timestamp: Date.now(),
         industry: industry || undefined,
       };
-     
+    
       // Add to beginning of array
       websites.unshift(newWebsite);
-     
+    
       // Keep only MAX_WEBSITES
       if (websites.length > MAX_WEBSITES) {
         websites.splice(MAX_WEBSITES);
       }
-     
+    
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
     } catch (error) {
       console.error('Error saving website:', error);
@@ -144,7 +146,7 @@ const Index = () => {
     setProgress(0);
     setGeneratedCode(null);
     setShowSuccess(false);
-   
+  
     // Create abort controller
     abortControllerRef.current = new AbortController();
     // Smooth progress animation
@@ -179,56 +181,48 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   signal: abortControllerRef.current?.signal
 });
       clearInterval(progressInterval);
+
       if (!response.ok) {
+        let errorMessage = 'Generation failed. Please try again.';
+        let errorDetails = '';
+
         if (response.status === 429) {
-          throw new Error('Too many requests. Please wait a moment.');
+          errorMessage = 'Too many requests. Please wait a moment.';
+        } else if (response.status === 401) {
+          errorMessage = 'API authentication failed.';
         }
-        throw new Error('Generation failed. Please try again.');
+
+        try {
+          const errorData = await response.json().catch(() => ({}));
+          errorDetails = errorData.error || '';
+        } catch {
+          errorDetails = await response.text();
+        }
+
+        console.error('Generation Error:', response.status, errorDetails);
+        throw new Error(errorMessage);
       }
-if (!response.ok) {
-  const errorText = await response.text();
-  console.error('Claude API Error:', response.status, errorText);
- 
-  if (response.status === 429) {
-    throw new Error('Too many requests. Please wait a moment.');
-  }
-  if (response.status === 401) {
-    throw new Error('Invalid API key. Please check your Claude API key.');
-  }
-  throw new Error(`API Error: ${response.status} - ${errorText}`);
-}
-      if (!response.ok) {
-  const errorData = await response.json().catch(() => ({}));
-  console.error('Generation Error:', response.status, errorData);
- 
-  if (response.status === 429) {
-    throw new Error('Too many requests. Please wait a moment.');
-  }
-  if (response.status === 401) {
-    throw new Error('API authentication failed.');
-  }
-  throw new Error(errorData.error || 'Generation failed. Please try again.');
-}
-const data = await response.json();
-let htmlCode = data.htmlCode;
+
+      const data = await response.json();
+      let htmlCode = data.htmlCode;
       // Show success state for 2 seconds
       setShowSuccess(true);
-     
+    
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-       
+      
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
-     
+    
     } catch (error) {
       clearInterval(progressInterval);
-     
+    
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -242,7 +236,7 @@ let htmlCode = data.htmlCode;
           variant: "destructive",
         });
       }
-     
+    
       setIsGenerating(false);
       setProgress(0);
       setShowSuccess(false);
@@ -284,7 +278,7 @@ let htmlCode = data.htmlCode;
   };
   const handleShare = async () => {
     if (!generatedCode) return;
-   
+  
     const shareUrl = window.location.href;
     await navigator.clipboard.writeText(shareUrl);
     toast({
@@ -320,22 +314,36 @@ let htmlCode = data.htmlCode;
       title: "Restaurant Website",
       description: "Modern dining experience",
       image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop",
-      prompt: "Create a modern restaurant website with a hero section featuring our signature dish, an elegant menu grid with food categories, an about section highlighting our chef's story, and a reservation form. Use warm earthy tones with gold accents. Include a photo gallery and customer testimonials.",
+      prompt: INDUSTRY_TEMPLATES.restaurant,
       industry: "restaurant"
     },
     {
       title: "Portfolio Website",
       description: "Showcase your creative work",
       image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop",
-      prompt: "Design a creative portfolio website with a striking hero section, a masonry-style project gallery, detailed case studies section, skills showcase with progress bars, and a contact form. Use a minimalist black and white design with electric blue accents. Include smooth scroll animations.",
+      prompt: INDUSTRY_TEMPLATES.portfolio,
       industry: "portfolio"
     },
     {
-      title: "Coaching Website",
-      description: "Inspire and transform lives",
-      image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop",
-      prompt: "Build a life coaching website with an inspiring hero section, services offered with pricing cards, client success stories with before/after transformations, a booking calendar section, and a blog preview. Use calming blues and greens with energetic orange CTAs. Add video testimonial placeholders.",
-      industry: "coaching"
+      title: "Gym Website",
+      description: "Energize your fitness brand",
+      image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop",
+      prompt: INDUSTRY_TEMPLATES.gym,
+      industry: "gym"
+    },
+    {
+      title: "E-commerce Store",
+      description: "Boost your online sales",
+      image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=300&fit=crop",
+      prompt: INDUSTRY_TEMPLATES.ecommerce,
+      industry: "ecommerce"
+    },
+    {
+      title: "Agency Website",
+      description: "Creative agency showcase",
+      image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop",
+      prompt: INDUSTRY_TEMPLATES.agency,
+      industry: "agency"
     }
   ];
   return (
@@ -427,10 +435,10 @@ let htmlCode = data.htmlCode;
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="restaurant">Restaurant</SelectItem>
+                      <SelectItem value="gym">Gym/Fitness</SelectItem>
                       <SelectItem value="portfolio">Portfolio</SelectItem>
-                      <SelectItem value="coaching">Coaching</SelectItem>
-                      <SelectItem value="salon">Salon/Spa</SelectItem>
                       <SelectItem value="ecommerce">E-commerce</SelectItem>
+                      <SelectItem value="agency">Agency</SelectItem>
                       <SelectItem value="custom">Custom</SelectItem>
                     </SelectContent>
                   </Select>
@@ -463,7 +471,7 @@ let htmlCode = data.htmlCode;
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-                   
+                  
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -556,7 +564,7 @@ let htmlCode = data.htmlCode;
                     Click any example to use its prompt
                   </p>
                 </div>
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
                   {examples.map((example, index) => (
                     <div
                       key={index}
