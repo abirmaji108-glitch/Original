@@ -39,13 +39,9 @@ import {
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
- 
   gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
- 
   portfolio: "Build a professional portfolio for [YourName], a [profession]. Include: hero with photo and tagline, about section with skills and experience, projects showcase with 6-8 items in grid layout with hover effects, skills with visual representation, testimonials, contact form and social links. Modern minimalist design with bold accents. Smooth scrolling and animations.",
- 
   ecommerce: "Create an e-commerce site for [StoreName] selling [products]. Include: hero with featured products and promo banner, product grid with 8-12 items showing images/prices/'Add to Cart', category navigation, bestsellers section, trust badges (shipping, returns, payment), newsletter signup, footer with customer service. Clean conversion-focused design with prominent CTAs.",
- 
   agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
   custom: "",
 };
@@ -104,10 +100,10 @@ const Index = () => {
   const saveWebsite = (htmlCode: string) => {
     try {
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-   
+  
       // Extract title from description or use default
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
-   
+  
       const newWebsite: SavedWebsite = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
@@ -116,15 +112,15 @@ const Index = () => {
         timestamp: Date.now(),
         industry: industry || undefined,
       };
-   
+  
       // Add to beginning of array
       websites.unshift(newWebsite);
-   
+  
       // Keep only MAX_WEBSITES
       if (websites.length > MAX_WEBSITES) {
         websites.splice(MAX_WEBSITES);
       }
-   
+  
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
     } catch (error) {
       console.error('Error saving website:', error);
@@ -151,7 +147,6 @@ const Index = () => {
     setProgress(0);
     setGeneratedCode(null);
     setShowSuccess(false);
- 
     // Create abort controller
     abortControllerRef.current = new AbortController();
     // Smooth progress animation
@@ -207,22 +202,22 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       let htmlCode = data.htmlCode;
       // Show success state for 2 seconds
       setShowSuccess(true);
-   
+  
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-     
+    
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
-   
+  
     } catch (error) {
       clearInterval(progressInterval);
-   
+  
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -236,7 +231,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
-   
+  
       setIsGenerating(false);
       setProgress(0);
       setShowSuccess(false);
@@ -278,7 +273,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   };
   const handleShare = async () => {
     if (!generatedCode) return;
- 
     const shareUrl = window.location.href;
     await navigator.clipboard.writeText(shareUrl);
     toast({
@@ -465,7 +459,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-                 
+                
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -598,53 +592,33 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           )}
           {/* Loading State */}
           {isGenerating && (
-            <div className="glass-card rounded-2xl p-12 shadow-card text-center animate-slide-up relative">
-              {/* Cancel Button */}
-              <Button
-                onClick={handleCancelGeneration}
-                variant="ghost"
-                size="sm"
-                className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-              {/* Time Indicator */}
-              <div className="text-sm text-muted-foreground mb-6">
-                ⏱️ Estimated time: 20-30 seconds
-              </div>
-              {showSuccess ? (
-                <>
-                  <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto animate-scale-in" />
-                  <h2 className="text-3xl font-bold mt-6 text-green-500">✅ Your website is ready!</h2>
-                </>
-              ) : (
-                <>
-                  <Loader2 className="w-16 h-16 text-primary mx-auto animate-spin" />
-                  <h2 className="text-3xl font-bold mt-6">Creating Your Website</h2>
-                  <p className="text-muted-foreground text-lg mt-3">{getStatusForProgress(progress)}</p>
-                </>
-              )}
-              <div className="mt-8 space-y-3">
-                {/* Gradient Progress Bar */}
-                <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full transition-all duration-500 ease-out rounded-full"
-                    style={{
-                      width: `${progress}%`,
-                      background: progress < 40
-                        ? 'linear-gradient(90deg, #3b82f6, #6366f1)'
-                        : progress < 80
-                        ? 'linear-gradient(90deg, #6366f1, #8b5cf6)'
-                        : 'linear-gradient(90deg, #8b5cf6, #10b981)'
-                    }}
-                  />
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground font-medium">{Math.floor(progress)}% Complete</span>
-                  <span className="text-primary font-semibold">
-                    Elapsed: {elapsedTime}s
-                  </span>
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-gray-900 rounded-2xl p-8 max-w-md mx-4 border border-purple-500/20 shadow-2xl">
+                <div className="flex flex-col items-center gap-6">
+                  <div className="relative">
+                    <Loader2 className="h-16 w-16 animate-spin text-purple-500" />
+                    <Sparkles className="h-6 w-6 text-yellow-400 absolute -top-2 -right-2 animate-pulse" />
+                  </div>
+                  
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-white">
+                      {input.length > 1000 ? '⚡ Optimizing Your Prompt...' : '🎨 Generating Your Website...'}
+                    </h3>
+                    <p className="text-gray-400 text-sm">
+                      {input.length > 1000 
+                        ? 'Compressing your detailed request for best results...' 
+                        : 'Creating a stunning website with AI...'}
+                    </p>
+                  </div>
+
+                  <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-full animate-pulse" 
+                         style={{ width: '70%' }}></div>
+                  </div>
+
+                  <p className="text-xs text-gray-500 text-center">
+                    This may take 30-60 seconds for complex websites
+                  </p>
                 </div>
               </div>
             </div>
