@@ -37,21 +37,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
-
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
-  
+ 
   gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
-  
+ 
   portfolio: "Build a professional portfolio for [YourName], a [profession]. Include: hero with photo and tagline, about section with skills and experience, projects showcase with 6-8 items in grid layout with hover effects, skills with visual representation, testimonials, contact form and social links. Modern minimalist design with bold accents. Smooth scrolling and animations.",
-  
+ 
   ecommerce: "Create an e-commerce site for [StoreName] selling [products]. Include: hero with featured products and promo banner, product grid with 8-12 items showing images/prices/'Add to Cart', category navigation, bestsellers section, trust badges (shipping, returns, payment), newsletter signup, footer with customer service. Clean conversion-focused design with prominent CTAs.",
-  
+ 
   agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
-
   custom: "",
 };
-
 type ViewMode = "desktop" | "tablet" | "mobile";
 const Index = () => {
   const navigate = useNavigate();
@@ -107,10 +104,10 @@ const Index = () => {
   const saveWebsite = (htmlCode: string) => {
     try {
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    
+   
       // Extract title from description or use default
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
-    
+   
       const newWebsite: SavedWebsite = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
@@ -119,21 +116,29 @@ const Index = () => {
         timestamp: Date.now(),
         industry: industry || undefined,
       };
-    
+   
       // Add to beginning of array
       websites.unshift(newWebsite);
-    
+   
       // Keep only MAX_WEBSITES
       if (websites.length > MAX_WEBSITES) {
         websites.splice(MAX_WEBSITES);
       }
-    
+   
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
     } catch (error) {
       console.error('Error saving website:', error);
     }
   };
   const handleGenerate = async () => {
+    if (input.trim().length === 0 || input.length > 3000) {
+      toast({
+        title: "Invalid Prompt Length",
+        description: input.length > 3000 ? "Maximum 3000 characters allowed. Please shorten your description." : "Please enter a description.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (input.length < 50) {
       toast({
         title: "Description too short",
@@ -146,7 +151,7 @@ const Index = () => {
     setProgress(0);
     setGeneratedCode(null);
     setShowSuccess(false);
-  
+ 
     // Create abort controller
     abortControllerRef.current = new AbortController();
     // Smooth progress animation
@@ -181,48 +186,43 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   signal: abortControllerRef.current?.signal
 });
       clearInterval(progressInterval);
-
       if (!response.ok) {
         let errorMessage = 'Generation failed. Please try again.';
         let errorDetails = '';
-
         if (response.status === 429) {
           errorMessage = 'Too many requests. Please wait a moment.';
         } else if (response.status === 401) {
           errorMessage = 'API authentication failed.';
         }
-
         try {
           const errorData = await response.json().catch(() => ({}));
           errorDetails = errorData.error || '';
         } catch {
           errorDetails = await response.text();
         }
-
         console.error('Generation Error:', response.status, errorDetails);
         throw new Error(errorMessage);
       }
-
       const data = await response.json();
       let htmlCode = data.htmlCode;
       // Show success state for 2 seconds
       setShowSuccess(true);
-    
+   
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-      
+     
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
-    
+   
     } catch (error) {
       clearInterval(progressInterval);
-    
+   
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -236,7 +236,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
-    
+   
       setIsGenerating(false);
       setProgress(0);
       setShowSuccess(false);
@@ -278,7 +278,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   };
   const handleShare = async () => {
     if (!generatedCode) return;
-  
+ 
     const shareUrl = window.location.href;
     await navigator.clipboard.writeText(shareUrl);
     toast({
@@ -303,12 +303,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   };
   const characterLimit = 3000;
   const characterCount = input.length;
-  const characterCountColor =
-    characterCount > characterLimit
-      ? "text-red-500"
-      : characterCount > 900
-      ? "text-yellow-500"
-      : "text-gray-500";
   const examples = [
     {
       title: "Restaurant Website",
@@ -471,7 +465,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-                  
+                 
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -495,14 +489,21 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                           <>
                             <AlertCircle className="w-4 h-4 text-orange-500" />
                             <span className="text-sm font-medium text-orange-500">
-                              Too long - AI works best under 3000
+                              Too long - Maximum 3000 characters allowed
                             </span>
                           </>
                         )}
                       </div>
-                      <span className={`text-sm font-medium ${characterCountColor}`}>
-                        {characterCount} / {characterLimit}
-                      </span>
+                      <div className="text-sm text-gray-400 text-right flex items-center gap-2">
+                        <span className={characterCount > 2800 ? "text-yellow-500" : ""}>
+                          {characterCount}/3000
+                        </span>
+                        {characterCount > 1000 && (
+                          <span className="text-xs text-purple-400">
+                            ⚡ Auto-optimizing prompt
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
