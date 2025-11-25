@@ -37,23 +37,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
-
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Professional restaurant website for [YourRestaurantName]. Hero: appetizing food photography from Unsplash. Menu: [8-12] signature dishes with prices and descriptions. About: cuisine story and chef bio. Features: location map, reservation form, gallery, testimonials. Colors: warm orange/red/brown palette. Mobile-optimized.",
-  
+ 
   portfolio: "Professional [photographer/designer/developer] portfolio for [YourName]. Hero: striking headshot with bold tagline. Projects: [6-9] works with hover overlays. About: background, skills, process. Services: offerings with pricing. Testimonials: 3 client quotes. Contact: form with social links. Colors: [choose color]. Clean, minimal aesthetic.",
-  
+ 
   coaching: "Authority coaching website for [YourName/Business]. Hero: transformation-focused headline with CTA. Programs: [3-4] offerings with outcomes and pricing. About: credentials, story, methodology. Proof: client results and testimonials. Lead magnet: free guide download. Booking: calendar integration placeholder. Colors: trust-building blue/green. Conversion-optimized.",
-  
+ 
   salon: "Elegant salon website for [YourSalonName]. Hero: stunning before/after slider. Services: complete menu with durations and prices. Team: stylist profiles with specialties. Gallery: [12+] transformation photos. Booking: appointment form. Reviews: Google reviews showcase. Info: location, hours, policies. Colors: luxe pink/purple/rose-gold. Premium feel.",
-  
+ 
   ecommerce: "Modern online store for [YourBrandName]. Hero: featured products with lifestyle shots. Shop: [12-16] product cards with images, prices, quick-add. Categories: intuitive navigation. Brand: story and values. Policies: shipping, returns, guarantees. CTA: WhatsApp instant checkout button. Colors: vibrant, energetic. Conversion-focused.",
-  
+ 
   custom: "",
 };
-
 type ViewMode = "desktop" | "tablet" | "mobile";
-
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,7 +65,6 @@ const Index = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
-
   // Load from navigation state if regenerating
   useEffect(() => {
     if (location.state?.description) {
@@ -78,7 +74,6 @@ const Index = () => {
       }
     }
   }, [location.state]);
-
   // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
     setIndustry(value);
@@ -88,7 +83,6 @@ const Index = () => {
       setInput("");
     }
   };
-
   // Elapsed time counter
   useEffect(() => {
     if (isGenerating) {
@@ -101,7 +95,6 @@ const Index = () => {
       setElapsedTime(0);
     }
   }, [isGenerating]);
-
   const getStatusForProgress = (progress: number): string => {
     if (progress < 20) return "🤖 AI analyzing your requirements...";
     if (progress < 40) return "🎨 Designing perfect layout structure...";
@@ -109,14 +102,13 @@ const Index = () => {
     if (progress < 80) return "📱 Optimizing for all devices...";
     return "🚀 Finalizing your professional website...";
   };
-
   const saveWebsite = (htmlCode: string) => {
     try {
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      
+     
       // Extract title from description or use default
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
-      
+     
       const newWebsite: SavedWebsite = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
@@ -125,21 +117,20 @@ const Index = () => {
         timestamp: Date.now(),
         industry: industry || undefined,
       };
-      
+     
       // Add to beginning of array
       websites.unshift(newWebsite);
-      
+     
       // Keep only MAX_WEBSITES
       if (websites.length > MAX_WEBSITES) {
         websites.splice(MAX_WEBSITES);
       }
-      
+     
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
     } catch (error) {
       console.error('Error saving website:', error);
     }
   };
-
   const handleGenerate = async () => {
     if (input.length < 50) {
       toast({
@@ -149,15 +140,13 @@ const Index = () => {
       });
       return;
     }
-
     setIsGenerating(true);
     setProgress(0);
     setGeneratedCode(null);
     setShowSuccess(false);
-    
+   
     // Create abort controller
     abortControllerRef.current = new AbortController();
-
     // Smooth progress animation
     const progressInterval = setInterval(() => {
       setProgress((p) => {
@@ -165,12 +154,9 @@ const Index = () => {
         return newProgress;
       });
     }, 150);
-
     try {
       const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
-
 ${input}
-
 REQUIREMENTS:
 - Complete HTML5 document starting with <!DOCTYPE html>
 - Use Tailwind CSS CDN: <script src="https://cdn.tailwindcss.com"></script>
@@ -183,9 +169,7 @@ REQUIREMENTS:
 - Professional color scheme matching the description
 - Proper semantic HTML5 tags
 - Accessibility features (alt tags, ARIA labels)
-
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
-
       const response = await fetch('/api/generate', {
   method: 'POST',
   headers: {
@@ -195,7 +179,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   signal: abortControllerRef.current?.signal
 });
       clearInterval(progressInterval);
-
       if (!response.ok) {
         if (response.status === 429) {
           throw new Error('Too many requests. Please wait a moment.');
@@ -205,7 +188,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 if (!response.ok) {
   const errorText = await response.text();
   console.error('Claude API Error:', response.status, errorText);
-  
+ 
   if (response.status === 429) {
     throw new Error('Too many requests. Please wait a moment.');
   }
@@ -217,7 +200,7 @@ if (!response.ok) {
       if (!response.ok) {
   const errorData = await response.json().catch(() => ({}));
   console.error('Generation Error:', response.status, errorData);
-  
+ 
   if (response.status === 429) {
     throw new Error('Too many requests. Please wait a moment.');
   }
@@ -226,27 +209,26 @@ if (!response.ok) {
   }
   throw new Error(errorData.error || 'Generation failed. Please try again.');
 }
-
 const data = await response.json();
 let htmlCode = data.htmlCode;
       // Show success state for 2 seconds
       setShowSuccess(true);
-      
+     
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-        
+       
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
-      
+     
     } catch (error) {
       clearInterval(progressInterval);
-      
+     
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -260,22 +242,19 @@ let htmlCode = data.htmlCode;
           variant: "destructive",
         });
       }
-      
+     
       setIsGenerating(false);
       setProgress(0);
       setShowSuccess(false);
     }
   };
-
   const handleCancelGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
   };
-
   const handleDownload = () => {
     if (!generatedCode) return;
-
     const blob = new Blob([generatedCode], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -283,23 +262,19 @@ let htmlCode = data.htmlCode;
     a.download = `sento-website-${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(url);
-
     toast({
       title: "Downloaded!",
       description: "Your website has been saved as an HTML file",
     });
   };
-
   const handleCopy = async () => {
     if (!generatedCode) return;
-
     await navigator.clipboard.writeText(generatedCode);
     toast({
       title: "Copied!",
       description: "Code copied to clipboard",
     });
   };
-
   const handleNewWebsite = () => {
     setGeneratedCode(null);
     setInput("");
@@ -307,10 +282,9 @@ let htmlCode = data.htmlCode;
     setStatus("");
     setIndustry("custom");
   };
-
   const handleShare = async () => {
     if (!generatedCode) return;
-    
+   
     const shareUrl = window.location.href;
     await navigator.clipboard.writeText(shareUrl);
     toast({
@@ -318,13 +292,11 @@ let htmlCode = data.htmlCode;
       description: "Share this link with others",
     });
   };
-
   const handleExampleClick = (exampleText: string, exampleIndustry: string) => {
     setInput(exampleText);
     setIndustry(exampleIndustry);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
   const getAspectRatio = () => {
     switch (viewMode) {
       case "tablet":
@@ -335,16 +307,14 @@ let htmlCode = data.htmlCode;
         return "aspect-video";
     }
   };
-
+  const characterLimit = 3000;
   const characterCount = input.length;
-  const characterLimit = 1000;
   const characterCountColor =
     characterCount > characterLimit
       ? "text-red-500"
       : characterCount > 900
       ? "text-yellow-500"
       : "text-gray-500";
-
   const examples = [
     {
       title: "Restaurant Website",
@@ -368,14 +338,12 @@ let htmlCode = data.htmlCode;
       industry: "coaching"
     }
   ];
-
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Animated Background Gradient */}
       <div className="fixed inset-0 bg-gradient-to-br from-purple-900/20 via-background to-indigo-900/20 pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse"></div>
       </div>
-
       {/* Navigation */}
       <nav className="glass-nav fixed top-0 left-0 right-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -384,8 +352,8 @@ let htmlCode = data.htmlCode;
               <Sparkles className="w-6 h-6 text-primary" />
               <span className="text-xl font-bold tracking-tight">Sento</span>
             </div>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => navigate('/my-websites')}
               className="flex items-center gap-2"
             >
@@ -409,7 +377,6 @@ let htmlCode = data.htmlCode;
           </div>
         </div>
       </nav>
-
       {/* Main Content */}
       <main className="relative pt-24 pb-12 px-6">
         <div className="max-w-5xl mx-auto">
@@ -426,7 +393,6 @@ let htmlCode = data.htmlCode;
                     Describe your vision. Watch AI build it in seconds.
                   </p>
                 </div>
-
                 {/* Demo Video Placeholder */}
                 <div className="max-w-4xl mx-auto mt-12">
                   <div className="glass-card rounded-2xl p-2 shadow-glow">
@@ -441,7 +407,6 @@ let htmlCode = data.htmlCode;
                     </div>
                   </div>
                 </div>
-
                 <div className="inline-flex items-center gap-2 glass-card rounded-full px-6 py-2">
                   <Sparkles className="w-5 h-5 text-primary" />
                   <span className="text-muted-foreground font-medium">
@@ -449,7 +414,6 @@ let htmlCode = data.htmlCode;
                   </span>
                 </div>
               </div>
-
               {/* Input Card */}
               <div className="glass-card rounded-2xl p-8 shadow-card animate-slide-up space-y-6">
                 {/* Industry Selector */}
@@ -471,7 +435,6 @@ let htmlCode = data.htmlCode;
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Description Input */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -480,7 +443,6 @@ let htmlCode = data.htmlCode;
                       Describe Your Website
                     </label>
                   </div>
-
                   <Textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -492,7 +454,6 @@ let htmlCode = data.htmlCode;
                     className="w-full h-56 bg-black/40 border-white/20 rounded-xl p-4 text-foreground placeholder:text-muted-foreground/60 text-sm focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50 resize-none"
                     maxLength={characterLimit + 100}
                   />
-
                   {/* Dynamic Character Counter with Validation Feedback */}
                   <div className="mt-3 space-y-2">
                     {/* Empty State Helper */}
@@ -502,7 +463,7 @@ let htmlCode = data.htmlCode;
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-                    
+                   
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -526,7 +487,7 @@ let htmlCode = data.htmlCode;
                           <>
                             <AlertCircle className="w-4 h-4 text-orange-500" />
                             <span className="text-sm font-medium text-orange-500">
-                              Too long - AI works best under 1000
+                              Too long - AI works best under 3000
                             </span>
                           </>
                         )}
@@ -537,7 +498,6 @@ let htmlCode = data.htmlCode;
                     </div>
                   </div>
                 </div>
-
                 {/* Pro Tips Panel */}
                 <div className="glass-card rounded-xl p-5 bg-primary/5 border-primary/20">
                   <div className="space-y-3">
@@ -567,7 +527,6 @@ let htmlCode = data.htmlCode;
                     </div>
                   </div>
                 </div>
-
                 {/* Smart Generate Button */}
                 <Button
                   onClick={handleGenerate}
@@ -587,7 +546,6 @@ let htmlCode = data.htmlCode;
                   )}
                 </Button>
               </div>
-
               {/* Examples Section */}
               <div className="mt-20 space-y-8">
                 <div className="text-center space-y-3">
@@ -598,7 +556,6 @@ let htmlCode = data.htmlCode;
                     Click any example to use its prompt
                   </p>
                 </div>
-
                 <div className="grid md:grid-cols-3 gap-6">
                   {examples.map((example, index) => (
                     <div
@@ -630,7 +587,6 @@ let htmlCode = data.htmlCode;
               </div>
             </>
           )}
-
           {/* Loading State */}
           {isGenerating && (
             <div className="glass-card rounded-2xl p-12 shadow-card text-center animate-slide-up relative">
@@ -644,12 +600,10 @@ let htmlCode = data.htmlCode;
                 <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
-
               {/* Time Indicator */}
               <div className="text-sm text-muted-foreground mb-6">
                 ⏱️ Estimated time: 20-30 seconds
               </div>
-
               {showSuccess ? (
                 <>
                   <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto animate-scale-in" />
@@ -662,7 +616,6 @@ let htmlCode = data.htmlCode;
                   <p className="text-muted-foreground text-lg mt-3">{getStatusForProgress(progress)}</p>
                 </>
               )}
-
               <div className="mt-8 space-y-3">
                 {/* Gradient Progress Bar */}
                 <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden">
@@ -670,9 +623,9 @@ let htmlCode = data.htmlCode;
                     className="h-full transition-all duration-500 ease-out rounded-full"
                     style={{
                       width: `${progress}%`,
-                      background: progress < 40 
+                      background: progress < 40
                         ? 'linear-gradient(90deg, #3b82f6, #6366f1)'
-                        : progress < 80 
+                        : progress < 80
                         ? 'linear-gradient(90deg, #6366f1, #8b5cf6)'
                         : 'linear-gradient(90deg, #8b5cf6, #10b981)'
                     }}
@@ -687,7 +640,6 @@ let htmlCode = data.htmlCode;
               </div>
             </div>
           )}
-
           {/* Preview Section */}
           {generatedCode && (
             <div className="space-y-8 animate-slide-up">
@@ -696,7 +648,6 @@ let htmlCode = data.htmlCode;
                 <PartyPopper className="w-10 h-10 text-primary animate-bounce" />
                 <h2 className="text-4xl font-bold">Your Website is Ready!</h2>
               </div>
-
               {/* Preview Card */}
               <div className="glass-card rounded-2xl overflow-hidden shadow-card">
                 {/* Toolbar */}
@@ -743,28 +694,28 @@ let htmlCode = data.htmlCode;
                     </Button>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled
                       className="text-muted-foreground"
                       title="Zoom out (coming soon)"
                     >
                       <ZoomOut className="w-4 h-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled
                       className="text-muted-foreground"
                       title="Fullscreen (coming soon)"
                     >
                       <Maximize2 className="w-4 h-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      disabled 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled
                       className="text-muted-foreground"
                       title="Zoom in (coming soon)"
                     >
@@ -772,7 +723,6 @@ let htmlCode = data.htmlCode;
                     </Button>
                   </div>
                 </div>
-
                 {/* Iframe Container */}
                 <div className="bg-white p-4 flex items-center justify-center">
                   <div className={`w-full ${getAspectRatio()} transition-all duration-300`}>
@@ -785,7 +735,6 @@ let htmlCode = data.htmlCode;
                   </div>
                 </div>
               </div>
-
               {/* Action Buttons */}
               <div className="grid sm:grid-cols-4 gap-4">
                 <Button
@@ -827,5 +776,4 @@ let htmlCode = data.htmlCode;
     </div>
   );
 };
-
 export default Index;
