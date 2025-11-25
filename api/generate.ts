@@ -13,9 +13,42 @@ export default async function handler(
   }
 
   const { prompt } = req.body;
-
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
+  }
+
+  let finalPrompt = prompt;
+
+  // SMART COMPRESSION: If prompt > 1000 chars, compress it first
+  if (prompt.length > 1000) {
+    try {
+      const compressionResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.CLAUDE_API_KEY || '',
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 600,
+          messages: [{
+            role: 'user',
+            content: `Compress this website description into a concise 100-150 word prompt that keeps all key requirements:\n\n${prompt}`
+          }]
+        })
+      });
+
+      if (!compressionResponse.ok) {
+        throw new Error(`Compression API Error: ${compressionResponse.status}`);
+      }
+
+      const compressionData = await compressionResponse.json();
+      finalPrompt = compressionData.content[0].text;
+    } catch (error) {
+      console.error('Compression failed, using original:', error);
+      finalPrompt = prompt;
+    }
   }
 
   try {
@@ -23,7 +56,7 @@ export default async function handler(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.VITE_CLAUDE_API_KEY || '',
+        'x-api-key': process.env.CLAUDE_API_KEY || '',
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
@@ -34,8 +67,7 @@ export default async function handler(
         messages: [
           {
             role: 'user',
-            content: `Create a complete, fully-functional, professional single-page website for: ${prompt}
-
+            content: `Create a complete, fully-functional, professional single-page website for: ${finalPrompt}
 CRITICAL REQUIREMENTS:
 - Return ONLY complete HTML starting with <!DOCTYPE html>
 - Include ALL content (hero, features, about, contact, footer)
@@ -54,9 +86,9 @@ CRITICAL REQUIREMENTS:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Claude API Error:', response.status, errorText);
-      return res.status(response.status).json({ 
+      return res.status(response.status).json({
         error: `API Error: ${response.status}`,
-        details: errorText 
+        details: errorText
       });
     }
 
@@ -68,17 +100,16 @@ CRITICAL REQUIREMENTS:
 
     // Ensure it starts with DOCTYPE
     if (!htmlCode.includes('<!DOCTYPE html>')) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Invalid HTML generated',
-        message: 'Generated content does not include proper HTML structure' 
+        message: 'Generated content does not include proper HTML structure'
       });
     }
 
     return res.status(200).json({ htmlCode });
-
   } catch (error) {
     console.error('Server error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
