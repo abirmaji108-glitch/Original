@@ -1,0 +1,13 @@
+[build]  
+  publish = "dist"  
+  command = "npm run build"  
+  
+[[headers]]  
+  for = "/*"  
+  [headers.values]  
+    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; font-src 'self' data: https:; connect-src 'self' https:;"  
+  
+[[redirects]]  
+  from = "/*"  
+  to = "/index.html"  
+  status = 200 
