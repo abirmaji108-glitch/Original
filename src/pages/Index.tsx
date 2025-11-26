@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
+import JSZip from "jszip";
 
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
@@ -124,10 +125,8 @@ const Index = () => {
   const saveWebsite = (htmlCode: string) => {
     try {
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
- 
       // Extract title from description or use default
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
- 
       const newWebsite: SavedWebsite = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
@@ -136,15 +135,12 @@ const Index = () => {
         timestamp: Date.now(),
         industry: industry || undefined,
       };
- 
       // Add to beginning of array
       websites.unshift(newWebsite);
- 
       // Keep only MAX_WEBSITES
       if (websites.length > MAX_WEBSITES) {
         websites.splice(MAX_WEBSITES);
       }
- 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
     } catch (error) {
       console.error('Error saving website:', error);
@@ -238,22 +234,19 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
       // Show success state for 2 seconds
       setShowSuccess(true);
- 
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-   
+  
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
- 
     } catch (error) {
       clearInterval(progressInterval);
- 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -267,7 +260,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
- 
       setIsGenerating(false);
       setProgress(0);
       setShowSuccess(false);
@@ -337,22 +329,19 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
       // Show success state for 2 seconds
       setShowSuccess(true);
- 
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-   
+  
         toast({
           title: "Regenerated! 🎉",
           description: "A fresh version of your website has been generated",
         });
       }, 2000);
- 
     } catch (error) {
       clearInterval(progressInterval);
- 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Regeneration cancelled",
@@ -366,7 +355,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
- 
       setIsGenerating(false);
       setProgress(0);
       setShowSuccess(false);
@@ -390,18 +378,60 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!generatedCode) return;
-    const blob = new Blob([generatedCode], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
+    const zip = new JSZip();
+    
+    // Extract CSS from HTML
+    const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
+    const styles = styleMatch ? styleMatch[1] : '';
+    
+    // Extract JS from HTML
+    const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
+    const scripts = scriptMatch ? scriptMatch[1] : '';
+    
+    // Create clean HTML without inline styles/scripts
+    let cleanHtml = generatedCode
+      .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
+      .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
+    
+    // Add files to ZIP
+    zip.file("index.html", cleanHtml);
+    zip.file("styles.css", styles);
+    zip.file("script.js", scripts);
+    zip.file("README.md", `# Your AI-Generated Website
+
+## 📁 Files Included:
+- index.html - Main HTML file
+- styles.css - All styling
+- script.js - JavaScript functionality
+
+## 🚀 How to Use:
+1. Extract this ZIP file
+2. Open index.html in your browser
+3. Edit files as needed
+4. Host on any web server
+
+## 📝 Notes:
+- All files are linked and ready to use
+- Modify styles.css to change design
+- Edit script.js for functionality changes
+
+Generated with AI Website Builder
+${new Date().toLocaleDateString()}
+`);
+    
+    // Generate and download ZIP
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `sento-website-${Date.now()}.html`;
+    a.download = `website-${Date.now()}.zip`;
     a.click();
     URL.revokeObjectURL(url);
     toast({
       title: "Downloaded!",
-      description: "Your website has been saved as an HTML file",
+      description: "Your website ZIP has been saved",
     });
   };
 
@@ -615,7 +645,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-               
+              
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -755,7 +785,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                     <Loader2 className="h-16 w-16 animate-spin text-purple-500" />
                     <Sparkles className="h-6 w-6 text-yellow-400 absolute -top-2 -right-2 animate-pulse" />
                   </div>
-                 
+                
                   <div className="text-center space-y-2">
                     <h3 className="text-xl font-bold text-white">
                       {input.length > 1000 ? '⚡ Optimizing Your Prompt...' : '🎨 Generating Your Website...'}
@@ -887,7 +917,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                   className="h-14 text-base font-semibold gradient-button hover-scale shadow-glow"
                 >
                   <Download className="w-5 h-5 mr-2" />
-                  Download
+                  Download ZIP
                 </Button>
                 <Button
                   onClick={handleCopy}
@@ -946,17 +976,31 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                         👁️ View
                       </button>
                       <button
-                        onClick={() => {
-                          const blob = new Blob([site.html], { type: 'text/html' });
-                          const url = URL.createObjectURL(blob);
+                        onClick={async () => {
+                          const zip = new JSZip();
+                          const styleMatch = site.html.match(/<style>([\s\S]*?)<\/style>/);
+                          const styles = styleMatch ? styleMatch[1] : '';
+                          const scriptMatch = site.html.match(/<script>([\s\S]*?)<\/script>/);
+                          const scripts = scriptMatch ? scriptMatch[1] : '';
+                          let cleanHtml = site.html
+                            .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
+                            .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
+                          
+                          zip.file("index.html", cleanHtml);
+                          zip.file("styles.css", styles);
+                          zip.file("script.js", scripts);
+                          
+                          const content = await zip.generateAsync({ type: "blob" });
+                          const url = URL.createObjectURL(content);
                           const a = document.createElement('a');
                           a.href = url;
-                          a.download = `website-${site.id}.html`;
+                          a.download = `website-${site.id}.zip`;
                           a.click();
+                          URL.revokeObjectURL(url);
                         }}
                         className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded text-sm transition-colors"
                       >
-                        📥 Download
+                        📦 ZIP
                       </button>
                     </div>
                   </div>
