@@ -61,6 +61,7 @@ const Index = () => {
   const [progressStage, setProgressStage] = useState("");
   const [status, setStatus] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("desktop");
+  const [previewMode, setPreviewMode] = useState<"mobile" | "tablet" | "desktop">("desktop");
   const [industry, setIndustry] = useState("custom");
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -155,11 +156,11 @@ const Index = () => {
       { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
       { progress: 90, message: "✨ Finalizing your website..." }
     ];
-    
+   
     let currentStage = 0;
     setProgress(0);
     setProgressStage(stages[0].message);
-    
+   
     const interval = setInterval(() => {
       if (currentStage < stages.length) {
         setProgress(stages[currentStage].progress);
@@ -169,7 +170,7 @@ const Index = () => {
         clearInterval(interval);
       }
     }, 8000); // Change stage every 8 seconds
-    
+   
     return interval;
   };
 
@@ -267,7 +268,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setProgressStage("✅ Complete! Your website is ready.");
       // Show success state for 2 seconds
       setShowSuccess(true);
- 
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
@@ -275,17 +275,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setShowSuccess(false);
         setProgress(0);
         setProgressStage("");
-   
+  
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
- 
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
- 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -299,7 +297,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
- 
       setIsGenerating(false);
       setProgress(0);
       setProgressStage("");
@@ -377,7 +374,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setProgressStage("✅ Complete! Your website is ready.");
       // Show success state for 2 seconds
       setShowSuccess(true);
- 
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
@@ -385,17 +381,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setShowSuccess(false);
         setProgress(0);
         setProgressStage("");
-   
+  
         toast({
           title: "Regenerated! 🎉",
           description: "A fresh version of your website has been generated",
         });
       }, 2000);
- 
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
- 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Regeneration cancelled",
@@ -409,7 +403,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
- 
       setIsGenerating(false);
       setProgress(0);
       setProgressStage("");
@@ -701,7 +694,7 @@ ${new Date().toLocaleDateString()}
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-              
+             
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -841,7 +834,7 @@ ${new Date().toLocaleDateString()}
                   <h3 className="text-2xl font-bold text-white mb-2">Creating Your Website</h3>
                   <p className="text-gray-300 text-lg">{progressStage}</p>
                 </div>
-               
+              
                 {/* Progress Bar */}
                 <div className="relative w-full h-4 bg-gray-700 rounded-full overflow-hidden">
                   <div 
@@ -851,11 +844,11 @@ ${new Date().toLocaleDateString()}
                     <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
                   </div>
                 </div>
-               
+              
                 <div className="text-center mt-3">
                   <span className="text-white font-bold text-lg">{progress}%</span>
                 </div>
-               
+              
                 <div className="mt-6 text-center text-sm text-gray-500">
                   <p>⏱️ This usually takes 30-60 seconds</p>
                   <p className="mt-1">✨ AI is crafting a beautiful, responsive website for you</p>
@@ -871,87 +864,69 @@ ${new Date().toLocaleDateString()}
                 <PartyPopper className="w-10 h-10 text-primary animate-bounce" />
                 <h2 className="text-4xl font-bold">Your Website is Ready!</h2>
               </div>
-              {/* Preview Card */}
-              <div className="glass-card rounded-2xl overflow-hidden shadow-card">
-                {/* Toolbar */}
-                <div className="bg-black/40 border-b border-white/10 px-6 py-4 flex items-center justify-between">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setViewMode("desktop")}
-                      className={`gap-2 ${
-                        viewMode === "desktop"
-                          ? "bg-primary/20 text-primary border border-primary/30"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Monitor className="w-4 h-4" />
-                      <span className="hidden sm:inline">Desktop</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setViewMode("tablet")}
-                      className={`gap-2 ${
-                        viewMode === "tablet"
-                          ? "bg-primary/20 text-primary border border-primary/30"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Tablet className="w-4 h-4" />
-                      <span className="hidden sm:inline">Tablet</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setViewMode("mobile")}
-                      className={`gap-2 ${
-                        viewMode === "mobile"
-                          ? "bg-primary/20 text-primary border border-primary/30"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Smartphone className="w-4 h-4" />
-                      <span className="hidden sm:inline">Mobile</span>
-                    </Button>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled
-                      className="text-muted-foreground"
-                      title="Zoom out (coming soon)"
-                    >
-                      <ZoomOut className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled
-                      className="text-muted-foreground"
-                      title="Fullscreen (coming soon)"
-                    >
-                      <Maximize2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled
-                      className="text-muted-foreground"
-                      title="Zoom in (coming soon)"
-                    >
-                      <ZoomIn className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-                {/* Iframe Container */}
-                <div className="bg-white p-4 flex items-center justify-center">
-                  <div className={`w-full ${getAspectRatio()} transition-all duration-300`}>
+              {/* Preview Mode Toggle Buttons */}
+              <div className="flex justify-center gap-3 mb-6">
+                <button
+                  onClick={() => setPreviewMode("mobile")}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                    previewMode === "mobile"
+                      ? "bg-blue-500 text-white shadow-lg scale-105"
+                      : "bg-white/10 text-gray-300 hover:bg-white/20"
+                  }`}
+                >
+                  📱 Mobile
+                </button>
+                <button
+                  onClick={() => setPreviewMode("tablet")}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                    previewMode === "tablet"
+                      ? "bg-blue-500 text-white shadow-lg scale-105"
+                      : "bg-white/10 text-gray-300 hover:bg-white/20"
+                  }`}
+                >
+                  📱 Tablet
+                </button>
+                <button
+                  onClick={() => setPreviewMode("desktop")}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                    previewMode === "desktop"
+                      ? "bg-blue-500 text-white shadow-lg scale-105"
+                      : "bg-white/10 text-gray-300 hover:bg-white/20"
+                  }`}
+                >
+                  💻 Desktop
+                </button>
+              </div>
+              {/* Responsive Preview Container */}
+              <div className="flex justify-center">
+                <div
+                  className={`transition-all duration-500 ${
+                    previewMode === "mobile"
+                      ? "w-[375px]"
+                      : previewMode === "tablet"
+                      ? "w-[768px]"
+                      : "w-full"
+                  }`}
+                >
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden shadow-2xl">
+                    {/* Device Frame Header */}
+                    <div className="bg-gray-800 px-4 py-2 flex items-center gap-2">
+                      <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      </div>
+                      <div className="flex-1 text-center text-gray-400 text-sm font-mono">
+                        {previewMode === "mobile" && "📱 375px × 667px"}
+                        {previewMode === "tablet" && "📱 768px × 1024px"}
+                        {previewMode === "desktop" && "💻 Full Width"}
+                      </div>
+                    </div>
+                    
+                    {/* Website Preview */}
                     <iframe
                       srcDoc={generatedCode}
-                      className="w-full h-full border-0 rounded-lg shadow-lg"
+                      className="w-full h-[600px] border-0 bg-white"
                       title="Generated Website Preview"
                       sandbox="allow-scripts"
                     />
