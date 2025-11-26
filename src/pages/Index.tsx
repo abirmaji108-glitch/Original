@@ -257,6 +257,121 @@ const Index = () => {
     setShowShareMenu(false);
   };
 
+  const handleOpenInCodeSandbox = () => {
+    if (!generatedCode) return;
+    // Extract CSS and JS from HTML
+    const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
+    const styles = styleMatch ? styleMatch[1] : '';
+    
+    const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
+    const scripts = scriptMatch ? scriptMatch[1] : '';
+    
+    // Create clean HTML
+    let cleanHtml = generatedCode
+      .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="./styles.css">')
+      .replace(/<script>[\s\S]*?<\/script>/, '<script src="./script.js"></script>');
+    
+    // Create CodeSandbox parameters
+    const parameters = {
+      files: {
+        "index.html": {
+          content: cleanHtml
+        },
+        "styles.css": {
+          content: styles
+        },
+        "script.js": {
+          content: scripts
+        },
+        "package.json": {
+          content: JSON.stringify({
+            name: "ai-generated-website",
+            version: "1.0.0",
+            description: "Website generated with AI",
+            main: "index.html",
+            scripts: {
+              start: "serve .",
+              build: "echo 'Build complete'"
+            }
+          })
+        },
+        "sandbox.config.json": {
+          content: JSON.stringify({
+            template: "static"
+          })
+        }
+      }
+    };
+    
+    // Compress and encode
+    const compressed = JSON.stringify(parameters);
+    const encoded = btoa(unescape(encodeURIComponent(compressed)));
+    
+    // Open in new tab
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'https://codesandbox.io/api/v1/sandboxes/define';
+    form.target = '_blank';
+    
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'parameters';
+    input.value = encoded;
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  };
+
+  const handleOpenInStackBlitz = () => {
+    if (!generatedCode) return;
+    // Extract CSS and JS from HTML
+    const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
+    const styles = styleMatch ? styleMatch[1] : '';
+    
+    const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
+    const scripts = scriptMatch ? scriptMatch[1] : '';
+    
+    // Create clean HTML
+    let cleanHtml = generatedCode
+      .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
+      .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
+    
+    // Create project structure
+    const project = {
+      title: 'AI Generated Website',
+      description: 'Website created with AI Website Generator',
+      template: 'html',
+      files: {
+        'index.html': cleanHtml,
+        'styles.css': styles,
+        'script.js': scripts,
+        'README.md': `# AI Generated Website
+
+This website was created using an AI Website Generator.
+
+## Files
+- \`index.html\` - Main HTML structure
+- \`styles.css\` - Styling
+- \`script.js\` - JavaScript functionality
+
+## Edit
+Feel free to modify any files to customize your website!
+
+Generated on: ${new Date().toLocaleDateString()}
+`
+      }
+    };
+    
+    // Create StackBlitz URL with encoded project
+    const projectString = JSON.stringify(project);
+    const encoded = btoa(encodeURIComponent(projectString));
+    
+    // Open StackBlitz
+    window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
+  };
+
   const getStatusForProgress = (progress: number): string => {
     if (progress < 20) return "🤖 AI analyzing your requirements...";
     if (progress < 40) return "🎨 Designing perfect layout structure...";
@@ -624,7 +739,7 @@ ${new Date().toLocaleDateString()}
     await navigator.clipboard.writeText(generatedCode);
     toast({
       title: "Copied!",
-      description: "Code copied to clipboard",
+      description: "Code copied to clipboard! Paste it into any code editor or StackBlitz.",
     });
   };
 
@@ -832,527 +947,4 @@ ${new Date().toLocaleDateString()}
                         </div>
                        
                         {/* Template Title */}
-                        <h3 className={`text-xl font-bold mb-2 transition-colors ${isDarkMode ? 'text-white group-hover:text-blue-300' : 'text-gray-900 group-hover:text-blue-600'}`}>
-                          {template.title}
-                        </h3>
-                       
-                        {/* Template Description */}
-                        <p className={`text-sm mb-4 ${dynamicSubtleClass}`}>
-                          {template.description}
-                        </p>
-                       
-                        {/* Hover Effect - Generate Button */}
-                        <div className={`flex items-center gap-2 font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                          <span>Generate Now</span>
-                          <span className="group-hover:translate-x-1 transition-transform">→</span>
-                        </div>
-                       
-                        {/* Corner Badge */}
-                        <div className={`absolute top-4 right-4 text-xs px-3 py-1 rounded-full border ${isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' : 'bg-blue-100 text-blue-600 border-blue-200'}`}>
-                          1-Click
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-               
-                {/* Divider */}
-                <div className="flex items-center gap-4 mb-8">
-                  <div className={`flex-1 h-px ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/20 to-transparent' : 'bg-gradient-to-r from-transparent via-gray-300 to-transparent'}`}></div>
-                  <span className={dynamicSubtleClass}>OR CREATE YOUR OWN</span>
-                  <div className={`flex-1 h-px ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/20 to-transparent' : 'bg-gradient-to-r from-transparent via-gray-300 to-transparent'}`}></div>
-                </div>
-                {/* Industry Selector */}
-                <div>
-                  <label className={`text-sm font-medium mb-2 block ${dynamicTextClass}`}>
-                    Choose Your Industry
-                  </label>
-                  <Select value={industry} onValueChange={handleIndustryChange}>
-                    <SelectTrigger className={`w-full transition-colors duration-300 ${isDarkMode ? 'bg-black/40 border-white/20' : 'bg-white border-gray-300'}`}>
-                      <SelectValue placeholder="Select your industry..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="restaurant">Restaurant</SelectItem>
-                      <SelectItem value="gym">Gym/Fitness</SelectItem>
-                      <SelectItem value="portfolio">Portfolio</SelectItem>
-                      <SelectItem value="ecommerce">E-commerce</SelectItem>
-                      <SelectItem value="agency">Agency</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* Description Input */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <MessageSquare className={`w-5 h-5 ${dynamicMutedClass}`} />
-                    <label className={`text-sm font-medium ${dynamicTextClass}`}>
-                      💭 Describe Your Custom Website
-                    </label>
-                  </div>
-                  <Textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder={
-                      industry === "custom"
-                        ? "Describe your dream website in detail..."
-                        : "Edit the template above or describe your dream website in detail..."
-                    }
-                    className={`w-full h-56 rounded-xl p-4 text-sm focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50 resize-none transition-colors duration-300 ${isDarkMode ? 'bg-black/40 border-white/20 text-foreground placeholder:text-muted-foreground/60' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-500'}`}
-                    maxLength={characterLimit + 100}
-                  />
-                  {/* Dynamic Character Counter with Validation Feedback */}
-                  <div className="mt-3 space-y-2">
-                    {/* Empty State Helper */}
-                    {characterCount === 0 && (
-                      <div className={`flex items-center gap-2 text-sm ${dynamicMutedClass} animate-pulse`}>
-                        <Lightbulb className="w-4 h-4" />
-                        <span>Not sure what to write? Pick an industry template above!</span>
-                      </div>
-                    )}
-           
-                    {/* Character Count with Status */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {characterCount < 50 && characterCount > 0 && (
-                          <>
-                            <AlertCircle className="w-4 h-4 text-red-500" />
-                            <span className="text-sm font-medium text-red-500">
-                              Add more detail for better results
-                            </span>
-                          </>
-                        )}
-                        {characterCount >= 50 && characterCount <= characterLimit && (
-                          <>
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            <span className="text-sm font-medium text-green-500">
-                              Perfect amount of detail!
-                            </span>
-                          </>
-                        )}
-                        {characterCount > characterLimit && (
-                          <>
-                            <AlertCircle className="w-4 h-4 text-orange-500" />
-                            <span className="text-sm font-medium text-orange-500">
-                              Too long - Maximum 3000 characters allowed
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <div className={`text-sm text-right flex items-center gap-2 ${dynamicSubtleClass}`}>
-                        <span className={characterCount > 2800 ? "text-yellow-500" : ""}>
-                          {characterCount}/3000
-                        </span>
-                        {characterCount > 1000 && (
-                          <span className={`text-xs ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                            ⚡ Auto-optimizing prompt
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Pro Tips Panel */}
-                <div className={`glass-card rounded-xl p-5 transition-colors duration-300 ${isDarkMode ? 'bg-primary/5 border-primary/20' : 'bg-blue-50 border-blue-200'}`}>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-primary/20' : 'bg-primary/10'}`}>
-                        <Lightbulb className={`w-4 h-4 ${isDarkMode ? 'text-primary' : 'text-primary'}`} />
-                      </div>
-                      <h3 className={`font-bold text-base ${dynamicTextClass}`}>💡 Pro Tips for Amazing Websites:</h3>
-                    </div>
-                    <div className="grid gap-2 ml-10">
-                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
-                        <span className="text-green-500 font-bold">✓</span>
-                        <span>Include your business name and type</span>
-                      </div>
-                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
-                        <span className="text-green-500 font-bold">✓</span>
-                        <span>Specify 2-3 color preferences</span>
-                      </div>
-                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
-                        <span className="text-green-500 font-bold">✓</span>
-                        <span>List must-have features (menu, gallery, contact, etc.)</span>
-                      </div>
-                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
-                        <span className="text-green-500 font-bold">✓</span>
-                        <span>Mention your target audience if relevant</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Smart Generate Button */}
-                <Button
-                  onClick={handleGenerate}
-                  disabled={input.length < 50}
-                  className="w-full h-16 text-lg font-bold gradient-button hover-scale shadow-glow rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all group"
-                >
-                  {input.length < 50 ? (
-                    <>
-                      <Lock className="w-6 h-6 mr-2" />
-                      Need at least 50 characters to generate
-                    </>
-                  ) : (
-                    <>
-                      <Unlock className="w-6 h-6 mr-2 group-hover:rotate-12 transition-transform" />
-                      Generate Website ✨
-                    </>
-                  )}
-                </Button>
-              </div>
-              {/* Examples Section */}
-              <div className="mt-20 space-y-8">
-                <div className="text-center space-y-3">
-                  <h2 className={`text-3xl md:text-4xl font-bold ${dynamicTextClass}`}>
-                    Get Inspired by <span className="gradient-text">Examples</span>
-                  </h2>
-                  <p className={dynamicMutedClass}>
-                    Click any example to use its prompt
-                  </p>
-                </div>
-                <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
-                  {examples.map((example, index) => (
-                    <div
-                      key={index}
-                      onClick={() => handleExampleClick(example.prompt, example.industry)}
-                      className={`glass-card rounded-xl overflow-hidden hover-scale cursor-pointer group transition-colors duration-300 ${dynamicGlassClass}`}
-                    >
-                      <div className="aspect-video relative overflow-hidden">
-                        <img
-                          src={example.image}
-                          alt={example.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
-                          <div>
-                            <h3 className={`font-bold text-lg ${dynamicTextClass}`}>{example.title}</h3>
-                            <p className={`text-sm ${dynamicMutedClass}`}>{example.description}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={`p-4 transition-colors duration-300 ${isDarkMode ? 'bg-primary/5 border-t border-primary/10' : 'bg-gray-50 border-t border-gray-200'}`}>
-                        <p className={`text-xs ${dynamicSubtleClass} line-clamp-2`}>
-                          {example.prompt}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-          {/* Loading State */}
-          {isGenerating && (
-            <div className={`fixed inset-0 ${isDarkMode ? 'bg-black/80' : 'bg-white/80'} backdrop-blur-sm flex items-center justify-center z-50`}>
-              <div className={`rounded-2xl p-8 max-w-md mx-4 border shadow-2xl transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-purple-500/20' : 'bg-white border-blue-500/20'}`}>
-                <div className="text-center mb-6">
-                  <div className="inline-block animate-spin text-6xl mb-4">⚙️</div>
-                  <h3 className={`text-2xl font-bold mb-2 ${dynamicTextClass}`}>Creating Your Website</h3>
-                  <p className={`text-lg ${dynamicMutedClass}`}>{progressStage}</p>
-                </div>
-            
-                {/* Progress Bar */}
-                <div className="relative w-full h-4 bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out"
-                    style={{ width: `${progress}%` }}
-                  >
-                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                  </div>
-                </div>
-            
-                <div className="text-center mt-3">
-                  <span className={`font-bold text-lg ${dynamicTextClass}`}>{progress}%</span>
-                </div>
-            
-                <div className="mt-6 text-center text-sm">
-                  <p className={dynamicSubtleClass}>⏱️ This usually takes 30-60 seconds</p>
-                  <p className={`mt-1 ${dynamicSubtleClass}`}>✨ AI is crafting a beautiful, responsive website for you</p>
-                </div>
-              </div>
-            </div>
-          )}
-          {/* Preview Section */}
-          {generatedCode && (
-            <div className="space-y-8 animate-slide-up">
-              {/* Success Header */}
-              <div className="flex items-center justify-center gap-3">
-                <PartyPopper className={`w-10 h-10 ${isDarkMode ? 'text-primary' : 'text-purple-600'} animate-bounce`} />
-                <h2 className={`text-4xl font-bold ${dynamicTextClass}`}>Your Website is Ready!</h2>
-              </div>
-              {/* Preview Mode Toggle Buttons */}
-              <div className="flex justify-center gap-3 mb-6">
-                <button
-                  onClick={() => setPreviewMode("mobile")}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${previewMode === "mobile" ? "bg-blue-500 text-white shadow-lg scale-105" : isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
-                >
-                  📱 Mobile
-                </button>
-                <button
-                  onClick={() => setPreviewMode("tablet")}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${previewMode === "tablet" ? "bg-blue-500 text-white shadow-lg scale-105" : isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
-                >
-                  📱 Tablet
-                </button>
-                <button
-                  onClick={() => setPreviewMode("desktop")}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${previewMode === "desktop" ? "bg-blue-500 text-white shadow-lg scale-105" : isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
-                >
-                  💻 Desktop
-                </button>
-              </div>
-              {/* Responsive Preview Container */}
-              <div className="flex justify-center">
-                <div
-                  className={`transition-all duration-500 ${previewMode === "mobile" ? "w-[375px]" : previewMode === "tablet" ? "w-[768px]" : "w-full"}`}
-                >
-                  <div className={`backdrop-blur-sm border rounded-lg overflow-hidden shadow-2xl transition-colors duration-300 ${dynamicGlassClass}`}>
-                    {/* Device Frame Header */}
-                    <div className={`px-4 py-2 flex items-center gap-2 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                      <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                      </div>
-                      <div className={`flex-1 text-center text-sm font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {previewMode === "mobile" && "📱 375px × 667px"}
-                        {previewMode === "tablet" && "📱 768px × 1024px"}
-                        {previewMode === "desktop" && "💻 Full Width"}
-                      </div>
-                    </div>
-                   
-                    {/* Website Preview */}
-                    <iframe
-                      srcDoc={generatedCode}
-                      className="w-full h-[600px] border-0 bg-white"
-                      title="Generated Website Preview"
-                      sandbox="allow-scripts"
-                    />
-                  </div>
-                </div>
-              </div>
-              {/* Action Buttons */}
-              <div className="grid sm:grid-cols-4 gap-4">
-                <Button
-                  onClick={handleRegenerate}
-                  variant="outline"
-                  className={`h-14 text-base font-semibold transition-colors duration-300 ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
-                >
-                  <RefreshCw className="w-5 h-5 mr-2" />
-                  Regenerate
-                </Button>
-                <Button
-                  onClick={handleDownload}
-                  className="h-14 text-base font-semibold gradient-button hover-scale shadow-glow"
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Download ZIP
-                </Button>
-                <Button
-                  onClick={handleCopy}
-                  variant="outline"
-                  className={`h-14 text-base font-semibold transition-colors duration-300 ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
-                >
-                  <Copy className="w-5 h-5 mr-2" />
-                  Copy Code
-                </Button>
-                <div className="relative">
-                  <Button 
-                    onClick={() => setShowShareMenu(!showShareMenu)}
-                    className={`h-14 text-base font-semibold ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'} bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600`}
-                  >
-                    <Share2 className="w-5 h-5 mr-2" />
-                    Share
-                  </Button>
-                  
-                  {/* Share Dropdown Menu */}
-                  {showShareMenu && (
-                    <div className={`absolute top-full mt-2 right-0 rounded-lg shadow-2xl border z-50 min-w-[250px] transition-colors duration-300 ${
-                      isDarkMode 
-                        ? 'bg-gray-800 border-gray-700' 
-                        : 'bg-white border-gray-200'
-                    }`}>
-                      <div className={`p-4 border-b transition-colors duration-300 ${
-                        isDarkMode ? 'border-gray-700' : 'border-gray-200'
-                      }`}>
-                        <p className={`text-sm font-semibold mb-2 ${dynamicTextClass}`}>Share this website</p>
-                        
-                        {/* Copy Link Button */}
-                        <button
-                          onClick={handleCopyLink}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                            isDarkMode
-                              ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                          }`}
-                        >
-                          <span className="text-xl">📋</span>
-                          <span className="flex-1 text-left">
-                            {linkCopied ? '✅ Link Copied!' : 'Copy Link'}
-                          </span>
-                        </button>
-                      </div>
-                      
-                      {/* Social Share Options */}
-                      <div className="p-2">
-                        <button
-                          onClick={handleShareTwitter}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                            isDarkMode
-                              ? 'hover:bg-gray-700 text-gray-300'
-                              : 'hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          <span className="text-xl">🐦</span>
-                          <span>Share on Twitter/X</span>
-                        </button>
-                        
-                        <button
-                          onClick={handleShareLinkedIn}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                            isDarkMode
-                              ? 'hover:bg-gray-700 text-gray-300'
-                              : 'hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          <span className="text-xl">💼</span>
-                          <span>Share on LinkedIn</span>
-                        </button>
-                        
-                        <button
-                          onClick={handleShareFacebook}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                            isDarkMode
-                              ? 'hover:bg-gray-700 text-gray-300'
-                              : 'hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          <span className="text-xl">📘</span>
-                          <span>Share on Facebook</span>
-                        </button>
-                        
-                        <button
-                          onClick={handleShareEmail}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                            isDarkMode
-                              ? 'hover:bg-gray-700 text-gray-300'
-                              : 'hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          <span className="text-xl">📧</span>
-                          <span>Share via Email</span>
-                        </button>
-                      </div>
-                      
-                      {/* Close Button */}
-                      <div className={`p-2 border-t transition-colors duration-300 ${
-                        isDarkMode ? 'border-gray-700' : 'border-gray-200'
-                      }`}>
-                        <button
-                          onClick={() => setShowShareMenu(false)}
-                          className={`w-full px-4 py-2 rounded-lg text-sm transition-colors ${
-                            isDarkMode
-                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                          }`}
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <Button
-                  onClick={handleNewWebsite}
-                  variant="ghost"
-                  className={`h-14 text-base font-semibold ${isDarkMode ? 'text-muted-foreground hover:text-foreground' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  New
-                </Button>
-              </div>
-              {/* Share Info Banner */}
-              {generatedCode && (
-                <div className={`mt-6 p-4 rounded-lg border transition-colors duration-300 ${
-                  isDarkMode
-                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
-                    : 'bg-blue-50 border-blue-200 text-blue-700'
-                }`}>
-                  <p className="text-sm flex items-center gap-2">
-                    <span className="text-lg">💡</span>
-                    <span>
-                      <strong>Pro Tip:</strong> Click the 🔗 Share button to generate a link that others can use to view this website instantly!
-                    </span>
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          {/* My Websites Section */}
-          {websiteHistory.length > 0 && (
-            <div className="mt-12">
-              <h2 className={`text-2xl font-bold mb-6 ${dynamicTextClass}`}>📂 My Websites ({websiteHistory.length})</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {websiteHistory.map((site) => (
-                  <div key={site.id} className={`backdrop-blur-sm rounded-lg p-6 transition-all duration-300 ${dynamicCardClass}`}>
-                    <div className="flex justify-between items-start mb-3">
-                      <p className={`text-sm ${dynamicSubtleClass}`}>
-                        {new Date(site.timestamp).toLocaleDateString()} {new Date(site.timestamp).toLocaleTimeString()}
-                      </p>
-                      <button
-                        onClick={() => handleDelete(site.id)}
-                        className={`text-xl transition-colors ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-600'}`}
-                        title="Delete"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                    <p className={`text-sm mb-4 line-clamp-3 ${dynamicTextClass}`}>
-                      {site.prompt}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleLoadWebsite(site.html)}
-                        className={`flex-1 py-2 px-4 rounded text-sm transition-colors ${isDarkMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
-                      >
-                        👁️ View
-                      </button>
-                      <button
-                        onClick={async () => {
-                          const zip = new JSZip();
-                          const styleMatch = site.html.match(/<style>([\s\S]*?)<\/style>/);
-                          const styles = styleMatch ? styleMatch[1] : '';
-                          const scriptMatch = site.html.match(/<script>([\s\S]*?)<\/script>/);
-                          const scripts = scriptMatch ? scriptMatch[1] : '';
-                          let cleanHtml = site.html
-                            .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
-                            .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-                       
-                          zip.file("index.html", cleanHtml);
-                          zip.file("styles.css", styles);
-                          zip.file("script.js", scripts);
-                       
-                          const content = await zip.generateAsync({ type: "blob" });
-                          const url = URL.createObjectURL(content);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `website-${site.id}.zip`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}
-                        className={`flex-1 py-2 px-4 rounded text-sm transition-colors ${isDarkMode ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
-                      >
-                        📦 ZIP
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default Index;
+                        <h3 className={`text-xl font-bold mb-2 transition-colors
