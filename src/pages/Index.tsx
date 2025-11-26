@@ -27,6 +27,7 @@ import {
   Lock,
   Unlock,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -37,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
+
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
   gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
@@ -45,7 +47,9 @@ const INDUSTRY_TEMPLATES: Record<string, string> = {
   agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
   custom: "",
 };
+
 type ViewMode = "desktop" | "tablet" | "mobile";
+
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,8 +62,10 @@ const Index = () => {
   const [industry, setIndustry] = useState("custom");
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [lastPrompt, setLastPrompt] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+
   // Load from navigation state if regenerating
   useEffect(() => {
     if (location.state?.description) {
@@ -69,6 +75,7 @@ const Index = () => {
       }
     }
   }, [location.state]);
+
   // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
     setIndustry(value);
@@ -78,6 +85,7 @@ const Index = () => {
       setInput("");
     }
   };
+
   // Elapsed time counter
   useEffect(() => {
     if (isGenerating) {
@@ -90,6 +98,7 @@ const Index = () => {
       setElapsedTime(0);
     }
   }, [isGenerating]);
+
   const getStatusForProgress = (progress: number): string => {
     if (progress < 20) return "🤖 AI analyzing your requirements...";
     if (progress < 40) return "🎨 Designing perfect layout structure...";
@@ -97,13 +106,14 @@ const Index = () => {
     if (progress < 80) return "📱 Optimizing for all devices...";
     return "🚀 Finalizing your professional website...";
   };
+
   const saveWebsite = (htmlCode: string) => {
     try {
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  
+ 
       // Extract title from description or use default
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
-  
+ 
       const newWebsite: SavedWebsite = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
@@ -112,20 +122,21 @@ const Index = () => {
         timestamp: Date.now(),
         industry: industry || undefined,
       };
-  
+ 
       // Add to beginning of array
       websites.unshift(newWebsite);
-  
+ 
       // Keep only MAX_WEBSITES
       if (websites.length > MAX_WEBSITES) {
         websites.splice(MAX_WEBSITES);
       }
-  
+ 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
     } catch (error) {
       console.error('Error saving website:', error);
     }
   };
+
   const handleGenerate = async () => {
     if (input.trim().length === 0 || input.length > 3000) {
       toast({
@@ -172,14 +183,15 @@ REQUIREMENTS:
 - Proper semantic HTML5 tags
 - Accessibility features (alt tags, ARIA labels)
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
+      setLastPrompt(prompt);
       const response = await fetch('/api/generate', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ prompt }),
-  signal: abortControllerRef.current?.signal
-});
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt }),
+        signal: abortControllerRef.current?.signal
+      });
       clearInterval(progressInterval);
       if (!response.ok) {
         let errorMessage = 'Generation failed. Please try again.';
@@ -202,22 +214,22 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       let htmlCode = data.htmlCode;
       // Show success state for 2 seconds
       setShowSuccess(true);
-  
+ 
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-    
+   
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
-  
+ 
     } catch (error) {
       clearInterval(progressInterval);
-  
+ 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -231,17 +243,108 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
-  
+ 
       setIsGenerating(false);
       setProgress(0);
       setShowSuccess(false);
     }
   };
+
+  const handleRegenerate = async () => {
+    if (!lastPrompt) {
+      toast({
+        title: "No prompt to regenerate",
+        description: "Please generate a website first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsGenerating(true);
+    setProgress(0);
+    setGeneratedCode(null);
+    setShowSuccess(false);
+    // Create abort controller
+    abortControllerRef.current = new AbortController();
+    // Smooth progress animation
+    const progressInterval = setInterval(() => {
+      setProgress((p) => {
+        const newProgress = Math.min(p + 0.5, 95);
+        return newProgress;
+      });
+    }, 150);
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: lastPrompt }),
+        signal: abortControllerRef.current?.signal
+      });
+      clearInterval(progressInterval);
+      if (!response.ok) {
+        let errorMessage = 'Regeneration failed. Please try again.';
+        let errorDetails = '';
+        if (response.status === 429) {
+          errorMessage = 'Too many requests. Please wait a moment.';
+        } else if (response.status === 401) {
+          errorMessage = 'API authentication failed.';
+        }
+        try {
+          const errorData = await response.json().catch(() => ({}));
+          errorDetails = errorData.error || '';
+        } catch {
+          errorDetails = await response.text();
+        }
+        console.error('Regeneration Error:', response.status, errorDetails);
+        throw new Error(errorMessage);
+      }
+      const data = await response.json();
+      let htmlCode = data.htmlCode;
+      // Show success state for 2 seconds
+      setShowSuccess(true);
+ 
+      setTimeout(() => {
+        setGeneratedCode(htmlCode);
+        saveWebsite(htmlCode);
+        setIsGenerating(false);
+        setShowSuccess(false);
+   
+        toast({
+          title: "Regenerated! 🎉",
+          description: "A fresh version of your website has been generated",
+        });
+      }, 2000);
+ 
+    } catch (error) {
+      clearInterval(progressInterval);
+ 
+      if (error instanceof Error && error.name === 'AbortError') {
+        toast({
+          title: "Regeneration cancelled",
+          description: "Website regeneration was cancelled",
+        });
+      } else {
+        console.error('Regeneration error:', error);
+        toast({
+          title: "Regeneration failed",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+ 
+      setIsGenerating(false);
+      setProgress(0);
+      setShowSuccess(false);
+    }
+  };
+
   const handleCancelGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
   };
+
   const handleDownload = () => {
     if (!generatedCode) return;
     const blob = new Blob([generatedCode], { type: "text/html" });
@@ -256,6 +359,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       description: "Your website has been saved as an HTML file",
     });
   };
+
   const handleCopy = async () => {
     if (!generatedCode) return;
     await navigator.clipboard.writeText(generatedCode);
@@ -264,6 +368,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       description: "Code copied to clipboard",
     });
   };
+
   const handleNewWebsite = () => {
     setGeneratedCode(null);
     setInput("");
@@ -271,6 +376,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     setStatus("");
     setIndustry("custom");
   };
+
   const handleShare = async () => {
     if (!generatedCode) return;
     const shareUrl = window.location.href;
@@ -280,11 +386,13 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       description: "Share this link with others",
     });
   };
+
   const handleExampleClick = (exampleText: string, exampleIndustry: string) => {
     setInput(exampleText);
     setIndustry(exampleIndustry);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
   const getAspectRatio = () => {
     switch (viewMode) {
       case "tablet":
@@ -295,8 +403,10 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         return "aspect-video";
     }
   };
+
   const characterLimit = 3000;
   const characterCount = input.length;
+
   const examples = [
     {
       title: "Restaurant Website",
@@ -334,6 +444,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       industry: "agency"
     }
   ];
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Animated Background Gradient */}
@@ -459,7 +570,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-                
+               
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -599,23 +710,21 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                     <Loader2 className="h-16 w-16 animate-spin text-purple-500" />
                     <Sparkles className="h-6 w-6 text-yellow-400 absolute -top-2 -right-2 animate-pulse" />
                   </div>
-                  
+                 
                   <div className="text-center space-y-2">
                     <h3 className="text-xl font-bold text-white">
                       {input.length > 1000 ? '⚡ Optimizing Your Prompt...' : '🎨 Generating Your Website...'}
                     </h3>
                     <p className="text-gray-400 text-sm">
-                      {input.length > 1000 
-                        ? 'Compressing your detailed request for best results...' 
+                      {input.length > 1000
+                        ? 'Compressing your detailed request for best results...'
                         : 'Creating a stunning website with AI...'}
                     </p>
                   </div>
-
                   <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-full animate-pulse" 
+                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-full animate-pulse"
                          style={{ width: '70%' }}></div>
                   </div>
-
                   <p className="text-xs text-gray-500 text-center">
                     This may take 30-60 seconds for complex websites
                   </p>
@@ -721,6 +830,14 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
               {/* Action Buttons */}
               <div className="grid sm:grid-cols-4 gap-4">
                 <Button
+                  onClick={handleRegenerate}
+                  variant="outline"
+                  className="h-14 text-base font-semibold border-white/20 bg-white/5 hover:bg-white/10"
+                >
+                  <RefreshCw className="w-5 h-5 mr-2" />
+                  Regenerate
+                </Button>
+                <Button
                   onClick={handleDownload}
                   className="h-14 text-base font-semibold gradient-button hover-scale shadow-glow"
                 >
@@ -759,4 +876,5 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     </div>
   );
 };
+
 export default Index;
