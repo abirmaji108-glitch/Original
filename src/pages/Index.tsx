@@ -129,6 +129,10 @@ const Index = () => {
     generationDates: [] as string[],
     totalStorageKB: 0
   });
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
@@ -157,12 +161,12 @@ const Index = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedCode = params.get('shared');
-   
+  
     if (sharedCode && !generatedCode) {
       try {
         const decodedCode = decodeURIComponent(atob(sharedCode));
         setGeneratedCode(decodedCode);
-       
+      
         // Scroll to preview
         setTimeout(() => {
           window.scrollTo({ top: 300, behavior: 'smooth' });
@@ -181,7 +185,7 @@ const Index = () => {
         setShowShareMenu(false);
       }
     };
-   
+  
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
@@ -198,37 +202,37 @@ const Index = () => {
 
   const calculateAnalytics = () => {
     const history = websiteHistory;
-    
+   
     // Total generated
     const totalGenerated = history.length;
-    
+   
     // Average generation time (simulate based on complexity)
-    const avgTime = history.length > 0 
+    const avgTime = history.length > 0
       ? Math.floor((history.reduce((sum, site) => sum + site.prompt.length, 0) / history.length) / 10)
       : 0;
-    
+   
     // Template usage tracking
     const templateUsage: Record<string, number> = {};
     TEMPLATES.forEach(template => {
-      const count = history.filter(site => 
+      const count = history.filter(site =>
         site.prompt.toLowerCase().includes(template.title.toLowerCase().split(' ')[0])
       ).length;
       if (count > 0) {
         templateUsage[template.title] = count;
       }
     });
-    
+   
     // Generation dates for chart
-    const generationDates = history.map(site => 
+    const generationDates = history.map(site =>
       new Date(site.timestamp).toLocaleDateString()
     );
-    
+   
     // Calculate storage used
-    const totalStorage = history.reduce((sum, site) => 
+    const totalStorage = history.reduce((sum, site) =>
       sum + (site.prompt.length + (site.html?.length || 0)), 0
     );
     const totalStorageKB = Math.round(totalStorage / 1024);
-    
+   
     setAnalytics({
       totalGenerated,
       averageTime: avgTime,
@@ -245,6 +249,90 @@ const Index = () => {
       dateCount[date] = (dateCount[date] || 0) + 1;
     });
     return dateCount;
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || isChatLoading) return;
+    
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    
+    // Add user message to chat
+    const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }];
+    setChatMessages(newMessages);
+    setIsChatLoading(true);
+    
+    try {
+      // Call Claude API
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Note: Add your Anthropic API key here in production: "x-api-key": "your-api-key"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [
+            {
+              role: "user",
+              content: `You are a helpful AI assistant for an AI Website Generator application. 
+              
+The user can create websites by describing what they want, choose from templates (Portfolio, E-commerce, Blog, Restaurant, Business, Gaming), and you help them with:
+- Suggesting website ideas and improvements
+- Brainstorming design concepts
+- Writing better prompts for the AI generator
+- Explaining web design best practices
+- Troubleshooting their generated websites
+
+User's question: ${userMessage}
+
+Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encouraging!`
+            }
+          ],
+        })
+      });
+
+      const data = await response.json();
+      
+      // Extract text from response
+      const assistantMessage = data.content
+        .map((item: any) => (item.type === "text" ? item.text : ""))
+        .filter(Boolean)
+        .join("\n");
+      
+      // Add assistant response to chat
+      setChatMessages([...newMessages, { 
+        role: 'assistant' as const, 
+        content: assistantMessage || "I'm here to help! Could you please rephrase your question?"
+      }]);
+      
+    } catch (error) {
+      console.error("Chat error:", error);
+      setChatMessages([...newMessages, { 
+        role: 'assistant' as const, 
+        content: "Sorry, I encountered an error. Please try again!"
+      }]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const handleChatKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  };
+
+  const clearChat = () => {
+    setChatMessages([]);
+    setChatInput("");
+  };
+
+  const startNewChat = () => {
+    clearChat();
+    setShowChat(true);
   };
 
   // Auto-fill textarea when industry changes
@@ -327,15 +415,15 @@ const Index = () => {
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-   
+  
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-   
+  
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="./styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="./script.js"></script>');
-   
+  
     // Create CodeSandbox parameters
     const parameters = {
       files: {
@@ -367,22 +455,22 @@ const Index = () => {
         }
       }
     };
-   
+  
     // Compress and encode
     const compressed = JSON.stringify(parameters);
     const encoded = btoa(unescape(encodeURIComponent(compressed)));
-   
+  
     // Open in new tab
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'https://codesandbox.io/api/v1/sandboxes/define';
     form.target = '_blank';
-   
+  
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'parameters';
     input.value = encoded;
-   
+  
     form.appendChild(input);
     document.body.appendChild(form);
     form.submit();
@@ -394,15 +482,15 @@ const Index = () => {
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-   
+  
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-   
+  
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-   
+  
     // Create project structure
     const project = {
       title: 'AI Generated Website',
@@ -424,11 +512,11 @@ Generated on: ${new Date().toLocaleDateString()}
 `
       }
     };
-   
+  
     // Create StackBlitz URL with encoded project
     const projectString = JSON.stringify(project);
     const encoded = btoa(encodeURIComponent(projectString));
-   
+  
     // Open StackBlitz
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
@@ -742,20 +830,16 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   const handleDownload = async () => {
     if (!generatedCode) return;
     const zip = new JSZip();
- 
     // Extract CSS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
- 
     // Extract JS from HTML
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
- 
     // Create clean HTML without inline styles/scripts
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
- 
     // Add files to ZIP
     zip.file("index.html", cleanHtml);
     zip.file("styles.css", styles);
@@ -777,7 +861,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 Generated with AI Website Builder
 ${new Date().toLocaleDateString()}
 `);
- 
     // Generate and download ZIP
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
@@ -829,7 +912,7 @@ ${new Date().toLocaleDateString()}
   const handleTemplateClick = (prompt: string) => {
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  
+ 
     // Auto-generate with template prompt
     setInput(prompt);
     handleGenerate();
@@ -848,7 +931,6 @@ ${new Date().toLocaleDateString()}
 
   const characterLimit = 3000;
   const characterCount = input.length;
-
   const examples = [
     {
       title: "Restaurant Website",
@@ -886,7 +968,6 @@ ${new Date().toLocaleDateString()}
       industry: "agency"
     }
   ];
-
   const dynamicTextClass = `transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`;
   const dynamicMutedClass = `transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`;
   const dynamicSubtleClass = `transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`;
@@ -934,7 +1015,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-            
+           
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Stats Cards */}
@@ -957,7 +1038,7 @@ ${new Date().toLocaleDateString()}
                     Websites Generated
                   </div>
                 </div>
-                
+               
                 {/* Average Time */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -976,7 +1057,7 @@ ${new Date().toLocaleDateString()}
                     Avg Generation Time
                   </div>
                 </div>
-                
+               
                 {/* Storage Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -995,7 +1076,7 @@ ${new Date().toLocaleDateString()}
                     Storage Used
                   </div>
                 </div>
-                
+               
                 {/* Templates Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1015,7 +1096,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-              
+             
               {/* Template Usage Chart */}
               {Object.keys(analytics.templateUsage).length > 0 && (
                 <div className={`p-6 rounded-xl border ${
@@ -1058,7 +1139,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-              
+             
               {/* Recent Activity */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1109,7 +1190,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
-              
+             
               {/* Generation Frequency */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1153,11 +1234,194 @@ ${new Date().toLocaleDateString()}
         </div>
       )}
 
+      {/* AI Chat Assistant Panel */}
+      {showChat && (
+        <div className="fixed bottom-4 right-4 z-50 animate-slideUp">
+          <div className={`w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
+            isDarkMode 
+              ? 'bg-gray-900 border border-gray-700' 
+              : 'bg-white border border-gray-200'
+          }`}>
+            {/* Chat Header */}
+            <div className={`p-4 border-b ${
+              isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl">
+                    🤖
+                  </div>
+                  <div>
+                    <h3 className={`font-bold ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      AI Assistant
+                    </h3>
+                    <p className={`text-xs ${
+                      isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      {isChatLoading ? 'Typing...' : 'Online'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {chatMessages.length > 0 && (
+                    <button
+                      onClick={clearChat}
+                      className={`p-2 rounded-lg transition-colors ${
+                        isDarkMode
+                          ? 'hover:bg-gray-700 text-gray-400'
+                          : 'hover:bg-gray-200 text-gray-600'
+                      }`}
+                      title="Clear chat"
+                    >
+                      <span className="text-lg">🗑️</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowChat(false)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      isDarkMode
+                        ? 'hover:bg-gray-700 text-gray-400'
+                        : 'hover:bg-gray-200 text-gray-600'
+                    }`}
+                  >
+                    <span className="text-lg">✕</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {chatMessages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <div className="text-6xl mb-4">💬</div>
+                  <h4 className={`text-lg font-bold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Hi! I'm your AI assistant
+                  </h4>
+                  <p className={`text-sm mb-6 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Ask me anything about creating websites!
+                  </p>
+                  
+                  {/* Quick Suggestions */}
+                  <div className="space-y-2 w-full">
+                    <p className={`text-xs font-semibold mb-2 ${
+                      isDarkMode ? 'text-gray-500' : 'text-gray-500'
+                    }`}>
+                      Try asking:
+                    </p>
+                    {[
+                      "What makes a great portfolio website?",
+                      "How do I improve my website prompt?",
+                      "Suggest colors for a restaurant site",
+                      "What features should an e-commerce site have?"
+                    ].map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setChatInput(suggestion);
+                          setTimeout(() => sendChatMessage(), 100);
+                        }}
+                        className={`w-full text-left p-3 rounded-lg text-sm transition-all hover:scale-105 ${
+                          isDarkMode
+                            ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        💡 {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {chatMessages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                          message.role === 'user'
+                            ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white'
+                            : isDarkMode
+                            ? 'bg-gray-800 text-gray-200'
+                            : 'bg-gray-100 text-gray-900'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {isChatLoading && (
+                    <div className="flex justify-start">
+                      <div className={`rounded-2xl px-4 py-3 ${
+                        isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+                      }`}>
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            
+            {/* Chat Input */}
+            <div className={`p-4 border-t ${
+              isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={handleChatKeyPress}
+                  placeholder="Ask me anything..."
+                  disabled={isChatLoading}
+                  className={`flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    isDarkMode
+                      ? 'bg-gray-700 text-white placeholder-gray-400'
+                      : 'bg-white text-gray-900 placeholder-gray-500 border border-gray-300'
+                  } disabled:opacity-50`}
+                />
+                <button
+                  onClick={sendChatMessage}
+                  disabled={!chatInput.trim() || isChatLoading}
+                  className={`px-4 py-3 rounded-lg font-semibold transition-all ${
+                    chatInput.trim() && !isChatLoading
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white'
+                      : isDarkMode
+                      ? 'bg-gray-700 text-gray-500'
+                      : 'bg-gray-200 text-gray-400'
+                  } disabled:cursor-not-allowed`}
+                >
+                  {isChatLoading ? '⏳' : '🚀'}
+                </button>
+              </div>
+              <p className={`text-xs mt-2 text-center ${
+                isDarkMode ? 'text-gray-500' : 'text-gray-500'
+              }`}>
+                Press Enter to send • Shift+Enter for new line
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
       </div>
-
       {/* Navigation */}
       <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -1176,6 +1440,23 @@ ${new Date().toLocaleDateString()}
             </Button>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowChat(!showChat)}
+              className={`px-4 py-2 rounded-full transition-all duration-300 font-semibold relative ${
+                isDarkMode
+                  ? 'bg-white/10 hover:bg-white/20 text-blue-300'
+                  : 'bg-gray-800/10 hover:bg-gray-800/20 text-blue-600'
+              }`}
+              title="AI Chat Assistant"
+            >
+              <span className="text-xl mr-2">💬</span>
+              AI Help
+              {chatMessages.length > 0 && !showChat && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {chatMessages.length}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setShowAnalytics(!showAnalytics)}
               className={`px-4 py-2 rounded-full transition-all duration-300 font-semibold ${
@@ -1212,7 +1493,6 @@ ${new Date().toLocaleDateString()}
           </div>
         </div>
       </nav>
-
       {/* Main Content */}
       <main className="relative pt-24 pb-12 px-6">
         <div className="max-w-5xl mx-auto">
@@ -1250,7 +1530,6 @@ ${new Date().toLocaleDateString()}
                   </span>
                 </div>
               </div>
-
               {/* Input Card */}
               <div className={`glass-card rounded-2xl p-8 shadow-card animate-slide-up space-y-6 transition-colors duration-300 ${dynamicGlassClass}`}>
                 {/* Template Gallery */}
@@ -1259,7 +1538,7 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-                
+               
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -1272,7 +1551,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-                      
+                     
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -1284,7 +1563,6 @@ ${new Date().toLocaleDateString()}
                     ))}
                   </div>
                 </div>
-
                 {/* Industry Select */}
                 <div className="flex items-center gap-4">
                   <Select value={industry} onValueChange={handleIndustryChange}>
@@ -1301,7 +1579,6 @@ ${new Date().toLocaleDateString()}
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Textarea */}
                 <Textarea
                   placeholder="Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
@@ -1310,13 +1587,11 @@ ${new Date().toLocaleDateString()}
                   className={`min-h-[120px] ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
                   rows={4}
                 />
-
                 {/* Character Count */}
                 <div className="flex justify-between items-center text-xs">
                   <span className={dynamicSubtleClass}>{characterCount}/{characterLimit} characters</span>
                   <span className={dynamicSubtleClass}>Min 50 chars for best results</span>
                 </div>
-
                 {/* Generate Button */}
                 <div className="flex gap-4 pt-4">
                   <Button
@@ -1338,7 +1613,6 @@ ${new Date().toLocaleDateString()}
                   </Button>
                 </div>
               </div>
-
               {/* Examples Gallery */}
               <div className="mt-16">
                 <h2 className={`text-3xl font-bold mb-8 text-center ${dynamicTextClass}`}>Quick Start Examples</h2>
@@ -1358,7 +1632,7 @@ ${new Date().toLocaleDateString()}
                         </div>
                       </div>
                       <div className="p-6">
-                        <Button variant="outline" size="sm" className="w-full justify-between ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}">
+                        <Button variant="outline" size="sm" className={`w-full justify-between ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
                           <span>Try This Template</span>
                           <Zap className="w-4 h-4 ml-2" />
                         </Button>
@@ -1375,7 +1649,7 @@ ${new Date().toLocaleDateString()}
             <div className="text-center space-y-8">
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 text-2xl mb-4">
-                  <Loader2 className="w-8 h-8 animate-spin ${dynamicTextClass}" />
+                  <Loader2 className={`w-8 h-8 animate-spin ${dynamicTextClass}`} />
                   <span className={dynamicTextClass}>Creating your website...</span>
                 </div>
                 <div className={`w-full bg-white/10 rounded-full h-3 relative overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>
@@ -1416,7 +1690,7 @@ ${new Date().toLocaleDateString()}
                 </div>
                 <div className="flex items-center gap-3">
                   {/* View Mode Toggle */}
-                  <div className="flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}">
+                  <div className={`flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
                     {[{ icon: Monitor, mode: 'desktop' as const }, { icon: Tablet, mode: 'tablet' as const }, { icon: Smartphone, mode: 'mobile' as const }].map(({ icon: Icon, mode }) => (
                       <button
                         key={mode}
@@ -1505,7 +1779,7 @@ ${new Date().toLocaleDateString()}
               {showShareMenu && (
                 <div className="relative">
                   <div className={`absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} z-50`}>
-                    <div className="p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}">
+                    <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                       <h3 className={`font-semibold ${dynamicTextClass}`}>Share Your Website</h3>
                     </div>
                     <div className="p-4 space-y-2">
@@ -1558,6 +1832,36 @@ ${new Date().toLocaleDateString()}
           )}
         </div>
       </main>
+
+      <style>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out;
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
