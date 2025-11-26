@@ -63,8 +63,22 @@ const Index = () => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
+  const [websiteHistory, setWebsiteHistory] = useState<Array<{
+    id: string;
+    prompt: string;
+    html: string;
+    timestamp: number;
+  }>>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('websiteHistory');
+    if (saved) {
+      setWebsiteHistory(JSON.parse(saved));
+    }
+  }, []);
 
   // Load from navigation state if regenerating
   useEffect(() => {
@@ -212,6 +226,16 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       }
       const data = await response.json();
       let htmlCode = data.htmlCode;
+      // Save to history
+      const newWebsite = {
+        id: Date.now().toString(),
+        prompt: prompt,
+        html: htmlCode,
+        timestamp: Date.now()
+      };
+      const updatedHistory = [newWebsite, ...websiteHistory];
+      setWebsiteHistory(updatedHistory);
+      localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
       // Show success state for 2 seconds
       setShowSuccess(true);
  
@@ -301,6 +325,16 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       }
       const data = await response.json();
       let htmlCode = data.htmlCode;
+      // Save to history
+      const newWebsite = {
+        id: Date.now().toString(),
+        prompt: lastPrompt,
+        html: htmlCode,
+        timestamp: Date.now()
+      };
+      const updatedHistory = [newWebsite, ...websiteHistory];
+      setWebsiteHistory(updatedHistory);
+      localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
       // Show success state for 2 seconds
       setShowSuccess(true);
  
@@ -337,6 +371,17 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setProgress(0);
       setShowSuccess(false);
     }
+  };
+
+  const handleDelete = (id: string) => {
+    const updatedHistory = websiteHistory.filter(site => site.id !== id);
+    setWebsiteHistory(updatedHistory);
+    localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+  };
+
+  const handleLoadWebsite = (html: string) => {
+    setGeneratedCode(html);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancelGeneration = () => {
@@ -868,6 +913,54 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
                   <Plus className="w-5 h-5 mr-2" />
                   New
                 </Button>
+              </div>
+            </div>
+          )}
+          {/* My Websites Section */}
+          {websiteHistory.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-2xl font-bold text-white mb-6">📂 My Websites ({websiteHistory.length})</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {websiteHistory.map((site) => (
+                  <div key={site.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                      <p className="text-sm text-gray-400">
+                        {new Date(site.timestamp).toLocaleDateString()} {new Date(site.timestamp).toLocaleTimeString()}
+                      </p>
+                      <button
+                        onClick={() => handleDelete(site.id)}
+                        className="text-red-400 hover:text-red-300 text-xl"
+                        title="Delete"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                    <p className="text-white text-sm mb-4 line-clamp-3">
+                      {site.prompt}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleLoadWebsite(site.html)}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded text-sm transition-colors"
+                      >
+                        👁️ View
+                      </button>
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([site.html], { type: 'text/html' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `website-${site.id}.html`;
+                          a.click();
+                        }}
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded text-sm transition-colors"
+                      >
+                        📥 Download
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
