@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/select";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 import JSZip from "jszip";
-
 const TEMPLATES = [
   {
     id: "portfolio",
@@ -84,7 +83,6 @@ const TEMPLATES = [
     prompt: "Design a gaming community website with an energetic hero section, featured games carousel, leaderboard table showing top 10 players, upcoming tournaments section with dates and prizes, gaming news cards, live stream section, join community form, and Discord integration button. Use dark theme with neon purple and cyan accents."
   }
 ];
-
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
   gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
@@ -93,9 +91,7 @@ const INDUSTRY_TEMPLATES: Record<string, string> = {
   agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
   custom: "",
 };
-
 type ViewMode = "desktop" | "tablet" | "mobile";
-
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -113,9 +109,14 @@ const Index = () => {
   const [lastPrompt, setLastPrompt] = useState("");
   const [websiteHistory, setWebsiteHistory] = useState<Array<{
     id: string;
+    name: string;
     prompt: string;
-    html: string;
+    html?: string;
     timestamp: number;
+    tags: string[];
+    isFavorite: boolean;
+    notes: string;
+    thumbnail?: string;
   }>>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -133,9 +134,16 @@ const Index = () => {
   const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [projectTags, setProjectTags] = useState<string[]>([]);
+  const [projectNotes, setProjectNotes] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterTag, setFilterTag] = useState<string>("all");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
-
   // Load history from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('websiteHistory');
@@ -145,28 +153,25 @@ const Index = () => {
       calculateAnalytics();
     }
   }, []);
-
   useEffect(() => {
     calculateAnalytics();
   }, [websiteHistory]);
-
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       setIsDarkMode(savedTheme === 'dark');
     }
   }, []);
-
   // Check if there's a shared website in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedCode = params.get('shared');
-  
+ 
     if (sharedCode && !generatedCode) {
       try {
         const decodedCode = decodeURIComponent(atob(sharedCode));
         setGeneratedCode(decodedCode);
-      
+     
         // Scroll to preview
         setTimeout(() => {
           window.scrollTo({ top: 300, behavior: 'smooth' });
@@ -176,7 +181,6 @@ const Index = () => {
       }
     }
   }, []);
-
   // Close share menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -185,11 +189,10 @@ const Index = () => {
         setShowShareMenu(false);
       }
     };
-  
+ 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
-
   // Load from navigation state if regenerating
   useEffect(() => {
     if (location.state?.description) {
@@ -199,18 +202,17 @@ const Index = () => {
       }
     }
   }, [location.state]);
-
   const calculateAnalytics = () => {
     const history = websiteHistory;
-   
+  
     // Total generated
     const totalGenerated = history.length;
-   
+  
     // Average generation time (simulate based on complexity)
     const avgTime = history.length > 0
       ? Math.floor((history.reduce((sum, site) => sum + site.prompt.length, 0) / history.length) / 10)
       : 0;
-   
+  
     // Template usage tracking
     const templateUsage: Record<string, number> = {};
     TEMPLATES.forEach(template => {
@@ -221,18 +223,18 @@ const Index = () => {
         templateUsage[template.title] = count;
       }
     });
-   
+  
     // Generation dates for chart
     const generationDates = history.map(site =>
       new Date(site.timestamp).toLocaleDateString()
     );
-   
+  
     // Calculate storage used
     const totalStorage = history.reduce((sum, site) =>
       sum + (site.prompt.length + (site.html?.length || 0)), 0
     );
     const totalStorageKB = Math.round(totalStorage / 1024);
-   
+  
     setAnalytics({
       totalGenerated,
       averageTime: avgTime,
@@ -241,7 +243,6 @@ const Index = () => {
       totalStorageKB
     });
   };
-
   const getGenerationsPerDay = () => {
     const dateCount: Record<string, number> = {};
     websiteHistory.forEach(site => {
@@ -250,18 +251,17 @@ const Index = () => {
     });
     return dateCount;
   };
-
   const sendChatMessage = async () => {
     if (!chatInput.trim() || isChatLoading) return;
-    
+   
     const userMessage = chatInput.trim();
     setChatInput("");
-    
+   
     // Add user message to chat
     const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }];
     setChatMessages(newMessages);
     setIsChatLoading(true);
-    
+   
     try {
       // Call Claude API
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -276,65 +276,58 @@ const Index = () => {
           messages: [
             {
               role: "user",
-              content: `You are a helpful AI assistant for an AI Website Generator application. 
-              
+              content: `You are a helpful AI assistant for an AI Website Generator application.
+             
 The user can create websites by describing what they want, choose from templates (Portfolio, E-commerce, Blog, Restaurant, Business, Gaming), and you help them with:
 - Suggesting website ideas and improvements
 - Brainstorming design concepts
 - Writing better prompts for the AI generator
 - Explaining web design best practices
 - Troubleshooting their generated websites
-
 User's question: ${userMessage}
-
 Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encouraging!`
             }
           ],
         })
       });
-
       const data = await response.json();
-      
+     
       // Extract text from response
       const assistantMessage = data.content
         .map((item: any) => (item.type === "text" ? item.text : ""))
         .filter(Boolean)
         .join("\n");
-      
+     
       // Add assistant response to chat
-      setChatMessages([...newMessages, { 
-        role: 'assistant' as const, 
+      setChatMessages([...newMessages, {
+        role: 'assistant' as const,
         content: assistantMessage || "I'm here to help! Could you please rephrase your question?"
       }]);
-      
+     
     } catch (error) {
       console.error("Chat error:", error);
-      setChatMessages([...newMessages, { 
-        role: 'assistant' as const, 
+      setChatMessages([...newMessages, {
+        role: 'assistant' as const,
         content: "Sorry, I encountered an error. Please try again!"
       }]);
     } finally {
       setIsChatLoading(false);
     }
   };
-
   const handleChatKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendChatMessage();
     }
   };
-
   const clearChat = () => {
     setChatMessages([]);
     setChatInput("");
   };
-
   const startNewChat = () => {
     clearChat();
     setShowChat(true);
   };
-
   // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
     setIndustry(value);
@@ -344,7 +337,6 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
       setInput("");
     }
   };
-
   // Elapsed time counter
   useEffect(() => {
     if (isGenerating) {
@@ -357,13 +349,11 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
       setElapsedTime(0);
     }
   }, [isGenerating]);
-
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     localStorage.setItem('theme', newTheme ? 'dark' : 'light');
   };
-
   const generateShareLink = () => {
     if (!generatedCode) return "";
     // Encode HTML to base64 for URL
@@ -372,14 +362,12 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
     setShareLink(shareUrl);
     return shareUrl;
   };
-
   const handleCopyLink = () => {
     const link = generateShareLink();
     navigator.clipboard.writeText(link);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 3000);
   };
-
   const handleShareTwitter = () => {
     const link = generateShareLink();
     const text = "Check out this website I created with AI! 🚀";
@@ -387,21 +375,18 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
     window.open(url, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
   };
-
   const handleShareLinkedIn = () => {
     const link = generateShareLink();
     const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=600');
     setShowShareMenu(false);
   };
-
   const handleShareFacebook = () => {
     const link = generateShareLink();
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
   };
-
   const handleShareEmail = () => {
     const link = generateShareLink();
     const subject = "Check out my AI-generated website!";
@@ -409,21 +394,20 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setShowShareMenu(false);
   };
-
   const handleOpenInCodeSandbox = () => {
     if (!generatedCode) return;
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-  
+ 
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-  
+ 
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="./styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="./script.js"></script>');
-  
+ 
     // Create CodeSandbox parameters
     const parameters = {
       files: {
@@ -455,42 +439,41 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
         }
       }
     };
-  
+ 
     // Compress and encode
     const compressed = JSON.stringify(parameters);
     const encoded = btoa(unescape(encodeURIComponent(compressed)));
-  
+ 
     // Open in new tab
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'https://codesandbox.io/api/v1/sandboxes/define';
     form.target = '_blank';
-  
+ 
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'parameters';
     input.value = encoded;
-  
+ 
     form.appendChild(input);
     document.body.appendChild(form);
     form.submit();
     document.body.removeChild(form);
   };
-
   const handleOpenInStackBlitz = () => {
     if (!generatedCode) return;
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-  
+ 
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-  
+ 
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-  
+ 
     // Create project structure
     const project = {
       title: 'AI Generated Website',
@@ -512,15 +495,14 @@ Generated on: ${new Date().toLocaleDateString()}
 `
       }
     };
-  
+ 
     // Create StackBlitz URL with encoded project
     const projectString = JSON.stringify(project);
     const encoded = btoa(encodeURIComponent(projectString));
-  
+ 
     // Open StackBlitz
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
-
   const getStatusForProgress = (progress: number): string => {
     if (progress < 20) return "🤖 AI analyzing your requirements...";
     if (progress < 40) return "🎨 Designing perfect layout structure...";
@@ -528,7 +510,6 @@ Generated on: ${new Date().toLocaleDateString()}
     if (progress < 80) return "📱 Optimizing for all devices...";
     return "🚀 Finalizing your professional website...";
   };
-
   const saveWebsite = (htmlCode: string) => {
     try {
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -553,7 +534,6 @@ Generated on: ${new Date().toLocaleDateString()}
       console.error('Error saving website:', error);
     }
   };
-
   const simulateProgress = () => {
     const stages = [
       { progress: 25, message: "🔍 Analyzing your requirements..." },
@@ -575,7 +555,83 @@ Generated on: ${new Date().toLocaleDateString()}
     }, 8000); // Change stage every 8 seconds
     return interval;
   };
-
+  const saveProjectDetails = () => {
+    if (!editingProject) return;
+    
+    const updatedHistory = websiteHistory.map(site => 
+      site.id === editingProject
+        ? {
+            ...site,
+            name: projectName.trim() || `Website ${websiteHistory.length}`,
+            tags: projectTags,
+            notes: projectNotes
+          }
+        : site
+    );
+    
+    setWebsiteHistory(updatedHistory);
+    localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+    
+    setShowProjectModal(false);
+    setEditingProject(null);
+    setProjectName("");
+    setProjectTags([]);
+    setProjectNotes("");
+  };
+  const toggleFavorite = (id: string) => {
+    const updatedHistory = websiteHistory.map(site =>
+      site.id === id ? { ...site, isFavorite: !site.isFavorite } : site
+    );
+    setWebsiteHistory(updatedHistory);
+    localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+  };
+  const addTag = (tag: string) => {
+    if (tag.trim() && !projectTags.includes(tag.trim())) {
+      setProjectTags([...projectTags, tag.trim()]);
+    }
+  };
+  const removeTag = (tag: string) => {
+    setProjectTags(projectTags.filter(t => t !== tag));
+  };
+  const openEditProject = (site: typeof websiteHistory[0]) => {
+    setEditingProject(site.id);
+    setProjectName(site.name);
+    setProjectTags(site.tags);
+    setProjectNotes(site.notes);
+    setShowProjectModal(true);
+  };
+  const getFilteredProjects = () => {
+    let filtered = [...websiteHistory];
+    
+    // Search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(site =>
+        site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        site.prompt.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        site.notes.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        site.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+    
+    // Tag filter
+    if (filterTag !== "all") {
+      filtered = filtered.filter(site => site.tags.includes(filterTag));
+    }
+    
+    // Favorites filter
+    if (showFavoritesOnly) {
+      filtered = filtered.filter(site => site.isFavorite);
+    }
+    
+    return filtered;
+  };
+  const getAllTags = () => {
+    const tagSet = new Set<string>();
+    websiteHistory.forEach(site => {
+      site.tags.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet);
+  };
   const handleGenerate = async () => {
     if (input.trim().length === 0 || input.length > 3000) {
       toast({
@@ -657,13 +713,26 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       // Save to history
       const newWebsite = {
         id: Date.now().toString(),
+        name: `Website ${websiteHistory.length + 1}`,
         prompt: prompt,
         html: htmlCode,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        tags: [],
+        isFavorite: false,
+        notes: "",
+        thumbnail: ""
       };
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+      // Show save project modal after generation
+      setTimeout(() => {
+        setEditingProject(newWebsite.id);
+        setProjectName(newWebsite.name);
+        setProjectTags([]);
+        setProjectNotes("");
+        setShowProjectModal(true);
+      }, 1000);
       // Clear progress interval
       clearInterval(progressInterval);
       setProgress(100);
@@ -704,7 +773,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setShowSuccess(false);
     }
   };
-
   const handleRegenerate = async () => {
     if (!lastPrompt) {
       toast({
@@ -762,13 +830,26 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       // Save to history
       const newWebsite = {
         id: Date.now().toString(),
+        name: `Website ${websiteHistory.length + 1}`,
         prompt: lastPrompt,
         html: htmlCode,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        tags: [],
+        isFavorite: false,
+        notes: "",
+        thumbnail: ""
       };
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+      // Show save project modal after generation
+      setTimeout(() => {
+        setEditingProject(newWebsite.id);
+        setProjectName(newWebsite.name);
+        setProjectTags([]);
+        setProjectNotes("");
+        setShowProjectModal(true);
+      }, 1000);
       // Clear progress interval
       clearInterval(progressInterval);
       setProgress(100);
@@ -809,24 +890,20 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setShowSuccess(false);
     }
   };
-
   const handleDelete = (id: string) => {
     const updatedHistory = websiteHistory.filter(site => site.id !== id);
     setWebsiteHistory(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
   };
-
   const handleLoadWebsite = (html: string) => {
     setGeneratedCode(html);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
   const handleCancelGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
   };
-
   const handleDownload = async () => {
     if (!generatedCode) return;
     const zip = new JSZip();
@@ -874,7 +951,6 @@ ${new Date().toLocaleDateString()}
       description: "Your website ZIP has been saved",
     });
   };
-
   const handleCopy = async () => {
     if (!generatedCode) return;
     await navigator.clipboard.writeText(generatedCode);
@@ -883,7 +959,6 @@ ${new Date().toLocaleDateString()}
       description: "Code copied to clipboard! Paste it into any code editor or StackBlitz.",
     });
   };
-
   const handleNewWebsite = () => {
     setGeneratedCode(null);
     setInput("");
@@ -891,7 +966,6 @@ ${new Date().toLocaleDateString()}
     setStatus("");
     setIndustry("custom");
   };
-
   const handleShare = async () => {
     const link = generateShareLink();
     if (link) {
@@ -902,22 +976,18 @@ ${new Date().toLocaleDateString()}
       });
     }
   };
-
   const handleExampleClick = (exampleText: string, exampleIndustry: string) => {
     setInput(exampleText);
     setIndustry(exampleIndustry);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
   const handleTemplateClick = (prompt: string) => {
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
- 
     // Auto-generate with template prompt
     setInput(prompt);
     handleGenerate();
   };
-
   const getAspectRatio = () => {
     switch (viewMode) {
       case "tablet":
@@ -928,7 +998,6 @@ ${new Date().toLocaleDateString()}
         return "aspect-video";
     }
   };
-
   const characterLimit = 3000;
   const characterCount = input.length;
   const examples = [
@@ -977,7 +1046,6 @@ ${new Date().toLocaleDateString()}
   const dynamicGlassClass = isDarkMode
     ? 'bg-white/5 backdrop-blur-sm border border-white/10'
     : 'bg-white border border-gray-200 shadow-xl';
-
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Analytics Dashboard Modal */}
@@ -1015,7 +1083,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-           
+          
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Stats Cards */}
@@ -1038,7 +1106,7 @@ ${new Date().toLocaleDateString()}
                     Websites Generated
                   </div>
                 </div>
-               
+              
                 {/* Average Time */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1057,7 +1125,7 @@ ${new Date().toLocaleDateString()}
                     Avg Generation Time
                   </div>
                 </div>
-               
+              
                 {/* Storage Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1076,7 +1144,7 @@ ${new Date().toLocaleDateString()}
                     Storage Used
                   </div>
                 </div>
-               
+              
                 {/* Templates Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1096,7 +1164,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-             
+            
               {/* Template Usage Chart */}
               {Object.keys(analytics.templateUsage).length > 0 && (
                 <div className={`p-6 rounded-xl border ${
@@ -1139,7 +1207,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-             
+            
               {/* Recent Activity */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1190,7 +1258,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
-             
+            
               {/* Generation Frequency */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1233,13 +1301,12 @@ ${new Date().toLocaleDateString()}
           </div>
         </div>
       )}
-
       {/* AI Chat Assistant Panel */}
       {showChat && (
         <div className="fixed bottom-4 right-4 z-50 animate-slideUp">
           <div className={`w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
-            isDarkMode 
-              ? 'bg-gray-900 border border-gray-700' 
+            isDarkMode
+              ? 'bg-gray-900 border border-gray-700'
               : 'bg-white border border-gray-200'
           }`}>
             {/* Chat Header */}
@@ -1291,7 +1358,7 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
             </div>
-            
+           
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chatMessages.length === 0 ? (
@@ -1307,7 +1374,7 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
-                  
+                 
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1358,7 +1425,7 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
-                  
+                 
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1375,7 +1442,7 @@ ${new Date().toLocaleDateString()}
                 </>
               )}
             </div>
-            
+           
             {/* Chat Input */}
             <div className={`p-4 border-t ${
               isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
@@ -1417,7 +1484,169 @@ ${new Date().toLocaleDateString()}
           </div>
         </div>
       )}
-
+      {/* Project Save/Edit Modal */}
+      {showProjectModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className={`max-w-2xl w-full rounded-2xl shadow-2xl ${
+            isDarkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
+          }`}>
+            {/* Modal Header */}
+            <div className={`p-6 border-b ${
+              isDarkMode ? 'border-gray-700' : 'border-gray-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <h2 className={`text-2xl font-bold ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  💾 Save Project Details
+                </h2>
+                <button
+                  onClick={() => setShowProjectModal(false)}
+                  className={`p-2 rounded-full transition-colors ${
+                    isDarkMode
+                      ? 'hover:bg-gray-800 text-gray-400'
+                      : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <span className="text-xl">✕</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Project Name */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Project Name *
+                </label>
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="e.g., My Portfolio Website"
+                  className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    isDarkMode
+                      ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
+                      : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
+                  }`}
+                />
+              </div>
+              
+              {/* Tags */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Tags (Press Enter to add)
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {projectTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
+                        isDarkMode
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          : 'bg-blue-100 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {tag}
+                      <button
+                        onClick={() => removeTag(tag)}
+                        className="hover:text-red-500 transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Add tags (Portfolio, Business, E-commerce...)"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag((e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }}
+                  className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    isDarkMode
+                      ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
+                      : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
+                  }`}
+                />
+                
+                {/* Quick Tag Buttons */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
+                    <button
+                      key={quickTag}
+                      onClick={() => addTag(quickTag)}
+                      disabled={projectTags.includes(quickTag)}
+                      className={`px-3 py-1 rounded-full text-xs transition-all ${
+                        projectTags.includes(quickTag)
+                          ? isDarkMode
+                            ? 'bg-gray-800 text-gray-600'
+                            : 'bg-gray-200 text-gray-400'
+                          : isDarkMode
+                          ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      } disabled:cursor-not-allowed`}
+                    >
+                      + {quickTag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Notes */}
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={projectNotes}
+                  onChange={(e) => setProjectNotes(e.target.value)}
+                  placeholder="Add any notes about this project..."
+                  rows={4}
+                  className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
+                    isDarkMode
+                      ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
+                      : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
+                  }`}
+                />
+              </div>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className={`p-6 border-t flex justify-end gap-3 ${
+              isDarkMode ? 'border-gray-700' : 'border-gray-200'
+            }`}>
+              <button
+                onClick={() => setShowProjectModal(false)}
+                className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  isDarkMode
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveProjectDetails}
+                className="px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white transition-all"
+              >
+                💾 Save Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
@@ -1538,7 +1767,7 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-               
+              
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -1551,7 +1780,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-                     
+                    
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -1643,7 +1872,6 @@ ${new Date().toLocaleDateString()}
               </div>
             </>
           )}
-
           {/* Generating State */}
           {isGenerating && (
             <div className="text-center space-y-8">
@@ -1675,7 +1903,6 @@ ${new Date().toLocaleDateString()}
               </div>
             </div>
           )}
-
           {/* Generated Preview */}
           {generatedCode && (
             <div className="space-y-8">
@@ -1701,7 +1928,6 @@ ${new Date().toLocaleDateString()}
                       </button>
                     ))}
                   </div>
-
                   {/* Action Buttons */}
                   <div className="flex gap-2">
                     <Button
@@ -1725,7 +1951,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-
               {/* Preview Container */}
               <div className={`relative ${getAspectRatio()} mx-auto max-w-4xl rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 ${isDarkMode ? 'bg-black/20' : 'bg-white/50'}`}>
                 <iframe
@@ -1735,7 +1960,6 @@ ${new Date().toLocaleDateString()}
                   sandbox="allow-scripts allow-same-origin"
                 />
               </div>
-
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 justify-center">
                 <Button
@@ -1774,7 +1998,6 @@ ${new Date().toLocaleDateString()}
                   Open in StackBlitz
                 </Button>
               </div>
-
               {/* Share Menu */}
               {showShareMenu && (
                 <div className="relative">
@@ -1817,7 +2040,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-
               {/* Success Animation */}
               {showSuccess && (
                 <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40">
@@ -1830,9 +2052,201 @@ ${new Date().toLocaleDateString()}
               )}
             </div>
           )}
+          {/* My Projects Section */}
+          {websiteHistory.length > 0 && (
+            <div className="mt-12">
+              {/* Section Header with Filters */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <h2 className={`text-2xl font-bold transition-colors ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  📂 My Projects ({getFilteredProjects().length})
+                </h2>
+                
+                {/* Search and Filters */}
+                <div className="flex flex-wrap gap-3">
+                  {/* Search */}
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="🔍 Search projects..."
+                    className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode
+                        ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
+                        : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
+                    }`}
+                  />
+                  
+                  {/* Tag Filter */}
+                  <select
+                    value={filterTag}
+                    onChange={(e) => setFilterTag(e.target.value)}
+                    className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode
+                        ? 'bg-gray-800 text-white border border-gray-700'
+                        : 'bg-white text-gray-900 border border-gray-300'
+                    }`}
+                  >
+                    <option value="all">All Tags</option>
+                    {getAllTags().map(tag => (
+                      <option key={tag} value={tag}>{tag}</option>
+                    ))}
+                  </select>
+                  
+                  {/* Favorites Toggle */}
+                  <button
+                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      showFavoritesOnly
+                        ? 'bg-yellow-500 text-white'
+                        : isDarkMode
+                        ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    ⭐ Favorites
+                  </button>
+                </div>
+              </div>
+              
+              {/* Project Grid */}
+              {getFilteredProjects().length === 0 ? (
+                <div className={`text-center py-12 rounded-xl border ${
+                  isDarkMode
+                    ? 'bg-white/5 border-white/10 text-gray-400'
+                    : 'bg-gray-50 border-gray-200 text-gray-600'
+                }`}>
+                  <div className="text-6xl mb-4">🔍</div>
+                  <p className="text-lg">No projects found matching your filters</p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setFilterTag("all");
+                      setShowFavoritesOnly(false);
+                    }}
+                    className={`mt-4 px-6 py-2 rounded-lg ${
+                      isDarkMode
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    }`}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {getFilteredProjects().map((site) => (
+                    <div
+                      key={site.id}
+                      className={`backdrop-blur-sm rounded-xl p-6 transition-all hover:scale-105 relative ${
+                        isDarkMode
+                          ? 'bg-white/5 border border-white/10 hover:bg-white/10'
+                          : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
+                      }`}
+                    >
+                      {/* Favorite Star */}
+                      <button
+                        onClick={() => toggleFavorite(site.id)}
+                        className="absolute top-4 right-4 text-2xl transition-transform hover:scale-125"
+                      >
+                        {site.isFavorite ? '⭐' : '☆'}
+                      </button>
+                      
+                      {/* Project Info */}
+                      <div className="mb-4">
+                        <h3 className={`text-xl font-bold mb-2 pr-8 ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {site.name}
+                        </h3>
+                        
+                        {/* Tags */}
+                        {site.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {site.tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  isDarkMode
+                                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                    : 'bg-blue-100 text-blue-700 border border-blue-200'
+                                }`}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <p className={`text-sm mb-2 line-clamp-2 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {site.prompt}
+                        </p>
+                        
+                        {site.notes && (
+                          <p className={`text-xs italic mb-2 line-clamp-2 ${
+                            isDarkMode ? 'text-gray-500' : 'text-gray-500'
+                          }`}>
+                            📝 {site.notes}
+                          </p>
+                        )}
+                        
+                        <p className={`text-xs ${
+                          isDarkMode ? 'text-gray-500' : 'text-gray-500'
+                        }`}>
+                          Created: {new Date(site.timestamp).toLocaleDateString()} at{' '}
+                          {new Date(site.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            setGeneratedCode(site.html || "");
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isDarkMode
+                              ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                        >
+                          👁️ View
+                        </button>
+                        
+                        <button
+                          onClick={() => openEditProject(site)}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isDarkMode
+                              ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                          }`}
+                        >
+                          ✏️ Edit
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDelete(site.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isDarkMode
+                              ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
-
       <style>{`
         @keyframes slideUp {
           from {
@@ -1844,7 +2258,7 @@ ${new Date().toLocaleDateString()}
             transform: translateY(0);
           }
         }
-        
+       
         @keyframes fadeIn {
           from {
             opacity: 0;
@@ -1853,11 +2267,11 @@ ${new Date().toLocaleDateString()}
             opacity: 1;
           }
         }
-        
+       
         .animate-slideUp {
           animation: slideUp 0.3s ease-out;
         }
-        
+       
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
         }
@@ -1865,5 +2279,4 @@ ${new Date().toLocaleDateString()}
     </div>
   );
 };
-
 export default Index;
