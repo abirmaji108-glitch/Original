@@ -58,6 +58,7 @@ const Index = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [progressStage, setProgressStage] = useState("");
   const [status, setStatus] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("desktop");
   const [industry, setIndustry] = useState("custom");
@@ -147,6 +148,31 @@ const Index = () => {
     }
   };
 
+  const simulateProgress = () => {
+    const stages = [
+      { progress: 25, message: "🔍 Analyzing your requirements..." },
+      { progress: 50, message: "🎨 Designing layout and structure..." },
+      { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
+      { progress: 90, message: "✨ Finalizing your website..." }
+    ];
+    
+    let currentStage = 0;
+    setProgress(0);
+    setProgressStage(stages[0].message);
+    
+    const interval = setInterval(() => {
+      if (currentStage < stages.length) {
+        setProgress(stages[currentStage].progress);
+        setProgressStage(stages[currentStage].message);
+        currentStage++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 8000); // Change stage every 8 seconds
+    
+    return interval;
+  };
+
   const handleGenerate = async () => {
     if (input.trim().length === 0 || input.length > 3000) {
       toast({
@@ -170,8 +196,10 @@ const Index = () => {
     setShowSuccess(false);
     // Create abort controller
     abortControllerRef.current = new AbortController();
+    // Start progress simulation
+    const progressInterval = simulateProgress();
     // Smooth progress animation
-    const progressInterval = setInterval(() => {
+    const progressInterval2 = setInterval(() => {
       setProgress((p) => {
         const newProgress = Math.min(p + 0.5, 95);
         return newProgress;
@@ -203,6 +231,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         signal: abortControllerRef.current?.signal
       });
       clearInterval(progressInterval);
+      clearInterval(progressInterval2);
       if (!response.ok) {
         let errorMessage = 'Generation failed. Please try again.';
         let errorDetails = '';
@@ -232,21 +261,31 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+      // Clear progress interval
+      clearInterval(progressInterval);
+      setProgress(100);
+      setProgressStage("✅ Complete! Your website is ready.");
       // Show success state for 2 seconds
       setShowSuccess(true);
+ 
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-  
+        setProgress(0);
+        setProgressStage("");
+   
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
         });
       }, 2000);
+ 
     } catch (error) {
       clearInterval(progressInterval);
+      clearInterval(progressInterval2);
+ 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Generation cancelled",
@@ -260,8 +299,10 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
+ 
       setIsGenerating(false);
       setProgress(0);
+      setProgressStage("");
       setShowSuccess(false);
     }
   };
@@ -281,8 +322,10 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     setShowSuccess(false);
     // Create abort controller
     abortControllerRef.current = new AbortController();
+    // Start progress simulation
+    const progressInterval = simulateProgress();
     // Smooth progress animation
-    const progressInterval = setInterval(() => {
+    const progressInterval2 = setInterval(() => {
       setProgress((p) => {
         const newProgress = Math.min(p + 0.5, 95);
         return newProgress;
@@ -298,6 +341,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         signal: abortControllerRef.current?.signal
       });
       clearInterval(progressInterval);
+      clearInterval(progressInterval2);
       if (!response.ok) {
         let errorMessage = 'Regeneration failed. Please try again.';
         let errorDetails = '';
@@ -327,21 +371,31 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+      // Clear progress interval
+      clearInterval(progressInterval);
+      setProgress(100);
+      setProgressStage("✅ Complete! Your website is ready.");
       // Show success state for 2 seconds
       setShowSuccess(true);
+ 
       setTimeout(() => {
         setGeneratedCode(htmlCode);
         saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
-  
+        setProgress(0);
+        setProgressStage("");
+   
         toast({
           title: "Regenerated! 🎉",
           description: "A fresh version of your website has been generated",
         });
       }, 2000);
+ 
     } catch (error) {
       clearInterval(progressInterval);
+      clearInterval(progressInterval2);
+ 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "Regeneration cancelled",
@@ -355,8 +409,10 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
+ 
       setIsGenerating(false);
       setProgress(0);
+      setProgressStage("");
       setShowSuccess(false);
     }
   };
@@ -780,29 +836,29 @@ ${new Date().toLocaleDateString()}
           {isGenerating && (
             <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
               <div className="bg-gray-900 rounded-2xl p-8 max-w-md mx-4 border border-purple-500/20 shadow-2xl">
-                <div className="flex flex-col items-center gap-6">
-                  <div className="relative">
-                    <Loader2 className="h-16 w-16 animate-spin text-purple-500" />
-                    <Sparkles className="h-6 w-6 text-yellow-400 absolute -top-2 -right-2 animate-pulse" />
+                <div className="text-center mb-6">
+                  <div className="inline-block animate-spin text-6xl mb-4">⚙️</div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Creating Your Website</h3>
+                  <p className="text-gray-300 text-lg">{progressStage}</p>
+                </div>
+               
+                {/* Progress Bar */}
+                <div className="relative w-full h-4 bg-gray-700 rounded-full overflow-hidden">
+                  <div 
+                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out"
+                    style={{ width: `${progress}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
                   </div>
-                
-                  <div className="text-center space-y-2">
-                    <h3 className="text-xl font-bold text-white">
-                      {input.length > 1000 ? '⚡ Optimizing Your Prompt...' : '🎨 Generating Your Website...'}
-                    </h3>
-                    <p className="text-gray-400 text-sm">
-                      {input.length > 1000
-                        ? 'Compressing your detailed request for best results...'
-                        : 'Creating a stunning website with AI...'}
-                    </p>
-                  </div>
-                  <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-full animate-pulse"
-                         style={{ width: '70%' }}></div>
-                  </div>
-                  <p className="text-xs text-gray-500 text-center">
-                    This may take 30-60 seconds for complex websites
-                  </p>
+                </div>
+               
+                <div className="text-center mt-3">
+                  <span className="text-white font-bold text-lg">{progress}%</span>
+                </div>
+               
+                <div className="mt-6 text-center text-sm text-gray-500">
+                  <p>⏱️ This usually takes 30-60 seconds</p>
+                  <p className="mt-1">✨ AI is crafting a beautiful, responsive website for you</p>
                 </div>
               </div>
             </div>
@@ -985,11 +1041,11 @@ ${new Date().toLocaleDateString()}
                           let cleanHtml = site.html
                             .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
                             .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-                          
+                         
                           zip.file("index.html", cleanHtml);
                           zip.file("styles.css", styles);
                           zip.file("script.js", scripts);
-                          
+                         
                           const content = await zip.generateAsync({ type: "blob" });
                           const url = URL.createObjectURL(content);
                           const a = document.createElement('a');
