@@ -118,6 +118,9 @@ const Index = () => {
     timestamp: number;
   }>>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareLink, setShareLink] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
@@ -135,6 +138,39 @@ const Index = () => {
       setIsDarkMode(savedTheme === 'dark');
     }
   }, []);
+
+  // Check if there's a shared website in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedCode = params.get('shared');
+    
+    if (sharedCode && !generatedCode) {
+      try {
+        const decodedCode = decodeURIComponent(atob(sharedCode));
+        setGeneratedCode(decodedCode);
+        
+        // Scroll to preview
+        setTimeout(() => {
+          window.scrollTo({ top: 300, behavior: 'smooth' });
+        }, 500);
+      } catch (error) {
+        console.error('Error loading shared website:', error);
+      }
+    }
+  }, []);
+
+  // Close share menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showShareMenu && !target.closest('.relative')) {
+        setShowShareMenu(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showShareMenu]);
 
   // Load from navigation state if regenerating
   useEffect(() => {
@@ -173,6 +209,52 @@ const Index = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+  };
+
+  const generateShareLink = () => {
+    if (!generatedCode) return "";
+    // Encode HTML to base64 for URL
+    const encodedCode = btoa(encodeURIComponent(generatedCode));
+    const shareUrl = `${window.location.origin}${window.location.pathname}?shared=${encodedCode}`;
+    setShareLink(shareUrl);
+    return shareUrl;
+  };
+
+  const handleCopyLink = () => {
+    const link = generateShareLink();
+    navigator.clipboard.writeText(link);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 3000);
+  };
+
+  const handleShareTwitter = () => {
+    const link = generateShareLink();
+    const text = "Check out this website I created with AI! 🚀";
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+    setShowShareMenu(false);
+  };
+
+  const handleShareLinkedIn = () => {
+    const link = generateShareLink();
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
+    window.open(url, '_blank', 'width=600,height=600');
+    setShowShareMenu(false);
+  };
+
+  const handleShareFacebook = () => {
+    const link = generateShareLink();
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+    setShowShareMenu(false);
+  };
+
+  const handleShareEmail = () => {
+    const link = generateShareLink();
+    const subject = "Check out my AI-generated website!";
+    const body = `I just created this amazing website using AI! Take a look:\n\n${link}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setShowShareMenu(false);
   };
 
   const getStatusForProgress = (progress: number): string => {
@@ -555,13 +637,14 @@ ${new Date().toLocaleDateString()}
   };
 
   const handleShare = async () => {
-    if (!generatedCode) return;
-    const shareUrl = window.location.href;
-    await navigator.clipboard.writeText(shareUrl);
-    toast({
-      title: "Link Copied!",
-      description: "Share this link with others",
-    });
+    const link = generateShareLink();
+    if (link) {
+      await navigator.clipboard.writeText(link);
+      toast({
+        title: "Link Copied!",
+        description: "Share this link with others",
+      });
+    }
   };
 
   const handleExampleClick = (exampleText: string, exampleIndustry: string) => {
@@ -1072,14 +1155,112 @@ ${new Date().toLocaleDateString()}
                   <Copy className="w-5 h-5 mr-2" />
                   Copy Code
                 </Button>
-                <Button
-                  onClick={handleShare}
-                  variant="outline"
-                  className={`h-14 text-base font-semibold transition-colors duration-300 ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
-                >
-                  <Share2 className="w-5 h-5 mr-2" />
-                  Share
-                </Button>
+                <div className="relative">
+                  <Button 
+                    onClick={() => setShowShareMenu(!showShareMenu)}
+                    className={`h-14 text-base font-semibold ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'} bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600`}
+                  >
+                    <Share2 className="w-5 h-5 mr-2" />
+                    Share
+                  </Button>
+                  
+                  {/* Share Dropdown Menu */}
+                  {showShareMenu && (
+                    <div className={`absolute top-full mt-2 right-0 rounded-lg shadow-2xl border z-50 min-w-[250px] transition-colors duration-300 ${
+                      isDarkMode 
+                        ? 'bg-gray-800 border-gray-700' 
+                        : 'bg-white border-gray-200'
+                    }`}>
+                      <div className={`p-4 border-b transition-colors duration-300 ${
+                        isDarkMode ? 'border-gray-700' : 'border-gray-200'
+                      }`}>
+                        <p className={`text-sm font-semibold mb-2 ${dynamicTextClass}`}>Share this website</p>
+                        
+                        {/* Copy Link Button */}
+                        <button
+                          onClick={handleCopyLink}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                            isDarkMode
+                              ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                          }`}
+                        >
+                          <span className="text-xl">📋</span>
+                          <span className="flex-1 text-left">
+                            {linkCopied ? '✅ Link Copied!' : 'Copy Link'}
+                          </span>
+                        </button>
+                      </div>
+                      
+                      {/* Social Share Options */}
+                      <div className="p-2">
+                        <button
+                          onClick={handleShareTwitter}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                            isDarkMode
+                              ? 'hover:bg-gray-700 text-gray-300'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          <span className="text-xl">🐦</span>
+                          <span>Share on Twitter/X</span>
+                        </button>
+                        
+                        <button
+                          onClick={handleShareLinkedIn}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                            isDarkMode
+                              ? 'hover:bg-gray-700 text-gray-300'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          <span className="text-xl">💼</span>
+                          <span>Share on LinkedIn</span>
+                        </button>
+                        
+                        <button
+                          onClick={handleShareFacebook}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                            isDarkMode
+                              ? 'hover:bg-gray-700 text-gray-300'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          <span className="text-xl">📘</span>
+                          <span>Share on Facebook</span>
+                        </button>
+                        
+                        <button
+                          onClick={handleShareEmail}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                            isDarkMode
+                              ? 'hover:bg-gray-700 text-gray-300'
+                              : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          <span className="text-xl">📧</span>
+                          <span>Share via Email</span>
+                        </button>
+                      </div>
+                      
+                      {/* Close Button */}
+                      <div className={`p-2 border-t transition-colors duration-300 ${
+                        isDarkMode ? 'border-gray-700' : 'border-gray-200'
+                      }`}>
+                        <button
+                          onClick={() => setShowShareMenu(false)}
+                          className={`w-full px-4 py-2 rounded-lg text-sm transition-colors ${
+                            isDarkMode
+                              ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <Button
                   onClick={handleNewWebsite}
                   variant="ghost"
@@ -1089,6 +1270,21 @@ ${new Date().toLocaleDateString()}
                   New
                 </Button>
               </div>
+              {/* Share Info Banner */}
+              {generatedCode && (
+                <div className={`mt-6 p-4 rounded-lg border transition-colors duration-300 ${
+                  isDarkMode
+                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                    : 'bg-blue-50 border-blue-200 text-blue-700'
+                }`}>
+                  <p className="text-sm flex items-center gap-2">
+                    <span className="text-lg">💡</span>
+                    <span>
+                      <strong>Pro Tip:</strong> Click the 🔗 Share button to generate a link that others can use to view this website instantly!
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
           )}
           {/* My Websites Section */}
