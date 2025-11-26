@@ -40,6 +40,51 @@ import {
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 import JSZip from "jszip";
 
+const TEMPLATES = [
+  {
+    id: "portfolio",
+    icon: "🎨",
+    title: "Portfolio Website",
+    description: "Showcase your work and skills",
+    prompt: "Create a modern portfolio website with a hero section, about me section, skills grid with icons, project gallery with 6 projects showing images and descriptions, contact form, and smooth scrolling navigation. Use a gradient background from purple to blue. Make it clean and professional."
+  },
+  {
+    id: "ecommerce",
+    icon: "🏪",
+    title: "E-commerce Store",
+    description: "Online shopping experience",
+    prompt: "Build an e-commerce website with a header with shopping cart icon, featured products grid showing 8 products with images, prices, and 'Add to Cart' buttons, product categories sidebar, promotional banner, customer testimonials section, and footer with social links. Use a modern, trustworthy design with green accents."
+  },
+  {
+    id: "blog",
+    icon: "📰",
+    title: "Blog/News Site",
+    description: "Content-focused publishing platform",
+    prompt: "Design a blog website with a clean header, featured article hero section with large image, grid of 6 blog post cards showing thumbnails, titles, excerpts, and dates, sidebar with popular posts and categories, author bio section, and newsletter signup form. Use a minimal, readable design with plenty of white space."
+  },
+  {
+    id: "restaurant",
+    icon: "🍕",
+    title: "Restaurant Menu",
+    description: "Delicious food showcase",
+    prompt: "Create a restaurant website with a hero section showing food imagery, about the restaurant section, interactive menu with categories (Appetizers, Main Courses, Desserts, Drinks) showing dish names, descriptions, and prices, gallery of food photos, reservation form, location map, and opening hours. Use warm colors like orange and red."
+  },
+  {
+    id: "business",
+    icon: "💼",
+    title: "Business Landing",
+    description: "Professional company page",
+    prompt: "Build a business landing page with a bold hero section with call-to-action button, services section with 4 service cards with icons, company statistics (clients, projects, awards), team members grid with photos and roles, client logos section, pricing tables with 3 tiers, and contact form. Use a corporate blue and white color scheme."
+  },
+  {
+    id: "gaming",
+    icon: "🎮",
+    title: "Gaming Community",
+    description: "Gamers unite platform",
+    prompt: "Design a gaming community website with an energetic hero section, featured games carousel, leaderboard table showing top 10 players, upcoming tournaments section with dates and prizes, gaming news cards, live stream section, join community form, and Discord integration button. Use dark theme with neon purple and cyan accents."
+  }
+];
+
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
   gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
@@ -156,11 +201,11 @@ const Index = () => {
       { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
       { progress: 90, message: "✨ Finalizing your website..." }
     ];
-   
+  
     let currentStage = 0;
     setProgress(0);
     setProgressStage(stages[0].message);
-   
+  
     const interval = setInterval(() => {
       if (currentStage < stages.length) {
         setProgress(stages[currentStage].progress);
@@ -170,7 +215,7 @@ const Index = () => {
         clearInterval(interval);
       }
     }, 8000); // Change stage every 8 seconds
-   
+  
     return interval;
   };
 
@@ -275,7 +320,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setShowSuccess(false);
         setProgress(0);
         setProgressStage("");
-  
+ 
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
@@ -381,7 +426,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setShowSuccess(false);
         setProgress(0);
         setProgressStage("");
-  
+ 
         toast({
           title: "Regenerated! 🎉",
           description: "A fresh version of your website has been generated",
@@ -430,46 +475,42 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   const handleDownload = async () => {
     if (!generatedCode) return;
     const zip = new JSZip();
-    
+   
     // Extract CSS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-    
+   
     // Extract JS from HTML
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-    
+   
     // Create clean HTML without inline styles/scripts
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-    
+   
     // Add files to ZIP
     zip.file("index.html", cleanHtml);
     zip.file("styles.css", styles);
     zip.file("script.js", scripts);
     zip.file("README.md", `# Your AI-Generated Website
-
 ## 📁 Files Included:
 - index.html - Main HTML file
 - styles.css - All styling
 - script.js - JavaScript functionality
-
 ## 🚀 How to Use:
 1. Extract this ZIP file
 2. Open index.html in your browser
 3. Edit files as needed
 4. Host on any web server
-
 ## 📝 Notes:
 - All files are linked and ready to use
 - Modify styles.css to change design
 - Edit script.js for functionality changes
-
 Generated with AI Website Builder
 ${new Date().toLocaleDateString()}
 `);
-    
+   
     // Generate and download ZIP
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
@@ -515,6 +556,15 @@ ${new Date().toLocaleDateString()}
     setInput(exampleText);
     setIndustry(exampleIndustry);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleTemplateClick = (prompt: string) => {
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Auto-generate with template prompt
+    setInput(prompt);
+    handleGenerate();
   };
 
   const getAspectRatio = () => {
@@ -647,6 +697,58 @@ ${new Date().toLocaleDateString()}
               </div>
               {/* Input Card */}
               <div className="glass-card rounded-2xl p-8 shadow-card animate-slide-up space-y-6">
+                {/* Template Gallery */}
+                <div className="mb-12">
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-white mb-3">✨ Start with a Template</h2>
+                    <p className="text-gray-300 text-lg">Click any template to instantly generate a professional website</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {TEMPLATES.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleTemplateClick(template.prompt)}
+                        disabled={isGenerating}
+                        className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 text-left hover:bg-white/10 hover:border-white/20 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      >
+                        {/* Template Icon */}
+                        <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                          {template.icon}
+                        </div>
+                        
+                        {/* Template Title */}
+                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
+                          {template.title}
+                        </h3>
+                        
+                        {/* Template Description */}
+                        <p className="text-gray-400 text-sm mb-4">
+                          {template.description}
+                        </p>
+                        
+                        {/* Hover Effect - Generate Button */}
+                        <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span>Generate Now</span>
+                          <span className="group-hover:translate-x-1 transition-transform">→</span>
+                        </div>
+                        
+                        {/* Corner Badge */}
+                        <div className="absolute top-4 right-4 bg-blue-500/20 text-blue-300 text-xs px-3 py-1 rounded-full border border-blue-400/30">
+                          1-Click
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Divider */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                  <span className="text-gray-400 text-sm font-semibold">OR CREATE YOUR OWN</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                </div>
+
                 {/* Industry Selector */}
                 <div>
                   <label className="text-sm font-medium mb-2 block">
@@ -671,7 +773,7 @@ ${new Date().toLocaleDateString()}
                   <div className="flex items-center gap-2 mb-3">
                     <MessageSquare className="w-5 h-5 text-muted-foreground" />
                     <label className="text-sm font-medium">
-                      Describe Your Website
+                      💭 Describe Your Custom Website
                     </label>
                   </div>
                   <Textarea
@@ -694,7 +796,7 @@ ${new Date().toLocaleDateString()}
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-             
+            
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -834,21 +936,21 @@ ${new Date().toLocaleDateString()}
                   <h3 className="text-2xl font-bold text-white mb-2">Creating Your Website</h3>
                   <p className="text-gray-300 text-lg">{progressStage}</p>
                 </div>
-              
+             
                 {/* Progress Bar */}
                 <div className="relative w-full h-4 bg-gray-700 rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out"
                     style={{ width: `${progress}%` }}
                   >
                     <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
                   </div>
                 </div>
-              
+             
                 <div className="text-center mt-3">
                   <span className="text-white font-bold text-lg">{progress}%</span>
                 </div>
-              
+             
                 <div className="mt-6 text-center text-sm text-gray-500">
                   <p>⏱️ This usually takes 30-60 seconds</p>
                   <p className="mt-1">✨ AI is crafting a beautiful, responsive website for you</p>
@@ -922,7 +1024,7 @@ ${new Date().toLocaleDateString()}
                         {previewMode === "desktop" && "💻 Full Width"}
                       </div>
                     </div>
-                    
+                   
                     {/* Website Preview */}
                     <iframe
                       srcDoc={generatedCode}
@@ -1016,11 +1118,11 @@ ${new Date().toLocaleDateString()}
                           let cleanHtml = site.html
                             .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
                             .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-                         
+                        
                           zip.file("index.html", cleanHtml);
                           zip.file("styles.css", styles);
                           zip.file("script.js", scripts);
-                         
+                        
                           const content = await zip.generateAsync({ type: "blob" });
                           const url = URL.createObjectURL(content);
                           const a = document.createElement('a');
