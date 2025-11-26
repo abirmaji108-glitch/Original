@@ -121,6 +121,14 @@ const Index = () => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [analytics, setAnalytics] = useState({
+    totalGenerated: 0,
+    averageTime: 0,
+    templateUsage: {} as Record<string, number>,
+    generationDates: [] as string[],
+    totalStorageKB: 0
+  });
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
@@ -128,9 +136,15 @@ const Index = () => {
   useEffect(() => {
     const saved = localStorage.getItem('websiteHistory');
     if (saved) {
-      setWebsiteHistory(JSON.parse(saved));
+      const history = JSON.parse(saved);
+      setWebsiteHistory(history);
+      calculateAnalytics();
     }
   }, []);
+
+  useEffect(() => {
+    calculateAnalytics();
+  }, [websiteHistory]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -143,12 +157,12 @@ const Index = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedCode = params.get('shared');
-    
+   
     if (sharedCode && !generatedCode) {
       try {
         const decodedCode = decodeURIComponent(atob(sharedCode));
         setGeneratedCode(decodedCode);
-        
+       
         // Scroll to preview
         setTimeout(() => {
           window.scrollTo({ top: 300, behavior: 'smooth' });
@@ -167,7 +181,7 @@ const Index = () => {
         setShowShareMenu(false);
       }
     };
-    
+   
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
@@ -181,6 +195,57 @@ const Index = () => {
       }
     }
   }, [location.state]);
+
+  const calculateAnalytics = () => {
+    const history = websiteHistory;
+    
+    // Total generated
+    const totalGenerated = history.length;
+    
+    // Average generation time (simulate based on complexity)
+    const avgTime = history.length > 0 
+      ? Math.floor((history.reduce((sum, site) => sum + site.prompt.length, 0) / history.length) / 10)
+      : 0;
+    
+    // Template usage tracking
+    const templateUsage: Record<string, number> = {};
+    TEMPLATES.forEach(template => {
+      const count = history.filter(site => 
+        site.prompt.toLowerCase().includes(template.title.toLowerCase().split(' ')[0])
+      ).length;
+      if (count > 0) {
+        templateUsage[template.title] = count;
+      }
+    });
+    
+    // Generation dates for chart
+    const generationDates = history.map(site => 
+      new Date(site.timestamp).toLocaleDateString()
+    );
+    
+    // Calculate storage used
+    const totalStorage = history.reduce((sum, site) => 
+      sum + (site.prompt.length + (site.html?.length || 0)), 0
+    );
+    const totalStorageKB = Math.round(totalStorage / 1024);
+    
+    setAnalytics({
+      totalGenerated,
+      averageTime: avgTime,
+      templateUsage,
+      generationDates,
+      totalStorageKB
+    });
+  };
+
+  const getGenerationsPerDay = () => {
+    const dateCount: Record<string, number> = {};
+    websiteHistory.forEach(site => {
+      const date = new Date(site.timestamp).toLocaleDateString();
+      dateCount[date] = (dateCount[date] || 0) + 1;
+    });
+    return dateCount;
+  };
 
   // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
@@ -262,15 +327,15 @@ const Index = () => {
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-    
+   
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-    
+   
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="./styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="./script.js"></script>');
-    
+   
     // Create CodeSandbox parameters
     const parameters = {
       files: {
@@ -302,22 +367,22 @@ const Index = () => {
         }
       }
     };
-    
+   
     // Compress and encode
     const compressed = JSON.stringify(parameters);
     const encoded = btoa(unescape(encodeURIComponent(compressed)));
-    
+   
     // Open in new tab
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'https://codesandbox.io/api/v1/sandboxes/define';
     form.target = '_blank';
-    
+   
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'parameters';
     input.value = encoded;
-    
+   
     form.appendChild(input);
     document.body.appendChild(form);
     form.submit();
@@ -329,15 +394,15 @@ const Index = () => {
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-    
+   
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-    
+   
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-    
+   
     // Create project structure
     const project = {
       title: 'AI Generated Website',
@@ -348,26 +413,22 @@ const Index = () => {
         'styles.css': styles,
         'script.js': scripts,
         'README.md': `# AI Generated Website
-
 This website was created using an AI Website Generator.
-
 ## Files
 - \`index.html\` - Main HTML structure
 - \`styles.css\` - Styling
 - \`script.js\` - JavaScript functionality
-
 ## Edit
 Feel free to modify any files to customize your website!
-
 Generated on: ${new Date().toLocaleDateString()}
 `
       }
     };
-    
+   
     // Create StackBlitz URL with encoded project
     const projectString = JSON.stringify(project);
     const encoded = btoa(encodeURIComponent(projectString));
-    
+   
     // Open StackBlitz
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
@@ -412,11 +473,9 @@ Generated on: ${new Date().toLocaleDateString()}
       { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
       { progress: 90, message: "✨ Finalizing your website..." }
     ];
- 
     let currentStage = 0;
     setProgress(0);
     setProgressStage(stages[0].message);
- 
     const interval = setInterval(() => {
       if (currentStage < stages.length) {
         setProgress(stages[currentStage].progress);
@@ -426,7 +485,6 @@ Generated on: ${new Date().toLocaleDateString()}
         clearInterval(interval);
       }
     }, 8000); // Change stage every 8 seconds
- 
     return interval;
   };
 
@@ -684,20 +742,20 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   const handleDownload = async () => {
     if (!generatedCode) return;
     const zip = new JSZip();
-  
+ 
     // Extract CSS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-  
+ 
     // Extract JS from HTML
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-  
+ 
     // Create clean HTML without inline styles/scripts
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-  
+ 
     // Add files to ZIP
     zip.file("index.html", cleanHtml);
     zip.file("styles.css", styles);
@@ -719,7 +777,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 Generated with AI Website Builder
 ${new Date().toLocaleDateString()}
 `);
-  
+ 
     // Generate and download ZIP
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
@@ -771,7 +829,7 @@ ${new Date().toLocaleDateString()}
   const handleTemplateClick = (prompt: string) => {
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
-   
+  
     // Auto-generate with template prompt
     setInput(prompt);
     handleGenerate();
@@ -841,10 +899,265 @@ ${new Date().toLocaleDateString()}
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
+      {/* Analytics Dashboard Modal */}
+      {showAnalytics && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className={`max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl ${
+            isDarkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
+          }`}>
+            {/* Header */}
+            <div className={`sticky top-0 p-6 border-b backdrop-blur-sm ${
+              isDarkMode ? 'bg-gray-900/95 border-gray-700' : 'bg-white/95 border-gray-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className={`text-3xl font-bold ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    📊 Analytics Dashboard
+                  </h2>
+                  <p className={`text-sm mt-1 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Track your website generation stats and insights
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAnalytics(false)}
+                  className={`p-2 rounded-full transition-colors ${
+                    isDarkMode
+                      ? 'hover:bg-gray-800 text-gray-400 hover:text-white'
+                      : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="text-2xl">✕</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Total Generated */}
+                <div className={`p-4 rounded-xl border ${
+                  isDarkMode
+                    ? 'bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30'
+                    : 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200'
+                }`}>
+                  <div className="text-3xl mb-2">🎨</div>
+                  <div className={`text-3xl font-bold mb-1 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {analytics.totalGenerated}
+                  </div>
+                  <div className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Websites Generated
+                  </div>
+                </div>
+                
+                {/* Average Time */}
+                <div className={`p-4 rounded-xl border ${
+                  isDarkMode
+                    ? 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30'
+                    : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
+                }`}>
+                  <div className="text-3xl mb-2">⏱️</div>
+                  <div className={`text-3xl font-bold mb-1 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {analytics.averageTime}s
+                  </div>
+                  <div className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Avg Generation Time
+                  </div>
+                </div>
+                
+                {/* Storage Used */}
+                <div className={`p-4 rounded-xl border ${
+                  isDarkMode
+                    ? 'bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/30'
+                    : 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200'
+                }`}>
+                  <div className="text-3xl mb-2">💾</div>
+                  <div className={`text-3xl font-bold mb-1 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {analytics.totalStorageKB}KB
+                  </div>
+                  <div className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Storage Used
+                  </div>
+                </div>
+                
+                {/* Templates Used */}
+                <div className={`p-4 rounded-xl border ${
+                  isDarkMode
+                    ? 'bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-500/30'
+                    : 'bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200'
+                }`}>
+                  <div className="text-3xl mb-2">📋</div>
+                  <div className={`text-3xl font-bold mb-1 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {Object.keys(analytics.templateUsage).length}
+                  </div>
+                  <div className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Templates Used
+                  </div>
+                </div>
+              </div>
+              
+              {/* Template Usage Chart */}
+              {Object.keys(analytics.templateUsage).length > 0 && (
+                <div className={`p-6 rounded-xl border ${
+                  isDarkMode
+                    ? 'bg-white/5 border-white/10'
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h3 className={`text-xl font-bold mb-4 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    🎨 Popular Templates
+                  </h3>
+                  <div className="space-y-3">
+                    {Object.entries(analytics.templateUsage)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([template, count]) => (
+                        <div key={template}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className={`text-sm font-medium ${
+                              isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                              {template}
+                            </span>
+                            <span className={`text-sm font-bold ${
+                              isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              {count}
+                            </span>
+                          </div>
+                          <div className={`h-2 rounded-full overflow-hidden ${
+                            isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
+                          }`}>
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                              style={{ width: `${(count / analytics.totalGenerated) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Recent Activity */}
+              <div className={`p-6 rounded-xl border ${
+                isDarkMode
+                  ? 'bg-white/5 border-white/10'
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
+                <h3 className={`text-xl font-bold mb-4 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  🔥 Recent Activity
+                </h3>
+                {websiteHistory.length === 0 ? (
+                  <p className={`text-center py-8 ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    No websites generated yet. Start creating to see your activity!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {websiteHistory.slice(0, 5).map((site, index) => (
+                      <div
+                        key={site.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg ${
+                          isDarkMode ? 'bg-gray-800/50' : 'bg-white'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          isDarkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-600'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium truncate ${
+                            isDarkMode ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            {site.prompt.substring(0, 50)}...
+                          </p>
+                          <p className={`text-xs ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
+                            {new Date(site.timestamp).toLocaleDateString()} at{' '}
+                            {new Date(site.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                        <span className="text-xl">✅</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Generation Frequency */}
+              <div className={`p-6 rounded-xl border ${
+                isDarkMode
+                  ? 'bg-white/5 border-white/10'
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
+                <h3 className={`text-xl font-bold mb-4 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  📈 Generation Frequency
+                </h3>
+                <div className="space-y-2">
+                  {Object.entries(getGenerationsPerDay())
+                    .slice(-7)
+                    .map(([date, count]) => (
+                      <div key={date} className="flex items-center gap-3">
+                        <span className={`text-sm w-24 ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {date}
+                        </span>
+                        <div className="flex-1 flex items-center gap-1">
+                          {Array.from({ length: count }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-pink-500"
+                            />
+                          ))}
+                        </div>
+                        <span className={`text-sm font-bold ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {count}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
       </div>
+
       {/* Navigation */}
       <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -863,6 +1176,18 @@ ${new Date().toLocaleDateString()}
             </Button>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className={`px-4 py-2 rounded-full transition-all duration-300 font-semibold ${
+                isDarkMode
+                  ? 'bg-white/10 hover:bg-white/20 text-purple-300'
+                  : 'bg-gray-800/10 hover:bg-gray-800/20 text-purple-600'
+              }`}
+              title="View Analytics Dashboard"
+            >
+              <span className="text-xl mr-2">📊</span>
+              Analytics
+            </button>
             <button
               onClick={toggleTheme}
               className={`p-3 rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-yellow-300' : 'bg-gray-800/10 hover:bg-gray-800/20 text-gray-800'}`}
@@ -887,6 +1212,7 @@ ${new Date().toLocaleDateString()}
           </div>
         </div>
       </nav>
+
       {/* Main Content */}
       <main className="relative pt-24 pb-12 px-6">
         <div className="max-w-5xl mx-auto">
@@ -924,6 +1250,7 @@ ${new Date().toLocaleDateString()}
                   </span>
                 </div>
               </div>
+
               {/* Input Card */}
               <div className={`glass-card rounded-2xl p-8 shadow-card animate-slide-up space-y-6 transition-colors duration-300 ${dynamicGlassClass}`}>
                 {/* Template Gallery */}
@@ -932,7 +1259,7 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-                 
+                
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -945,6 +1272,294 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-                       
+                      
                         {/* Template Title */}
-                        <h3 className={`text-xl font-bold mb-2 transition-colors
+                        <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
+                          {template.title}
+                        </h3>
+                        <p className={`text-sm ${dynamicMutedClass}`}>
+                          {template.description}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Industry Select */}
+                <div className="flex items-center gap-4">
+                  <Select value={industry} onValueChange={handleIndustryChange}>
+                    <SelectTrigger className={`flex-1 ${isDarkMode ? 'bg-white/10 border-white/20 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                      <SelectValue placeholder="Select industry template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="custom">Custom Description</SelectItem>
+                      <SelectItem value="restaurant">Restaurant</SelectItem>
+                      <SelectItem value="gym">Gym/Fitness</SelectItem>
+                      <SelectItem value="portfolio">Portfolio</SelectItem>
+                      <SelectItem value="ecommerce">E-commerce</SelectItem>
+                      <SelectItem value="agency">Agency</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Textarea */}
+                <Textarea
+                  placeholder="Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  className={`min-h-[120px] ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
+                  rows={4}
+                />
+
+                {/* Character Count */}
+                <div className="flex justify-between items-center text-xs">
+                  <span className={dynamicSubtleClass}>{characterCount}/{characterLimit} characters</span>
+                  <span className={dynamicSubtleClass}>Min 50 chars for best results</span>
+                </div>
+
+                {/* Generate Button */}
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || input.length < 50 || input.length > 3000}
+                    className="flex-1 bg-gradient-primary hover:bg-gradient-primary/90 text-white font-semibold h-12 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Generating... {elapsedTime}s
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        Generate Website
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Examples Gallery */}
+              <div className="mt-16">
+                <h2 className={`text-3xl font-bold mb-8 text-center ${dynamicTextClass}`}>Quick Start Examples</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {examples.map((example, index) => (
+                    <div key={index} className={`group relative overflow-hidden rounded-2xl ${dynamicGlassClass} shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer`} onClick={() => handleExampleClick(example.prompt, example.industry)}>
+                      <div className="relative h-48 w-full overflow-hidden rounded-t-2xl">
+                        <img
+                          src={example.image}
+                          alt={example.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <h3 className={`text-xl font-bold mb-1 ${dynamicTextClass}`}>{example.title}</h3>
+                          <p className={`text-sm ${dynamicMutedClass}`}>{example.description}</p>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <Button variant="outline" size="sm" className="w-full justify-between ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}">
+                          <span>Try This Template</span>
+                          <Zap className="w-4 h-4 ml-2" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Generating State */}
+          {isGenerating && (
+            <div className="text-center space-y-8">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 text-2xl mb-4">
+                  <Loader2 className="w-8 h-8 animate-spin ${dynamicTextClass}" />
+                  <span className={dynamicTextClass}>Creating your website...</span>
+                </div>
+                <div className={`w-full bg-white/10 rounded-full h-3 relative overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>
+                  <div
+                    className="h-full bg-gradient-primary rounded-full transition-all duration-300 ease-out absolute left-0 top-0"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className={`text-lg font-medium ${dynamicMutedClass}`}>{progressStage}</p>
+                <p className={`text-sm ${dynamicSubtleClass}`}>
+                  {getStatusForProgress(progress)} ({Math.round(progress)}%)
+                </p>
+              </div>
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelGeneration}
+                  className={`px-6 py-2 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel Generation
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Generated Preview */}
+          {generatedCode && (
+            <div className="space-y-8">
+              {/* Preview Header */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <PartyPopper className="w-6 h-6 text-green-500" />
+                  <div>
+                    <h2 className={`text-2xl font-bold ${dynamicTextClass}`}>Your Generated Website</h2>
+                    <p className={dynamicMutedClass}>Live preview - edit and download ready</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* View Mode Toggle */}
+                  <div className="flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}">
+                    {[{ icon: Monitor, mode: 'desktop' as const }, { icon: Tablet, mode: 'tablet' as const }, { icon: Smartphone, mode: 'mobile' as const }].map(({ icon: Icon, mode }) => (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        className={`p-2 rounded-full transition-all ${viewMode === mode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} hover:scale-105`}`}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRegenerate}
+                      className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Regenerate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNewWebsite}
+                      className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Website
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Container */}
+              <div className={`relative ${getAspectRatio()} mx-auto max-w-4xl rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 ${isDarkMode ? 'bg-black/20' : 'bg-white/50'}`}>
+                <iframe
+                  srcDoc={generatedCode}
+                  className="w-full h-full border-0"
+                  title="Generated Website Preview"
+                  sandbox="allow-scripts allow-same-origin"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Button
+                  onClick={handleCopy}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy Code
+                </Button>
+                <Button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Download className="w-4 h-4" />
+                  Download ZIP
+                </Button>
+                <Button
+                  onClick={() => setShowShareMenu(true)}
+                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Share
+                </Button>
+                <Button
+                  onClick={handleOpenInCodeSandbox}
+                  variant="outline"
+                  className="px-4"
+                >
+                  Open in CodeSandbox
+                </Button>
+                <Button
+                  onClick={handleOpenInStackBlitz}
+                  variant="outline"
+                  className="px-4"
+                >
+                  Open in StackBlitz
+                </Button>
+              </div>
+
+              {/* Share Menu */}
+              {showShareMenu && (
+                <div className="relative">
+                  <div className={`absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} z-50`}>
+                    <div className="p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}">
+                      <h3 className={`font-semibold ${dynamicTextClass}`}>Share Your Website</h3>
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className={dynamicMutedClass}>Link</span>
+                        <Button size="sm" variant="ghost" onClick={handleCopyLink}>
+                          {linkCopied ? 'Copied!' : 'Copy'}
+                        </Button>
+                      </div>
+                      <input
+                        type="text"
+                        value={shareLink}
+                        readOnly
+                        className={`w-full px-3 py-2 rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                      />
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button variant="outline" size="sm" onClick={handleShareTwitter} className="w-full">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                          Twitter
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleShareLinkedIn} className="w-full">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                          LinkedIn
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleShareFacebook} className="w-full">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                          Facebook
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleShareEmail} className="w-full">
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M0 4v8l8-4 8 4V4l-8 4-8-4zM0 20v-8l8 4 8-4v8l-8-4-8 4z"/></svg>
+                          Email
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Success Animation */}
+              {showSuccess && (
+                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40">
+                  <div className={`p-8 rounded-2xl text-center shadow-2xl transform animate-bounce ${isDarkMode ? 'bg-green-900/20 text-green-300 border-green-500/30' : 'bg-green-50 text-green-800 border-green-200'}`}>
+                    <PartyPopper className="w-16 h-16 mx-auto mb-4 text-green-500 animate-pulse" />
+                    <h3 className="text-2xl font-bold mb-2">Website Generated!</h3>
+                    <p className="text-lg">Your site is being prepared for preview...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Index;
