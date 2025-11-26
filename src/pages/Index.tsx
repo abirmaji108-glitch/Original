@@ -117,6 +117,7 @@ const Index = () => {
     html: string;
     timestamp: number;
   }>>([]);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
@@ -125,6 +126,13 @@ const Index = () => {
     const saved = localStorage.getItem('websiteHistory');
     if (saved) {
       setWebsiteHistory(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark');
     }
   }, []);
 
@@ -160,6 +168,12 @@ const Index = () => {
       setElapsedTime(0);
     }
   }, [isGenerating]);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+  };
 
   const getStatusForProgress = (progress: number): string => {
     if (progress < 20) return "🤖 AI analyzing your requirements...";
@@ -201,11 +215,11 @@ const Index = () => {
       { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
       { progress: 90, message: "✨ Finalizing your website..." }
     ];
-  
+ 
     let currentStage = 0;
     setProgress(0);
     setProgressStage(stages[0].message);
-  
+ 
     const interval = setInterval(() => {
       if (currentStage < stages.length) {
         setProgress(stages[currentStage].progress);
@@ -215,7 +229,7 @@ const Index = () => {
         clearInterval(interval);
       }
     }, 8000); // Change stage every 8 seconds
-  
+ 
     return interval;
   };
 
@@ -320,7 +334,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setShowSuccess(false);
         setProgress(0);
         setProgressStage("");
- 
         toast({
           title: "Success! 🎉",
           description: "Your website has been generated successfully",
@@ -426,7 +439,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setShowSuccess(false);
         setProgress(0);
         setProgressStage("");
- 
         toast({
           title: "Regenerated! 🎉",
           description: "A fresh version of your website has been generated",
@@ -475,20 +487,20 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   const handleDownload = async () => {
     if (!generatedCode) return;
     const zip = new JSZip();
-   
+  
     // Extract CSS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-   
+  
     // Extract JS from HTML
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-   
+  
     // Create clean HTML without inline styles/scripts
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-   
+  
     // Add files to ZIP
     zip.file("index.html", cleanHtml);
     zip.file("styles.css", styles);
@@ -510,7 +522,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 Generated with AI Website Builder
 ${new Date().toLocaleDateString()}
 `);
-   
+  
     // Generate and download ZIP
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
@@ -561,7 +573,7 @@ ${new Date().toLocaleDateString()}
   const handleTemplateClick = (prompt: string) => {
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+   
     // Auto-generate with template prompt
     setInput(prompt);
     handleGenerate();
@@ -619,40 +631,59 @@ ${new Date().toLocaleDateString()}
     }
   ];
 
+  const dynamicTextClass = `transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`;
+  const dynamicMutedClass = `transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`;
+  const dynamicSubtleClass = `transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`;
+  const dynamicCardClass = isDarkMode
+    ? 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
+    : 'bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-lg';
+  const dynamicGlassClass = isDarkMode
+    ? 'bg-white/5 backdrop-blur-sm border border-white/10'
+    : 'bg-white border border-gray-200 shadow-xl';
+
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Animated Background Gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-900/20 via-background to-indigo-900/20 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse"></div>
+      <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
+        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
       </div>
       {/* Navigation */}
-      <nav className="glass-nav fixed top-0 left-0 right-0 z-50">
+      <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-primary" />
-              <span className="text-xl font-bold tracking-tight">Sento</span>
+              <Sparkles className={`w-6 h-6 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
+              <span className={`text-xl font-bold tracking-tight ${dynamicTextClass}`}>Sento</span>
             </div>
             <Button
               variant="ghost"
               onClick={() => navigate('/my-websites')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 hover:bg-white/10"
             >
-              <FolderOpen className="w-4 h-4" />
-              My Websites
+              <FolderOpen className={`w-4 h-4 ${dynamicSubtleClass}`} />
+              <span className={dynamicSubtleClass}>My Websites</span>
             </Button>
           </div>
-          <div className="glass-card px-4 py-2 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
-              <User className="w-4 h-4" />
-            </div>
-            <div className="text-sm">
-              <div className="font-medium">Free Plan</div>
-              <div className="text-xs text-muted-foreground">
-                Credits: 1/1{" "}
-                <a href="#" className="text-primary hover:underline">
-                  Upgrade
-                </a>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className={`p-3 rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-yellow-300' : 'bg-gray-800/10 hover:bg-gray-800/20 text-gray-800'}`}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              <span className="text-2xl">{isDarkMode ? '☀️' : '🌙'}</span>
+            </button>
+            <div className={`glass-card px-4 py-2 flex items-center gap-3 transition-colors duration-300 ${isDarkMode ? 'bg-white/10 border-white/20' : 'bg-gray-50 border-gray-200'}`}>
+              <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
+                <User className="w-4 h-4" />
+              </div>
+              <div className="text-sm">
+                <div className={dynamicTextClass}>Free Plan</div>
+                <div className={`text-xs ${dynamicSubtleClass}`}>
+                  Credits: 1/1{" "}
+                  <a href="#" className={`hover:underline ${isDarkMode ? 'text-primary' : 'text-purple-600'}`}>
+                    Upgrade
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -666,96 +697,95 @@ ${new Date().toLocaleDateString()}
               {/* Hero Section */}
               <div className="text-center mb-16 space-y-8">
                 <div className="space-y-6">
-                  <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
+                  <h1 className={`text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight ${dynamicTextClass}`}>
                     Create Stunning Websites{" "}
                     <span className="gradient-text animate-glow">with AI</span>
                   </h1>
-                  <p className="text-2xl md:text-3xl text-muted-foreground max-w-3xl mx-auto font-light">
+                  <p className={`text-2xl md:text-3xl max-w-3xl mx-auto font-light ${dynamicMutedClass}`}>
                     Describe your vision. Watch AI build it in seconds.
                   </p>
                 </div>
                 {/* Demo Video Placeholder */}
                 <div className="max-w-4xl mx-auto mt-12">
-                  <div className="glass-card rounded-2xl p-2 shadow-glow">
-                    <div className="relative aspect-video bg-gradient-to-br from-purple-900/40 to-indigo-900/40 rounded-xl flex items-center justify-center overflow-hidden">
+                  <div className={`glass-card rounded-2xl p-2 shadow-glow transition-colors duration-300 ${dynamicGlassClass}`}>
+                    <div className={`relative aspect-video rounded-xl flex items-center justify-center overflow-hidden ${isDarkMode ? 'bg-gradient-to-br from-purple-900/40 to-indigo-900/40' : 'bg-gradient-to-br from-blue-900/20 to-purple-900/20'}`}>
                       <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1547658719-da2b51169166?w=1200&h=675&fit=crop')] bg-cover bg-center opacity-30"></div>
                       <div className="relative z-10 text-center space-y-4">
                         <div className="w-20 h-20 mx-auto rounded-full bg-gradient-primary flex items-center justify-center shadow-glow hover-scale cursor-pointer">
                           <Play className="w-8 h-8 text-white ml-1" />
                         </div>
-                        <p className="text-lg font-medium">Watch How It Works</p>
+                        <p className={`text-lg font-medium ${dynamicTextClass}`}>Watch How It Works</p>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="inline-flex items-center gap-2 glass-card rounded-full px-6 py-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <span className="text-muted-foreground font-medium">
+                <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass}`}>
+                  <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
+                  <span className={dynamicMutedClass}>
                     Powered by Groq & Llama 3.3
                   </span>
                 </div>
               </div>
               {/* Input Card */}
-              <div className="glass-card rounded-2xl p-8 shadow-card animate-slide-up space-y-6">
+              <div className={`glass-card rounded-2xl p-8 shadow-card animate-slide-up space-y-6 transition-colors duration-300 ${dynamicGlassClass}`}>
                 {/* Template Gallery */}
                 <div className="mb-12">
                   <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-white mb-3">✨ Start with a Template</h2>
-                    <p className="text-gray-300 text-lg">Click any template to instantly generate a professional website</p>
+                    <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
+                    <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-                  
+                 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
                         key={template.id}
                         onClick={() => handleTemplateClick(template.prompt)}
                         disabled={isGenerating}
-                        className="group relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 text-left hover:bg-white/10 hover:border-white/20 hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className={`group relative ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
                       >
                         {/* Template Icon */}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-                        
+                       
                         {/* Template Title */}
-                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
+                        <h3 className={`text-xl font-bold mb-2 transition-colors ${isDarkMode ? 'text-white group-hover:text-blue-300' : 'text-gray-900 group-hover:text-blue-600'}`}>
                           {template.title}
                         </h3>
-                        
+                       
                         {/* Template Description */}
-                        <p className="text-gray-400 text-sm mb-4">
+                        <p className={`text-sm mb-4 ${dynamicSubtleClass}`}>
                           {template.description}
                         </p>
-                        
+                       
                         {/* Hover Effect - Generate Button */}
-                        <div className="flex items-center gap-2 text-blue-400 font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className={`flex items-center gap-2 font-semibold text-sm opacity-0 group-hover:opacity-100 transition-opacity ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                           <span>Generate Now</span>
                           <span className="group-hover:translate-x-1 transition-transform">→</span>
                         </div>
-                        
+                       
                         {/* Corner Badge */}
-                        <div className="absolute top-4 right-4 bg-blue-500/20 text-blue-300 text-xs px-3 py-1 rounded-full border border-blue-400/30">
+                        <div className={`absolute top-4 right-4 text-xs px-3 py-1 rounded-full border ${isDarkMode ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' : 'bg-blue-100 text-blue-600 border-blue-200'}`}>
                           1-Click
                         </div>
                       </button>
                     ))}
                   </div>
                 </div>
-                
+               
                 {/* Divider */}
                 <div className="flex items-center gap-4 mb-8">
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                  <span className="text-gray-400 text-sm font-semibold">OR CREATE YOUR OWN</span>
-                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                  <div className={`flex-1 h-px ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/20 to-transparent' : 'bg-gradient-to-r from-transparent via-gray-300 to-transparent'}`}></div>
+                  <span className={dynamicSubtleClass}>OR CREATE YOUR OWN</span>
+                  <div className={`flex-1 h-px ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/20 to-transparent' : 'bg-gradient-to-r from-transparent via-gray-300 to-transparent'}`}></div>
                 </div>
-
                 {/* Industry Selector */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block">
+                  <label className={`text-sm font-medium mb-2 block ${dynamicTextClass}`}>
                     Choose Your Industry
                   </label>
                   <Select value={industry} onValueChange={handleIndustryChange}>
-                    <SelectTrigger className="w-full bg-black/40 border-white/20">
+                    <SelectTrigger className={`w-full transition-colors duration-300 ${isDarkMode ? 'bg-black/40 border-white/20' : 'bg-white border-gray-300'}`}>
                       <SelectValue placeholder="Select your industry..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -771,8 +801,8 @@ ${new Date().toLocaleDateString()}
                 {/* Description Input */}
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <MessageSquare className="w-5 h-5 text-muted-foreground" />
-                    <label className="text-sm font-medium">
+                    <MessageSquare className={`w-5 h-5 ${dynamicMutedClass}`} />
+                    <label className={`text-sm font-medium ${dynamicTextClass}`}>
                       💭 Describe Your Custom Website
                     </label>
                   </div>
@@ -784,19 +814,19 @@ ${new Date().toLocaleDateString()}
                         ? "Describe your dream website in detail..."
                         : "Edit the template above or describe your dream website in detail..."
                     }
-                    className="w-full h-56 bg-black/40 border-white/20 rounded-xl p-4 text-foreground placeholder:text-muted-foreground/60 text-sm focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50 resize-none"
+                    className={`w-full h-56 rounded-xl p-4 text-sm focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50 resize-none transition-colors duration-300 ${isDarkMode ? 'bg-black/40 border-white/20 text-foreground placeholder:text-muted-foreground/60' : 'bg-white border-gray-300 text-gray-900 placeholder:text-gray-500'}`}
                     maxLength={characterLimit + 100}
                   />
                   {/* Dynamic Character Counter with Validation Feedback */}
                   <div className="mt-3 space-y-2">
                     {/* Empty State Helper */}
                     {characterCount === 0 && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                      <div className={`flex items-center gap-2 text-sm ${dynamicMutedClass} animate-pulse`}>
                         <Lightbulb className="w-4 h-4" />
                         <span>Not sure what to write? Pick an industry template above!</span>
                       </div>
                     )}
-            
+           
                     {/* Character Count with Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -825,12 +855,12 @@ ${new Date().toLocaleDateString()}
                           </>
                         )}
                       </div>
-                      <div className="text-sm text-gray-400 text-right flex items-center gap-2">
+                      <div className={`text-sm text-right flex items-center gap-2 ${dynamicSubtleClass}`}>
                         <span className={characterCount > 2800 ? "text-yellow-500" : ""}>
                           {characterCount}/3000
                         </span>
                         {characterCount > 1000 && (
-                          <span className="text-xs text-purple-400">
+                          <span className={`text-xs ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
                             ⚡ Auto-optimizing prompt
                           </span>
                         )}
@@ -839,28 +869,28 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
                 {/* Pro Tips Panel */}
-                <div className="glass-card rounded-xl p-5 bg-primary/5 border-primary/20">
+                <div className={`glass-card rounded-xl p-5 transition-colors duration-300 ${isDarkMode ? 'bg-primary/5 border-primary/20' : 'bg-blue-50 border-blue-200'}`}>
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                        <Lightbulb className="w-4 h-4 text-primary" />
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-primary/20' : 'bg-primary/10'}`}>
+                        <Lightbulb className={`w-4 h-4 ${isDarkMode ? 'text-primary' : 'text-primary'}`} />
                       </div>
-                      <h3 className="font-bold text-base">💡 Pro Tips for Amazing Websites:</h3>
+                      <h3 className={`font-bold text-base ${dynamicTextClass}`}>💡 Pro Tips for Amazing Websites:</h3>
                     </div>
                     <div className="grid gap-2 ml-10">
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
                         <span className="text-green-500 font-bold">✓</span>
                         <span>Include your business name and type</span>
                       </div>
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
                         <span className="text-green-500 font-bold">✓</span>
                         <span>Specify 2-3 color preferences</span>
                       </div>
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
                         <span className="text-green-500 font-bold">✓</span>
                         <span>List must-have features (menu, gallery, contact, etc.)</span>
                       </div>
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <div className={`flex items-start gap-2 text-sm ${dynamicMutedClass}`}>
                         <span className="text-green-500 font-bold">✓</span>
                         <span>Mention your target audience if relevant</span>
                       </div>
@@ -889,10 +919,10 @@ ${new Date().toLocaleDateString()}
               {/* Examples Section */}
               <div className="mt-20 space-y-8">
                 <div className="text-center space-y-3">
-                  <h2 className="text-3xl md:text-4xl font-bold">
+                  <h2 className={`text-3xl md:text-4xl font-bold ${dynamicTextClass}`}>
                     Get Inspired by <span className="gradient-text">Examples</span>
                   </h2>
-                  <p className="text-muted-foreground text-lg">
+                  <p className={dynamicMutedClass}>
                     Click any example to use its prompt
                   </p>
                 </div>
@@ -901,7 +931,7 @@ ${new Date().toLocaleDateString()}
                     <div
                       key={index}
                       onClick={() => handleExampleClick(example.prompt, example.industry)}
-                      className="glass-card rounded-xl overflow-hidden hover-scale cursor-pointer group"
+                      className={`glass-card rounded-xl overflow-hidden hover-scale cursor-pointer group transition-colors duration-300 ${dynamicGlassClass}`}
                     >
                       <div className="aspect-video relative overflow-hidden">
                         <img
@@ -911,13 +941,13 @@ ${new Date().toLocaleDateString()}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
                           <div>
-                            <h3 className="font-bold text-lg">{example.title}</h3>
-                            <p className="text-sm text-muted-foreground">{example.description}</p>
+                            <h3 className={`font-bold text-lg ${dynamicTextClass}`}>{example.title}</h3>
+                            <p className={`text-sm ${dynamicMutedClass}`}>{example.description}</p>
                           </div>
                         </div>
                       </div>
-                      <div className="p-4 bg-primary/5 border-t border-primary/10">
-                        <p className="text-xs text-muted-foreground line-clamp-2">
+                      <div className={`p-4 transition-colors duration-300 ${isDarkMode ? 'bg-primary/5 border-t border-primary/10' : 'bg-gray-50 border-t border-gray-200'}`}>
+                        <p className={`text-xs ${dynamicSubtleClass} line-clamp-2`}>
                           {example.prompt}
                         </p>
                       </div>
@@ -929,14 +959,14 @@ ${new Date().toLocaleDateString()}
           )}
           {/* Loading State */}
           {isGenerating && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-              <div className="bg-gray-900 rounded-2xl p-8 max-w-md mx-4 border border-purple-500/20 shadow-2xl">
+            <div className={`fixed inset-0 ${isDarkMode ? 'bg-black/80' : 'bg-white/80'} backdrop-blur-sm flex items-center justify-center z-50`}>
+              <div className={`rounded-2xl p-8 max-w-md mx-4 border shadow-2xl transition-colors duration-300 ${isDarkMode ? 'bg-gray-900 border-purple-500/20' : 'bg-white border-blue-500/20'}`}>
                 <div className="text-center mb-6">
                   <div className="inline-block animate-spin text-6xl mb-4">⚙️</div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Creating Your Website</h3>
-                  <p className="text-gray-300 text-lg">{progressStage}</p>
+                  <h3 className={`text-2xl font-bold mb-2 ${dynamicTextClass}`}>Creating Your Website</h3>
+                  <p className={`text-lg ${dynamicMutedClass}`}>{progressStage}</p>
                 </div>
-             
+            
                 {/* Progress Bar */}
                 <div className="relative w-full h-4 bg-gray-700 rounded-full overflow-hidden">
                   <div
@@ -946,14 +976,14 @@ ${new Date().toLocaleDateString()}
                     <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
                   </div>
                 </div>
-             
+            
                 <div className="text-center mt-3">
-                  <span className="text-white font-bold text-lg">{progress}%</span>
+                  <span className={`font-bold text-lg ${dynamicTextClass}`}>{progress}%</span>
                 </div>
-             
-                <div className="mt-6 text-center text-sm text-gray-500">
-                  <p>⏱️ This usually takes 30-60 seconds</p>
-                  <p className="mt-1">✨ AI is crafting a beautiful, responsive website for you</p>
+            
+                <div className="mt-6 text-center text-sm">
+                  <p className={dynamicSubtleClass}>⏱️ This usually takes 30-60 seconds</p>
+                  <p className={`mt-1 ${dynamicSubtleClass}`}>✨ AI is crafting a beautiful, responsive website for you</p>
                 </div>
               </div>
             </div>
@@ -963,38 +993,26 @@ ${new Date().toLocaleDateString()}
             <div className="space-y-8 animate-slide-up">
               {/* Success Header */}
               <div className="flex items-center justify-center gap-3">
-                <PartyPopper className="w-10 h-10 text-primary animate-bounce" />
-                <h2 className="text-4xl font-bold">Your Website is Ready!</h2>
+                <PartyPopper className={`w-10 h-10 ${isDarkMode ? 'text-primary' : 'text-purple-600'} animate-bounce`} />
+                <h2 className={`text-4xl font-bold ${dynamicTextClass}`}>Your Website is Ready!</h2>
               </div>
               {/* Preview Mode Toggle Buttons */}
               <div className="flex justify-center gap-3 mb-6">
                 <button
                   onClick={() => setPreviewMode("mobile")}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                    previewMode === "mobile"
-                      ? "bg-blue-500 text-white shadow-lg scale-105"
-                      : "bg-white/10 text-gray-300 hover:bg-white/20"
-                  }`}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${previewMode === "mobile" ? "bg-blue-500 text-white shadow-lg scale-105" : isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                 >
                   📱 Mobile
                 </button>
                 <button
                   onClick={() => setPreviewMode("tablet")}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                    previewMode === "tablet"
-                      ? "bg-blue-500 text-white shadow-lg scale-105"
-                      : "bg-white/10 text-gray-300 hover:bg-white/20"
-                  }`}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${previewMode === "tablet" ? "bg-blue-500 text-white shadow-lg scale-105" : isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                 >
                   📱 Tablet
                 </button>
                 <button
                   onClick={() => setPreviewMode("desktop")}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                    previewMode === "desktop"
-                      ? "bg-blue-500 text-white shadow-lg scale-105"
-                      : "bg-white/10 text-gray-300 hover:bg-white/20"
-                  }`}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${previewMode === "desktop" ? "bg-blue-500 text-white shadow-lg scale-105" : isDarkMode ? "bg-white/10 text-gray-300 hover:bg-white/20" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                 >
                   💻 Desktop
                 </button>
@@ -1002,23 +1020,17 @@ ${new Date().toLocaleDateString()}
               {/* Responsive Preview Container */}
               <div className="flex justify-center">
                 <div
-                  className={`transition-all duration-500 ${
-                    previewMode === "mobile"
-                      ? "w-[375px]"
-                      : previewMode === "tablet"
-                      ? "w-[768px]"
-                      : "w-full"
-                  }`}
+                  className={`transition-all duration-500 ${previewMode === "mobile" ? "w-[375px]" : previewMode === "tablet" ? "w-[768px]" : "w-full"}`}
                 >
-                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden shadow-2xl">
+                  <div className={`backdrop-blur-sm border rounded-lg overflow-hidden shadow-2xl transition-colors duration-300 ${dynamicGlassClass}`}>
                     {/* Device Frame Header */}
-                    <div className="bg-gray-800 px-4 py-2 flex items-center gap-2">
+                    <div className={`px-4 py-2 flex items-center gap-2 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                       <div className="flex gap-1.5">
                         <div className="w-3 h-3 rounded-full bg-red-500"></div>
                         <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                         <div className="w-3 h-3 rounded-full bg-green-500"></div>
                       </div>
-                      <div className="flex-1 text-center text-gray-400 text-sm font-mono">
+                      <div className={`flex-1 text-center text-sm font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {previewMode === "mobile" && "📱 375px × 667px"}
                         {previewMode === "tablet" && "📱 768px × 1024px"}
                         {previewMode === "desktop" && "💻 Full Width"}
@@ -1040,7 +1052,7 @@ ${new Date().toLocaleDateString()}
                 <Button
                   onClick={handleRegenerate}
                   variant="outline"
-                  className="h-14 text-base font-semibold border-white/20 bg-white/5 hover:bg-white/10"
+                  className={`h-14 text-base font-semibold transition-colors duration-300 ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
                 >
                   <RefreshCw className="w-5 h-5 mr-2" />
                   Regenerate
@@ -1055,7 +1067,7 @@ ${new Date().toLocaleDateString()}
                 <Button
                   onClick={handleCopy}
                   variant="outline"
-                  className="h-14 text-base font-semibold border-white/20 bg-white/5 hover:bg-white/10"
+                  className={`h-14 text-base font-semibold transition-colors duration-300 ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
                 >
                   <Copy className="w-5 h-5 mr-2" />
                   Copy Code
@@ -1063,7 +1075,7 @@ ${new Date().toLocaleDateString()}
                 <Button
                   onClick={handleShare}
                   variant="outline"
-                  className="h-14 text-base font-semibold border-white/20 bg-white/5 hover:bg-white/10"
+                  className={`h-14 text-base font-semibold transition-colors duration-300 ${isDarkMode ? 'border-white/20 bg-white/5 hover:bg-white/10' : 'border-gray-300 bg-white hover:bg-gray-50'}`}
                 >
                   <Share2 className="w-5 h-5 mr-2" />
                   Share
@@ -1071,7 +1083,7 @@ ${new Date().toLocaleDateString()}
                 <Button
                   onClick={handleNewWebsite}
                   variant="ghost"
-                  className="h-14 text-base font-semibold text-muted-foreground hover:text-foreground"
+                  className={`h-14 text-base font-semibold ${isDarkMode ? 'text-muted-foreground hover:text-foreground' : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   <Plus className="w-5 h-5 mr-2" />
                   New
@@ -1082,29 +1094,29 @@ ${new Date().toLocaleDateString()}
           {/* My Websites Section */}
           {websiteHistory.length > 0 && (
             <div className="mt-12">
-              <h2 className="text-2xl font-bold text-white mb-6">📂 My Websites ({websiteHistory.length})</h2>
+              <h2 className={`text-2xl font-bold mb-6 ${dynamicTextClass}`}>📂 My Websites ({websiteHistory.length})</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {websiteHistory.map((site) => (
-                  <div key={site.id} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-all">
+                  <div key={site.id} className={`backdrop-blur-sm rounded-lg p-6 transition-all duration-300 ${dynamicCardClass}`}>
                     <div className="flex justify-between items-start mb-3">
-                      <p className="text-sm text-gray-400">
+                      <p className={`text-sm ${dynamicSubtleClass}`}>
                         {new Date(site.timestamp).toLocaleDateString()} {new Date(site.timestamp).toLocaleTimeString()}
                       </p>
                       <button
                         onClick={() => handleDelete(site.id)}
-                        className="text-red-400 hover:text-red-300 text-xl"
+                        className={`text-xl transition-colors ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-600'}`}
                         title="Delete"
                       >
                         🗑️
                       </button>
                     </div>
-                    <p className="text-white text-sm mb-4 line-clamp-3">
+                    <p className={`text-sm mb-4 line-clamp-3 ${dynamicTextClass}`}>
                       {site.prompt}
                     </p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleLoadWebsite(site.html)}
-                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded text-sm transition-colors"
+                        className={`flex-1 py-2 px-4 rounded text-sm transition-colors ${isDarkMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
                       >
                         👁️ View
                       </button>
@@ -1118,11 +1130,11 @@ ${new Date().toLocaleDateString()}
                           let cleanHtml = site.html
                             .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
                             .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-                        
+                       
                           zip.file("index.html", cleanHtml);
                           zip.file("styles.css", styles);
                           zip.file("script.js", scripts);
-                        
+                       
                           const content = await zip.generateAsync({ type: "blob" });
                           const url = URL.createObjectURL(content);
                           const a = document.createElement('a');
@@ -1131,7 +1143,7 @@ ${new Date().toLocaleDateString()}
                           a.click();
                           URL.revokeObjectURL(url);
                         }}
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded text-sm transition-colors"
+                        className={`flex-1 py-2 px-4 rounded text-sm transition-colors ${isDarkMode ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
                       >
                         📦 ZIP
                       </button>
