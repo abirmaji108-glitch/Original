@@ -647,7 +647,7 @@ REQUIREMENTS:
 - Accessibility features (alt tags, ARIA labels)
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
       setLastPrompt(prompt);
-      const response = await fetch('/api/generate', {
+      const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -764,7 +764,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       });
     }, 150);
     try {
-      const response = await fetch('/api/generate', {
+      const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
