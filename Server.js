@@ -1,11 +1,22 @@
 // server.js - Complete Express.js server with Smart Compression for Website Generation
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Add CORS middleware - PUT THIS BEFORE ANY ROUTES
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 
 // Middleware
 app.use(cors());
@@ -27,11 +38,11 @@ app.post('/api/generate', async (req, res) => {
 
   try {
     let optimizedPrompt = prompt;
-    
+   
     // SMART COMPRESSION: If prompt is long (>1000 chars), compress it first
     if (prompt.length > 1000) {
       console.log(`🔧 Compressing long prompt (${prompt.length} chars)...`);
-      
+     
       const compressionResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -46,7 +57,6 @@ app.post('/api/generate', async (req, res) => {
           messages: [{
             role: 'user',
             content: `Convert this detailed website request into a concise structured brief (maximum 500 words). Keep ALL essential details but compress into efficient format:
-
 ${prompt}
 
 Format your response as:
@@ -84,7 +94,7 @@ Be comprehensive but concise. Don't lose any important details.`
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4096,
-        system: `You are an elite web developer who creates stunning, production-ready websites. You MUST return ONLY complete HTML code starting with <!DOCTYPE html>. 
+        system: `You are an elite web developer who creates stunning, production-ready websites. You MUST return ONLY complete HTML code starting with <!DOCTYPE html>.
 
 CRITICAL RULES:
 - NEVER include markdown code blocks (\`\`\`html)
@@ -99,7 +109,6 @@ CRITICAL RULES:
           {
             role: 'user',
             content: `Create a complete, professional, fully-functional website based on this brief:
-
 ${optimizedPrompt}
 
 REQUIREMENTS:
@@ -122,9 +131,9 @@ Return ONLY the HTML code, nothing else.`
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Claude API Error:', response.status, errorText);
-      return res.status(response.status).json({ 
+      return res.status(response.status).json({
         error: `API Error: ${response.status}`,
-        details: errorText 
+        details: errorText
       });
     }
 
@@ -137,9 +146,9 @@ Return ONLY the HTML code, nothing else.`
     // Validate HTML
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
       console.error('Invalid HTML generated - missing DOCTYPE');
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Invalid HTML generated',
-        message: 'Generated content does not include proper HTML structure' 
+        message: 'Generated content does not include proper HTML structure'
       });
     }
 
@@ -148,7 +157,7 @@ Return ONLY the HTML code, nothing else.`
 
   } catch (error) {
     console.error('Server error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
