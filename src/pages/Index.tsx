@@ -166,12 +166,11 @@ const Index = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sharedCode = params.get('shared');
- 
     if (sharedCode && !generatedCode) {
       try {
         const decodedCode = decodeURIComponent(atob(sharedCode));
         setGeneratedCode(decodedCode);
-     
+    
         // Scroll to preview
         setTimeout(() => {
           window.scrollTo({ top: 300, behavior: 'smooth' });
@@ -189,7 +188,6 @@ const Index = () => {
         setShowShareMenu(false);
       }
     };
- 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
@@ -204,15 +202,15 @@ const Index = () => {
   }, [location.state]);
   const calculateAnalytics = () => {
     const history = websiteHistory;
-  
+ 
     // Total generated
     const totalGenerated = history.length;
-  
+ 
     // Average generation time (simulate based on complexity)
     const avgTime = history.length > 0
       ? Math.floor((history.reduce((sum, site) => sum + site.prompt.length, 0) / history.length) / 10)
       : 0;
-  
+ 
     // Template usage tracking
     const templateUsage: Record<string, number> = {};
     TEMPLATES.forEach(template => {
@@ -223,18 +221,18 @@ const Index = () => {
         templateUsage[template.title] = count;
       }
     });
-  
+ 
     // Generation dates for chart
     const generationDates = history.map(site =>
       new Date(site.timestamp).toLocaleDateString()
     );
-  
+ 
     // Calculate storage used
     const totalStorage = history.reduce((sum, site) =>
       sum + (site.prompt.length + (site.html?.length || 0)), 0
     );
     const totalStorageKB = Math.round(totalStorage / 1024);
-  
+ 
     setAnalytics({
       totalGenerated,
       averageTime: avgTime,
@@ -253,57 +251,37 @@ const Index = () => {
   };
   const sendChatMessage = async () => {
     if (!chatInput.trim() || isChatLoading) return;
-   
+  
     const userMessage = chatInput.trim();
     setChatInput("");
-   
+  
     // Add user message to chat
     const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }];
     setChatMessages(newMessages);
     setIsChatLoading(true);
-   
+  
     try {
-      // Call Claude API
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      // Call Backend API
+      const response = await fetch("https://original-lbxv.onrender.com/api/generate", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          // Note: Add your Anthropic API key here in production: "x-api-key": "your-api-key"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [
-            {
-              role: "user",
-              content: `You are a helpful AI assistant for an AI Website Generator application.
-             
-The user can create websites by describing what they want, choose from templates (Portfolio, E-commerce, Blog, Restaurant, Business, Gaming), and you help them with:
-- Suggesting website ideas and improvements
-- Brainstorming design concepts
-- Writing better prompts for the AI generator
-- Explaining web design best practices
-- Troubleshooting their generated websites
-User's question: ${userMessage}
-Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encouraging!`
-            }
-          ],
+          prompt: userMessage
         })
       });
       const data = await response.json();
-     
-      // Extract text from response
-      const assistantMessage = data.content
-        .map((item: any) => (item.type === "text" ? item.text : ""))
-        .filter(Boolean)
-        .join("\n");
-     
+    
+      // Extract text from response (assuming backend returns response in htmlCode field for chat)
+      const assistantMessage = data.htmlCode || "I'm here to help! Could you please rephrase your question?";
+    
       // Add assistant response to chat
       setChatMessages([...newMessages, {
         role: 'assistant' as const,
-        content: assistantMessage || "I'm here to help! Could you please rephrase your question?"
+        content: assistantMessage
       }]);
-     
+    
     } catch (error) {
       console.error("Chat error:", error);
       setChatMessages([...newMessages, {
@@ -399,15 +377,12 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
- 
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
- 
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="./styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="./script.js"></script>');
- 
     // Create CodeSandbox parameters
     const parameters = {
       files: {
@@ -439,22 +414,18 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
         }
       }
     };
- 
     // Compress and encode
     const compressed = JSON.stringify(parameters);
     const encoded = btoa(unescape(encodeURIComponent(compressed)));
- 
     // Open in new tab
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'https://codesandbox.io/api/v1/sandboxes/define';
     form.target = '_blank';
- 
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'parameters';
     input.value = encoded;
- 
     form.appendChild(input);
     document.body.appendChild(form);
     form.submit();
@@ -465,15 +436,12 @@ Provide a helpful, concise response (2-3 paragraphs max). Be friendly and encour
     // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
- 
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
- 
     // Create clean HTML
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
- 
     // Create project structure
     const project = {
       title: 'AI Generated Website',
@@ -495,11 +463,9 @@ Generated on: ${new Date().toLocaleDateString()}
 `
       }
     };
- 
     // Create StackBlitz URL with encoded project
     const projectString = JSON.stringify(project);
     const encoded = btoa(encodeURIComponent(projectString));
- 
     // Open StackBlitz
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
@@ -557,8 +523,8 @@ Generated on: ${new Date().toLocaleDateString()}
   };
   const saveProjectDetails = () => {
     if (!editingProject) return;
-    
-    const updatedHistory = websiteHistory.map(site => 
+   
+    const updatedHistory = websiteHistory.map(site =>
       site.id === editingProject
         ? {
             ...site,
@@ -568,10 +534,10 @@ Generated on: ${new Date().toLocaleDateString()}
           }
         : site
     );
-    
+   
     setWebsiteHistory(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-    
+   
     setShowProjectModal(false);
     setEditingProject(null);
     setProjectName("");
@@ -602,7 +568,7 @@ Generated on: ${new Date().toLocaleDateString()}
   };
   const getFilteredProjects = () => {
     let filtered = [...websiteHistory];
-    
+   
     // Search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(site =>
@@ -612,17 +578,17 @@ Generated on: ${new Date().toLocaleDateString()}
         site.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
-    
+   
     // Tag filter
     if (filterTag !== "all") {
       filtered = filtered.filter(site => site.tags.includes(filterTag));
     }
-    
+   
     // Favorites filter
     if (showFavoritesOnly) {
       filtered = filtered.filter(site => site.isFavorite);
     }
-    
+   
     return filtered;
   };
   const getAllTags = () => {
@@ -1083,7 +1049,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-          
+         
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Stats Cards */}
@@ -1106,7 +1072,7 @@ ${new Date().toLocaleDateString()}
                     Websites Generated
                   </div>
                 </div>
-              
+             
                 {/* Average Time */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1125,7 +1091,7 @@ ${new Date().toLocaleDateString()}
                     Avg Generation Time
                   </div>
                 </div>
-              
+             
                 {/* Storage Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1144,7 +1110,7 @@ ${new Date().toLocaleDateString()}
                     Storage Used
                   </div>
                 </div>
-              
+             
                 {/* Templates Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1164,7 +1130,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-            
+           
               {/* Template Usage Chart */}
               {Object.keys(analytics.templateUsage).length > 0 && (
                 <div className={`p-6 rounded-xl border ${
@@ -1207,7 +1173,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-            
+           
               {/* Recent Activity */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1258,7 +1224,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
-            
+           
               {/* Generation Frequency */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1358,7 +1324,7 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
             </div>
-           
+          
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chatMessages.length === 0 ? (
@@ -1374,7 +1340,7 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
-                 
+                
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1425,7 +1391,7 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
-                 
+                
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1442,7 +1408,7 @@ ${new Date().toLocaleDateString()}
                 </>
               )}
             </div>
-           
+          
             {/* Chat Input */}
             <div className={`p-4 border-t ${
               isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
@@ -1512,7 +1478,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-            
+           
             {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Project Name */}
@@ -1534,7 +1500,7 @@ ${new Date().toLocaleDateString()}
                   }`}
                 />
               </div>
-              
+             
               {/* Tags */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1578,7 +1544,7 @@ ${new Date().toLocaleDateString()}
                       : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                   }`}
                 />
-                
+               
                 {/* Quick Tag Buttons */}
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
@@ -1601,7 +1567,7 @@ ${new Date().toLocaleDateString()}
                   ))}
                 </div>
               </div>
-              
+             
               {/* Notes */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1622,7 +1588,7 @@ ${new Date().toLocaleDateString()}
                 />
               </div>
             </div>
-            
+           
             {/* Modal Footer */}
             <div className={`p-6 border-t flex justify-end gap-3 ${
               isDarkMode ? 'border-gray-700' : 'border-gray-200'
@@ -1767,7 +1733,7 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-              
+             
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -1780,7 +1746,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-                    
+                   
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -2062,7 +2028,7 @@ ${new Date().toLocaleDateString()}
                 }`}>
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
-                
+               
                 {/* Search and Filters */}
                 <div className="flex flex-wrap gap-3">
                   {/* Search */}
@@ -2077,7 +2043,7 @@ ${new Date().toLocaleDateString()}
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-                  
+                 
                   {/* Tag Filter */}
                   <select
                     value={filterTag}
@@ -2093,7 +2059,7 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-                  
+                 
                   {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -2109,7 +2075,7 @@ ${new Date().toLocaleDateString()}
                   </button>
                 </div>
               </div>
-              
+             
               {/* Project Grid */}
               {getFilteredProjects().length === 0 ? (
                 <div className={`text-center py-12 rounded-xl border ${
@@ -2152,7 +2118,7 @@ ${new Date().toLocaleDateString()}
                       >
                         {site.isFavorite ? '⭐' : '☆'}
                       </button>
-                      
+                     
                       {/* Project Info */}
                       <div className="mb-4">
                         <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2160,7 +2126,7 @@ ${new Date().toLocaleDateString()}
                         }`}>
                           {site.name}
                         </h3>
-                        
+                       
                         {/* Tags */}
                         {site.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-3">
@@ -2178,13 +2144,13 @@ ${new Date().toLocaleDateString()}
                             ))}
                           </div>
                         )}
-                        
+                       
                         <p className={`text-sm mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           {site.prompt}
                         </p>
-                        
+                       
                         {site.notes && (
                           <p className={`text-xs italic mb-2 line-clamp-2 ${
                             isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2192,7 +2158,7 @@ ${new Date().toLocaleDateString()}
                             📝 {site.notes}
                           </p>
                         )}
-                        
+                       
                         <p className={`text-xs ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
@@ -2200,7 +2166,7 @@ ${new Date().toLocaleDateString()}
                           {new Date(site.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-                      
+                     
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -2216,7 +2182,7 @@ ${new Date().toLocaleDateString()}
                         >
                           👁️ View
                         </button>
-                        
+                       
                         <button
                           onClick={() => openEditProject(site)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2227,7 +2193,7 @@ ${new Date().toLocaleDateString()}
                         >
                           ✏️ Edit
                         </button>
-                        
+                       
                         <button
                           onClick={() => handleDelete(site.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2258,7 +2224,7 @@ ${new Date().toLocaleDateString()}
             transform: translateY(0);
           }
         }
-       
+      
         @keyframes fadeIn {
           from {
             opacity: 0;
@@ -2267,11 +2233,11 @@ ${new Date().toLocaleDateString()}
             opacity: 1;
           }
         }
-       
+      
         .animate-slideUp {
           animation: slideUp 0.3s ease-out;
         }
-       
+      
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
         }
