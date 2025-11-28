@@ -28,6 +28,7 @@ import {
   Unlock,
   X,
   RefreshCw,
+  LogOut,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 import JSZip from "jszip";
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
 const TEMPLATES = [
   {
@@ -147,6 +148,7 @@ const Index = () => {
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   // Load history from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('websiteHistory');
@@ -165,6 +167,12 @@ const Index = () => {
       setIsDarkMode(savedTheme === 'dark');
     }
   }, []);
+  // Get authenticated user ID
+  useEffect(() => {
+    if (user?.id) {
+      setUserId(user.id);
+    }
+  }, [user]);
   // Check if there's a shared website in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -173,7 +181,6 @@ const Index = () => {
       try {
         const decodedCode = decodeURIComponent(atob(sharedCode));
         setGeneratedCode(decodedCode);
-  
         // Scroll to preview
         setTimeout(() => {
           window.scrollTo({ top: 300, behavior: 'smooth' });
@@ -203,15 +210,6 @@ const Index = () => {
       }
     }
   }, [location.state]);
-  useEffect(() => {
-    const getUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-      }
-    };
-    getUserId();
-  }, []);
   const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
   const calculateAnalytics = () => {
     const history = websiteHistory;
@@ -276,16 +274,13 @@ const Index = () => {
         })
       });
       const data = await response.json();
-  
       // Extract text from response (assuming backend returns response in htmlCode field for chat)
       const assistantMessage = data.htmlCode || "I'm here to help! Could you please rephrase your question?";
-  
       // Add assistant response to chat
       setChatMessages([...newMessages, {
         role: 'assistant' as const,
         content: assistantMessage
       }]);
-  
     } catch (error) {
       console.error("Chat error:", error);
       setChatMessages([...newMessages, {
@@ -527,7 +522,6 @@ Generated on: ${new Date().toLocaleDateString()}
   };
   const saveProjectDetails = () => {
     if (!editingProject) return;
- 
     const updatedHistory = websiteHistory.map(site =>
       site.id === editingProject
         ? {
@@ -538,10 +532,8 @@ Generated on: ${new Date().toLocaleDateString()}
           }
         : site
     );
- 
     setWebsiteHistory(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
- 
     setShowProjectModal(false);
     setEditingProject(null);
     setProjectName("");
@@ -572,7 +564,6 @@ Generated on: ${new Date().toLocaleDateString()}
   };
   const getFilteredProjects = () => {
     let filtered = [...websiteHistory];
- 
     // Search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(site =>
@@ -582,17 +573,14 @@ Generated on: ${new Date().toLocaleDateString()}
         site.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
- 
     // Tag filter
     if (filterTag !== "all") {
       filtered = filtered.filter(site => site.tags.includes(filterTag));
     }
- 
     // Favorites filter
     if (showFavoritesOnly) {
       filtered = filtered.filter(site => site.isFavorite);
     }
- 
     return filtered;
   };
   const getAllTags = () => {
@@ -1034,7 +1022,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-       
+     
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Stats Cards */}
@@ -1057,7 +1045,7 @@ ${new Date().toLocaleDateString()}
                     Websites Generated
                   </div>
                 </div>
-           
+         
                 {/* Average Time */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1076,7 +1064,7 @@ ${new Date().toLocaleDateString()}
                     Avg Generation Time
                   </div>
                 </div>
-           
+         
                 {/* Storage Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1095,7 +1083,7 @@ ${new Date().toLocaleDateString()}
                     Storage Used
                   </div>
                 </div>
-           
+         
                 {/* Templates Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1115,7 +1103,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-         
+       
               {/* Template Usage Chart */}
               {Object.keys(analytics.templateUsage).length > 0 && (
                 <div className={`p-6 rounded-xl border ${
@@ -1158,7 +1146,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-         
+       
               {/* Recent Activity */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1209,7 +1197,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
-         
+       
               {/* Generation Frequency */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1309,7 +1297,7 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
             </div>
-        
+      
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chatMessages.length === 0 ? (
@@ -1325,7 +1313,7 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
-              
+            
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1376,7 +1364,7 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
-              
+            
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1393,7 +1381,7 @@ ${new Date().toLocaleDateString()}
                 </>
               )}
             </div>
-        
+      
             {/* Chat Input */}
             <div className={`p-4 border-t ${
               isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
@@ -1463,7 +1451,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-         
+       
             {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Project Name */}
@@ -1485,7 +1473,7 @@ ${new Date().toLocaleDateString()}
                   }`}
                 />
               </div>
-           
+         
               {/* Tags */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1529,7 +1517,7 @@ ${new Date().toLocaleDateString()}
                       : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                   }`}
                 />
-             
+           
                 {/* Quick Tag Buttons */}
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
@@ -1552,7 +1540,7 @@ ${new Date().toLocaleDateString()}
                   ))}
                 </div>
               </div>
-           
+         
               {/* Notes */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1573,7 +1561,7 @@ ${new Date().toLocaleDateString()}
                 />
               </div>
             </div>
-         
+       
             {/* Modal Footer */}
             <div className={`p-6 border-t flex justify-end gap-3 ${
               isDarkMode ? 'border-gray-700' : 'border-gray-200'
@@ -1670,6 +1658,15 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={signOut}
+              className={`flex items-center gap-2 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
           </div>
         </div>
       </nav>
@@ -1718,7 +1715,7 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-           
+         
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -1731,7 +1728,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-                 
+               
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -2013,7 +2010,7 @@ ${new Date().toLocaleDateString()}
                 }`}>
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
-             
+           
                 {/* Search and Filters */}
                 <div className="flex flex-wrap gap-3">
                   {/* Search */}
@@ -2028,7 +2025,7 @@ ${new Date().toLocaleDateString()}
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-               
+             
                   {/* Tag Filter */}
                   <select
                     value={filterTag}
@@ -2044,7 +2041,7 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-               
+             
                   {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -2060,7 +2057,7 @@ ${new Date().toLocaleDateString()}
                   </button>
                 </div>
               </div>
-           
+         
               {/* Project Grid */}
               {getFilteredProjects().length === 0 ? (
                 <div className={`text-center py-12 rounded-xl border ${
@@ -2103,7 +2100,7 @@ ${new Date().toLocaleDateString()}
                       >
                         {site.isFavorite ? '⭐' : '☆'}
                       </button>
-                   
+                 
                       {/* Project Info */}
                       <div className="mb-4">
                         <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2111,7 +2108,7 @@ ${new Date().toLocaleDateString()}
                         }`}>
                           {site.name}
                         </h3>
-                     
+                   
                         {/* Tags */}
                         {site.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-3">
@@ -2129,13 +2126,13 @@ ${new Date().toLocaleDateString()}
                             ))}
                           </div>
                         )}
-                     
+                   
                         <p className={`text-sm mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           {site.prompt}
                         </p>
-                     
+                   
                         {site.notes && (
                           <p className={`text-xs italic mb-2 line-clamp-2 ${
                             isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2143,7 +2140,7 @@ ${new Date().toLocaleDateString()}
                             📝 {site.notes}
                           </p>
                         )}
-                     
+                   
                         <p className={`text-xs ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
@@ -2151,7 +2148,7 @@ ${new Date().toLocaleDateString()}
                           {new Date(site.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-                   
+                 
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -2167,7 +2164,7 @@ ${new Date().toLocaleDateString()}
                         >
                           👁️ View
                         </button>
-                     
+                   
                         <button
                           onClick={() => openEditProject(site)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2178,7 +2175,7 @@ ${new Date().toLocaleDateString()}
                         >
                           ✏️ Edit
                         </button>
-                     
+                   
                         <button
                           onClick={() => handleDelete(site.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2209,7 +2206,7 @@ ${new Date().toLocaleDateString()}
             transform: translateY(0);
           }
         }
-    
+  
         @keyframes fadeIn {
           from {
             opacity: 0;
@@ -2218,11 +2215,11 @@ ${new Date().toLocaleDateString()}
             opacity: 1;
           }
         }
-    
+  
         .animate-slideUp {
           animation: slideUp 0.3s ease-out;
         }
-    
+  
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
         }
