@@ -1,7 +1,6 @@
 // server.js - Complete Express.js server with Smart Compression for Website Generation
 import express from 'express';
 import cors from 'cors';
-import Anthropic from '@anthropic-ai/sdk';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,6 +9,13 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Validate API key on startup
+const apiKey = process.env.CLAUDE_API_KEY;
+if (!apiKey) {
+  console.error('❌ ERROR: CLAUDE_API_KEY is not set in environment variables!');
+  process.exit(1);
+}
 
 // Add CORS middleware - PUT THIS BEFORE ANY ROUTES
 app.use((req, res, next) => {
@@ -31,16 +37,32 @@ app.use(express.static(path.join(__dirname, 'public'))); // Serve static files i
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    apiKeyConfigured: !!apiKey 
+  });
 });
 
 // Website generation endpoint with smart compression
 app.post('/api/generate', async (req, res) => {
   const { prompt } = req.body;
+  
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
+
+  // Validate API key
+  if (!apiKey) {
+    console.error('❌ API key not configured');
+    return res.status(500).json({ 
+      error: 'Server configuration error',
+      message: 'Claude API key is not configured'
+    });
+  }
+
   try {
+    console.log(`📝 Received prompt (${prompt.length} chars)`);
     let optimizedPrompt = prompt;
   
     // SMART COMPRESSION: If prompt is long (>1000 chars), compress it first
@@ -51,7 +73,7 @@ app.post('/api/generate', async (req, res) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': process.env.CLAUDE_API_KEY,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
@@ -62,6 +84,7 @@ app.post('/api/generate', async (req, res) => {
             role: 'user',
             content: `Convert this detailed website request into a concise structured brief (maximum 500 words). Keep ALL essential details but compress into efficient format:
 ${prompt}
+
 Format your response as:
 **Business Type:** [type]
 **Style:** [design style/theme]
@@ -70,12 +93,14 @@ Format your response as:
 **Key Features:** [interactive elements, special requests]
 **Content Details:** [specific text, images, data to include]
 **Target Audience:** [if mentioned]
+
 Be comprehensive but concise. Don't lose any important details.`
           }]
         })
       });
+
       if (!compressionResponse.ok) {
-        console.error('Compression failed, using original prompt');
+        console.error('⚠️ Compression failed, using original prompt');
         optimizedPrompt = prompt; // Fallback to original
       } else {
         const compressionData = await compressionResponse.json();
@@ -83,18 +108,21 @@ Be comprehensive but concise. Don't lose any important details.`
         console.log(`✅ Compressed to ${optimizedPrompt.length} chars`);
       }
     }
+
     // MAIN GENERATION with optimized prompt
+    console.log(`🚀 Generating website...`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.CLAUDE_API_KEY,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4096,
         system: `You are an elite web developer who creates stunning, production-ready websites. You MUST return ONLY complete HTML code starting with <!DOCTYPE html>.
+
 CRITICAL RULES:
 - NEVER include markdown code blocks (\`\`\`html)
 - NEVER add explanations or comments outside the HTML
@@ -108,7 +136,9 @@ CRITICAL RULES:
           {
             role: 'user',
             content: `Create a complete, professional, fully-functional website based on this brief:
+
 ${optimizedPrompt}
+
 REQUIREMENTS:
 ✅ Complete HTML with <!DOCTYPE html>
 ✅ All sections mentioned in the brief
@@ -119,38 +149,48 @@ REQUIREMENTS:
 ✅ Smooth scrolling and micro-animations
 ✅ Production-ready quality
 ✅ NO markdown formatting - ONLY pure HTML
+
 Return ONLY the HTML code, nothing else.`
           }
         ]
       })
     });
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Claude API Error:', response.status, errorText);
+      console.error('❌ Claude API Error:', response.status, errorText);
       return res.status(response.status).json({
         error: `API Error: ${response.status}`,
+        message: 'Failed to generate website',
         details: errorText
       });
     }
+
     const data = await response.json();
     let htmlCode = data.content[0].text;
+
     // Clean up any markdown artifacts
     htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+
     // Validate HTML
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
-      console.error('Invalid HTML generated - missing DOCTYPE');
+      console.error('❌ Invalid HTML generated - missing DOCTYPE');
       return res.status(400).json({
         error: 'Invalid HTML generated',
         message: 'Generated content does not include proper HTML structure'
       });
     }
+
     console.log(`✅ Generated website successfully (${htmlCode.length} bytes)`);
+    
+    // Return response with htmlCode field (required by frontend)
     return res.status(200).json({ htmlCode });
+
   } catch (error) {
-    console.error('Server error:', error);
+    console.error('❌ Server error:', error);
     return res.status(500).json({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
     });
   }
 });
@@ -163,7 +203,9 @@ app.get('*', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔑 CLAUDE_API_KEY configured: ${process.env.CLAUDE_API_KEY ? 'Yes' : 'No - Set it in .env'}`);
+  console.log(`🔑 CLAUDE_API_KEY configured: ${apiKey ? '✅ Yes' : '❌ No'}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`📍 Generate endpoint: http://localhost:${PORT}/api/generate`);
 });
 
 export default app;
