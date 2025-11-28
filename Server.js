@@ -1,7 +1,13 @@
 // server.js - Complete Express.js server with Smart Compression for Website Generation
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import Anthropic from '@anthropic-ai/sdk';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -10,11 +16,11 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
-  
+ 
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
-  
+ 
   next();
 });
 
@@ -31,18 +37,16 @@ app.get('/api/health', (req, res) => {
 // Website generation endpoint with smart compression
 app.post('/api/generate', async (req, res) => {
   const { prompt } = req.body;
-
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
-
   try {
     let optimizedPrompt = prompt;
-   
+  
     // SMART COMPRESSION: If prompt is long (>1000 chars), compress it first
     if (prompt.length > 1000) {
       console.log(`🔧 Compressing long prompt (${prompt.length} chars)...`);
-     
+    
       const compressionResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -58,7 +62,6 @@ app.post('/api/generate', async (req, res) => {
             role: 'user',
             content: `Convert this detailed website request into a concise structured brief (maximum 500 words). Keep ALL essential details but compress into efficient format:
 ${prompt}
-
 Format your response as:
 **Business Type:** [type]
 **Style:** [design style/theme]
@@ -67,12 +70,10 @@ Format your response as:
 **Key Features:** [interactive elements, special requests]
 **Content Details:** [specific text, images, data to include]
 **Target Audience:** [if mentioned]
-
 Be comprehensive but concise. Don't lose any important details.`
           }]
         })
       });
-
       if (!compressionResponse.ok) {
         console.error('Compression failed, using original prompt');
         optimizedPrompt = prompt; // Fallback to original
@@ -82,7 +83,6 @@ Be comprehensive but concise. Don't lose any important details.`
         console.log(`✅ Compressed to ${optimizedPrompt.length} chars`);
       }
     }
-
     // MAIN GENERATION with optimized prompt
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -95,7 +95,6 @@ Be comprehensive but concise. Don't lose any important details.`
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4096,
         system: `You are an elite web developer who creates stunning, production-ready websites. You MUST return ONLY complete HTML code starting with <!DOCTYPE html>.
-
 CRITICAL RULES:
 - NEVER include markdown code blocks (\`\`\`html)
 - NEVER add explanations or comments outside the HTML
@@ -110,7 +109,6 @@ CRITICAL RULES:
             role: 'user',
             content: `Create a complete, professional, fully-functional website based on this brief:
 ${optimizedPrompt}
-
 REQUIREMENTS:
 ✅ Complete HTML with <!DOCTYPE html>
 ✅ All sections mentioned in the brief
@@ -121,13 +119,11 @@ REQUIREMENTS:
 ✅ Smooth scrolling and micro-animations
 ✅ Production-ready quality
 ✅ NO markdown formatting - ONLY pure HTML
-
 Return ONLY the HTML code, nothing else.`
           }
         ]
       })
     });
-
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Claude API Error:', response.status, errorText);
@@ -136,13 +132,10 @@ Return ONLY the HTML code, nothing else.`
         details: errorText
       });
     }
-
     const data = await response.json();
     let htmlCode = data.content[0].text;
-
     // Clean up any markdown artifacts
     htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-
     // Validate HTML
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
       console.error('Invalid HTML generated - missing DOCTYPE');
@@ -151,10 +144,8 @@ Return ONLY the HTML code, nothing else.`
         message: 'Generated content does not include proper HTML structure'
       });
     }
-
     console.log(`✅ Generated website successfully (${htmlCode.length} bytes)`);
     return res.status(200).json({ htmlCode });
-
   } catch (error) {
     console.error('Server error:', error);
     return res.status(500).json({
@@ -175,4 +166,4 @@ app.listen(PORT, () => {
   console.log(`🔑 CLAUDE_API_KEY configured: ${process.env.CLAUDE_API_KEY ? 'Yes' : 'No - Set it in .env'}`);
 });
 
-module.exports = app;
+export default app;
