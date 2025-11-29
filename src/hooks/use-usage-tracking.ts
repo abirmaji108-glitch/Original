@@ -24,17 +24,21 @@ export const useUsageTracking = (userId: string | undefined) => {
       setLoading(false);
       return;
     }
+
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
+
       const { data, error } = await supabase
         .from('usage_tracking')
         .select('*')
         .eq('user_id', userId)
         .eq('month_year', currentMonth)
-        .single();
+        .maybeSingle();
+
       if (error && error.code !== 'PGRST116') {
-        throw error;
+        console.error('Error fetching usage:', error);
       }
+
       if (data) {
         setUsage({
           generationsUsed: data.generations_used,
@@ -51,12 +55,7 @@ export const useUsageTracking = (userId: string | undefined) => {
         });
       }
     } catch (error) {
-      console.error('Error fetching usage:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch usage data",
-        variant: "destructive"
-      });
+      console.error('Error in fetchUsage:', error);
     } finally {
       setLoading(false);
     }
@@ -64,24 +63,37 @@ export const useUsageTracking = (userId: string | undefined) => {
 
   const incrementUsage = async () => {
     if (!userId) return false;
+
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const { data: existing } = await supabase
+
+      const { data: existing, error: fetchError } = await supabase
         .from('usage_tracking')
         .select('*')
         .eq('user_id', userId)
         .eq('month_year', currentMonth)
-        .single();
+        .maybeSingle();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('Error fetching usage:', fetchError);
+        return false;
+      }
+
       if (existing) {
         const { error } = await supabase
           .from('usage_tracking')
-          .update({
+          .update({ 
             generations_used: existing.generations_used + 1,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', userId)
           .eq('month_year', currentMonth);
-        if (error) throw error;
+
+        if (error) {
+          console.error('Error updating usage:', error);
+          return false;
+        }
+
         setUsage(prev => ({
           ...prev,
           generationsUsed: existing.generations_used + 1,
@@ -95,21 +107,22 @@ export const useUsageTracking = (userId: string | undefined) => {
             generations_used: 1,
             month_year: currentMonth
           });
-        if (error) throw error;
+
+        if (error) {
+          console.error('Error inserting usage:', error);
+          return false;
+        }
+
         setUsage(prev => ({
           ...prev,
           generationsUsed: 1,
           canGenerate: true
         }));
       }
+
       return true;
     } catch (error) {
-      console.error('Error incrementing usage:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update usage tracking",
-        variant: "destructive"
-      });
+      console.error('Error in incrementUsage:', error);
       return false;
     }
   };
