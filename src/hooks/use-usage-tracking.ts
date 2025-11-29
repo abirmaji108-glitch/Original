@@ -24,21 +24,17 @@ export const useUsageTracking = (userId: string | undefined) => {
       setLoading(false);
       return;
     }
-
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-
       const { data, error } = await supabase
-        .from('user_usage')
+        .from('usage_tracking')
         .select('*')
         .eq('user_id', userId)
         .eq('month_year', currentMonth)
         .single();
-
       if (error && error.code !== 'PGRST116') {
         throw error;
       }
-
       if (data) {
         setUsage({
           generationsUsed: data.generations_used,
@@ -68,29 +64,24 @@ export const useUsageTracking = (userId: string | undefined) => {
 
   const incrementUsage = async () => {
     if (!userId) return false;
-
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-
       const { data: existing } = await supabase
-        .from('user_usage')
+        .from('usage_tracking')
         .select('*')
         .eq('user_id', userId)
         .eq('month_year', currentMonth)
         .single();
-
       if (existing) {
         const { error } = await supabase
-          .from('user_usage')
-          .update({ 
+          .from('usage_tracking')
+          .update({
             generations_used: existing.generations_used + 1,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', userId)
           .eq('month_year', currentMonth);
-
         if (error) throw error;
-
         setUsage(prev => ({
           ...prev,
           generationsUsed: existing.generations_used + 1,
@@ -98,22 +89,19 @@ export const useUsageTracking = (userId: string | undefined) => {
         }));
       } else {
         const { error } = await supabase
-          .from('user_usage')
+          .from('usage_tracking')
           .insert({
             user_id: userId,
             generations_used: 1,
             month_year: currentMonth
           });
-
         if (error) throw error;
-
         setUsage(prev => ({
           ...prev,
           generationsUsed: 1,
           canGenerate: true
         }));
       }
-
       return true;
     } catch (error) {
       console.error('Error incrementing usage:', error);
