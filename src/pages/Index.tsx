@@ -42,6 +42,8 @@ import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 import JSZip from "jszip";
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
+import { supabase } from '@/integrations/supabase/client';
+
 const TEMPLATES = [
   {
     id: "portfolio",
@@ -94,6 +96,16 @@ const INDUSTRY_TEMPLATES: Record<string, string> = {
   agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
   custom: "",
 };
+
+const STYLE_DESCRIPTIONS: Record<string, string> = {
+  modern: "Clean, contemporary design with smooth animations, gradients, and glass-morphism effects. Uses bold colors and modern typography.",
+  minimal: "Simple, elegant design with lots of white space, subtle colors, and focus on content. Typography-focused with minimal decorative elements.",
+  bold: "Vibrant, eye-catching design with strong colors, large typography, dramatic contrasts, and confident visual statements.",
+  elegant: "Sophisticated, refined design with serif fonts, soft colors, subtle animations, and premium aesthetic. Luxurious feel.",
+  playful: "Fun, energetic design with bright colors, rounded shapes, playful illustrations, and dynamic animations. Youthful vibe.",
+  professional: "Corporate, trustworthy design with structured layouts, conservative colors (blues, grays), and business-focused aesthetic."
+};
+
 type ViewMode = "desktop" | "tablet" | "mobile";
 const Index = () => {
   const navigate = useNavigate();
@@ -146,6 +158,9 @@ const Index = () => {
   const [filterTag, setFilterTag] = useState<string>("all");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedCode, setEditedCode] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState("modern");
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
@@ -475,26 +490,59 @@ Generated on: ${new Date().toLocaleDateString()}
     if (progress < 80) return "📱 Optimizing for all devices...";
     return "🚀 Finalizing your professional website...";
   };
-  const saveWebsite = (htmlCode: string) => {
+  const saveWebsite = async (htmlCode: string) => {
     try {
-      const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if (!userId) {
+        console.error('No user ID - cannot save to database');
+        return;
+      }
+
       // Extract title from description or use default
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
+
+      // Save to Supabase database
+      const { data, error } = await supabase
+        .from('websites')
+        .insert({
+          user_id: userId,
+          name: name,
+          description: input,
+          html_code: htmlCode,
+          industry: industry || null
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving to database:', error);
+        toast({
+          title: "Save Failed",
+          description: "Could not save website to database",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Also save to localStorage as backup
+      const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       const newWebsite: SavedWebsite = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: data.id,
         name,
         description: input,
         htmlCode,
         timestamp: Date.now(),
         industry: industry || undefined,
       };
-      // Add to beginning of array
       websites.unshift(newWebsite);
-      // Keep only MAX_WEBSITES
       if (websites.length > MAX_WEBSITES) {
         websites.splice(MAX_WEBSITES);
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
+
+      toast({
+        title: "Saved! 💾",
+        description: "Website saved to your account",
+      });
     } catch (error) {
       console.error('Error saving website:', error);
     }
@@ -632,8 +680,15 @@ Generated on: ${new Date().toLocaleDateString()}
       });
     }, 150);
     try {
+      const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
+
       const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
 ${input}
+
+DESIGN STYLE: ${selectedStyle.toUpperCase()}
+${styleInstruction}
+
+Apply this design style consistently throughout the website.
 REQUIREMENTS:
 - Complete HTML5 document starting with <!DOCTYPE html>
 - Use Tailwind CSS CDN: <script src="https://cdn.tailwindcss.com"></script>
@@ -641,7 +696,13 @@ REQUIREMENTS:
 - Inline all JavaScript in <script> tags
 - Mobile-first responsive design
 - Modern, professional design with smooth animations
-- Use placeholder images from https://source.unsplash.com/random/800x600?{relevant-keyword}
+- Use SPECIFIC placeholder images from Unsplash based on the website content:
+  * For hero sections: https://source.unsplash.com/1920x1080?{main-topic}
+  * For team/people: https://source.unsplash.com/800x800?portrait,professional
+  * For products: https://source.unsplash.com/800x600?{product-type}
+  * For backgrounds: https://source.unsplash.com/1920x1080?{theme},abstract
+  * Replace {keywords} with SPECIFIC terms from the description (e.g., "fitness" for gym, "food" for restaurant)
+- IMPORTANT: Use different, relevant Unsplash keywords for each image based on its context
 - Include realistic placeholder text and content
 - Professional color scheme matching the description
 - Proper semantic HTML5 tags
@@ -693,9 +754,9 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       await incrementUsage();
       // Show success state for 2 seconds
       setShowSuccess(true);
-      setTimeout(() => {
+      setTimeout(async () => {
         setGeneratedCode(htmlCode);
-        saveWebsite(htmlCode);
+        await saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
         setProgress(0);
@@ -795,9 +856,9 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setProgressStage("✅ Complete! Your website is ready.");
       // Show success state for 2 seconds
       setShowSuccess(true);
-      setTimeout(() => {
+      setTimeout(async () => {
         setGeneratedCode(htmlCode);
-        saveWebsite(htmlCode);
+        await saveWebsite(htmlCode);
         setIsGenerating(false);
         setShowSuccess(false);
         setProgress(0);
@@ -1022,7 +1083,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-     
+    
             {/* Content */}
             <div className="p-6 space-y-6">
               {/* Stats Cards */}
@@ -1045,7 +1106,7 @@ ${new Date().toLocaleDateString()}
                     Websites Generated
                   </div>
                 </div>
-         
+        
                 {/* Average Time */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1064,7 +1125,7 @@ ${new Date().toLocaleDateString()}
                     Avg Generation Time
                   </div>
                 </div>
-         
+        
                 {/* Storage Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1083,7 +1144,7 @@ ${new Date().toLocaleDateString()}
                     Storage Used
                   </div>
                 </div>
-         
+        
                 {/* Templates Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1103,7 +1164,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-       
+      
               {/* Template Usage Chart */}
               {Object.keys(analytics.templateUsage).length > 0 && (
                 <div className={`p-6 rounded-xl border ${
@@ -1146,7 +1207,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-       
+      
               {/* Recent Activity */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1197,7 +1258,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
-       
+      
               {/* Generation Frequency */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1297,7 +1358,7 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
             </div>
-      
+     
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chatMessages.length === 0 ? (
@@ -1313,7 +1374,7 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
-            
+           
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1364,7 +1425,7 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
-            
+           
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1381,7 +1442,7 @@ ${new Date().toLocaleDateString()}
                 </>
               )}
             </div>
-      
+     
             {/* Chat Input */}
             <div className={`p-4 border-t ${
               isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
@@ -1451,7 +1512,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-       
+      
             {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Project Name */}
@@ -1473,7 +1534,7 @@ ${new Date().toLocaleDateString()}
                   }`}
                 />
               </div>
-         
+        
               {/* Tags */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1517,7 +1578,7 @@ ${new Date().toLocaleDateString()}
                       : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                   }`}
                 />
-           
+          
                 {/* Quick Tag Buttons */}
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
@@ -1540,7 +1601,7 @@ ${new Date().toLocaleDateString()}
                   ))}
                 </div>
               </div>
-         
+        
               {/* Notes */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1561,7 +1622,7 @@ ${new Date().toLocaleDateString()}
                 />
               </div>
             </div>
-       
+      
             {/* Modal Footer */}
             <div className={`p-6 border-t flex justify-end gap-3 ${
               isDarkMode ? 'border-gray-700' : 'border-gray-200'
@@ -1715,7 +1776,7 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-         
+        
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -1728,7 +1789,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-               
+              
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -1755,6 +1816,45 @@ ${new Date().toLocaleDateString()}
                       <SelectItem value="agency">Agency</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                {/* Style Selector */}
+                <div className="space-y-3">
+                  <label className={`text-sm font-semibold ${dynamicTextClass}`}>
+                    🎨 Design Style
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      { id: 'modern', label: 'Modern', icon: '✨', color: 'from-blue-500 to-purple-500' },
+                      { id: 'minimal', label: 'Minimal', icon: '⚪', color: 'from-gray-400 to-gray-600' },
+                      { id: 'bold', label: 'Bold', icon: '🔥', color: 'from-red-500 to-orange-500' },
+                      { id: 'elegant', label: 'Elegant', icon: '👑', color: 'from-purple-500 to-pink-500' },
+                      { id: 'playful', label: 'Playful', icon: '🎈', color: 'from-green-400 to-blue-400' },
+                      { id: 'professional', label: 'Professional', icon: '💼', color: 'from-blue-600 to-indigo-600' }
+                    ].map((style) => (
+                      <button
+                        key={style.id}
+                        onClick={() => setSelectedStyle(style.id)}
+                        className={`relative p-4 rounded-xl border-2 transition-all ${
+                          selectedStyle === style.id
+                            ? `border-transparent bg-gradient-to-r ${style.color} text-white shadow-lg scale-105`
+                            : isDarkMode
+                            ? 'border-white/20 bg-white/5 text-gray-300 hover:bg-white/10'
+                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="text-2xl mb-1">{style.icon}</div>
+                        <div className="font-semibold text-sm">{style.label}</div>
+                        {selectedStyle === style.id && (
+                          <div className="absolute top-2 right-2 text-white">✓</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedStyle && (
+                    <p className={`text-xs ${dynamicSubtleClass}`}>
+                      {STYLE_DESCRIPTIONS[selectedStyle]}
+                    </p>
+                  )}
                 </div>
                 {/* Textarea */}
                 <Textarea
@@ -1864,18 +1964,40 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {/* View Mode Toggle */}
+                  {/* Edit/Preview Toggle */}
                   <div className={`flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
-                    {[{ icon: Monitor, mode: 'desktop' as const }, { icon: Tablet, mode: 'tablet' as const }, { icon: Smartphone, mode: 'mobile' as const }].map(({ icon: Icon, mode }) => (
-                      <button
-                        key={mode}
-                        onClick={() => setViewMode(mode)}
-                        className={`p-2 rounded-full transition-all ${viewMode === mode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} hover:scale-105`}`}
-                      >
-                        <Icon className="w-5 h-5" />
-                      </button>
-                    ))}
+                    <button
+                      onClick={() => setIsEditMode(false)}
+                      className={`px-4 py-2 rounded-full transition-all font-semibold ${!isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
+                    >
+                      👁️ Preview
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditMode(true);
+                        setEditedCode(generatedCode);
+                      }}
+                      className={`px-4 py-2 rounded-full transition-all font-semibold ${isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
+                    >
+                      ✏️ Edit Code
+                    </button>
                   </div>
+
+                  {/* View Mode Toggle (only in preview mode) */}
+                  {!isEditMode && (
+                    <div className={`flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
+                      {[{ icon: Monitor, mode: 'desktop' as const }, { icon: Tablet, mode: 'tablet' as const }, { icon: Smartphone, mode: 'mobile' as const }].map(({ icon: Icon, mode }) => (
+                        <button
+                          key={mode}
+                          onClick={() => setViewMode(mode)}
+                          className={`p-2 rounded-full transition-all ${viewMode === mode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} hover:scale-105`}`}
+                        >
+                          <Icon className="w-5 h-5" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Action Buttons */}
                   <div className="flex gap-2">
                     <Button
@@ -1899,15 +2021,59 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-              {/* Preview Container */}
-              <div className={`relative ${getAspectRatio()} mx-auto max-w-4xl rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 ${isDarkMode ? 'bg-black/20' : 'bg-white/50'}`}>
-                <iframe
-                  srcDoc={generatedCode}
-                  className="w-full h-full border-0"
-                  title="Generated Website Preview"
-                  sandbox="allow-scripts allow-same-origin"
-                />
-              </div>
+
+              {/* Preview/Edit Container */}
+              {isEditMode ? (
+                <div className="space-y-4">
+                  {/* Code Editor */}
+                  <div className={`relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? 'border-white/20 bg-gray-900' : 'border-gray-300 bg-white'}`}>
+                    <div className={`flex items-center justify-between px-4 py-2 border-b ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                      <span className={`text-sm font-semibold ${dynamicTextClass}`}>📝 HTML Editor</span>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setGeneratedCode(editedCode);
+                            setIsEditMode(false);
+                          }}
+                          className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          💾 Save & Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditedCode(generatedCode);
+                            setIsEditMode(false);
+                          }}
+                          className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          ❌ Cancel
+                        </Button>
+                      </div>
+                    </div>
+                    <textarea
+                      value={editedCode}
+                      onChange={(e) => setEditedCode(e.target.value)}
+                      className={`w-full h-[600px] p-4 font-mono text-sm resize-none focus:outline-none ${
+                        isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'
+                      }`}
+                      spellCheck={false}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className={`relative ${getAspectRatio()} mx-auto max-w-4xl rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 ${isDarkMode ? 'bg-black/20' : 'bg-white/50'}`}>
+                  <iframe
+                    srcDoc={generatedCode}
+                    className="w-full h-full border-0"
+                    title="Generated Website Preview"
+                    sandbox="allow-scripts allow-same-origin"
+                  />
+                </div>
+              )}
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 justify-center">
                 <Button
@@ -2010,7 +2176,7 @@ ${new Date().toLocaleDateString()}
                 }`}>
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
-           
+          
                 {/* Search and Filters */}
                 <div className="flex flex-wrap gap-3">
                   {/* Search */}
@@ -2025,7 +2191,7 @@ ${new Date().toLocaleDateString()}
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-             
+            
                   {/* Tag Filter */}
                   <select
                     value={filterTag}
@@ -2041,7 +2207,7 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-             
+            
                   {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -2057,7 +2223,7 @@ ${new Date().toLocaleDateString()}
                   </button>
                 </div>
               </div>
-         
+        
               {/* Project Grid */}
               {getFilteredProjects().length === 0 ? (
                 <div className={`text-center py-12 rounded-xl border ${
@@ -2100,7 +2266,7 @@ ${new Date().toLocaleDateString()}
                       >
                         {site.isFavorite ? '⭐' : '☆'}
                       </button>
-                 
+                
                       {/* Project Info */}
                       <div className="mb-4">
                         <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2108,7 +2274,7 @@ ${new Date().toLocaleDateString()}
                         }`}>
                           {site.name}
                         </h3>
-                   
+                  
                         {/* Tags */}
                         {site.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-3">
@@ -2126,13 +2292,13 @@ ${new Date().toLocaleDateString()}
                             ))}
                           </div>
                         )}
-                   
+                  
                         <p className={`text-sm mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           {site.prompt}
                         </p>
-                   
+                  
                         {site.notes && (
                           <p className={`text-xs italic mb-2 line-clamp-2 ${
                             isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2140,7 +2306,7 @@ ${new Date().toLocaleDateString()}
                             📝 {site.notes}
                           </p>
                         )}
-                   
+                  
                         <p className={`text-xs ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
@@ -2148,7 +2314,7 @@ ${new Date().toLocaleDateString()}
                           {new Date(site.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-                 
+                
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -2164,7 +2330,7 @@ ${new Date().toLocaleDateString()}
                         >
                           👁️ View
                         </button>
-                   
+                  
                         <button
                           onClick={() => openEditProject(site)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2175,7 +2341,7 @@ ${new Date().toLocaleDateString()}
                         >
                           ✏️ Edit
                         </button>
-                   
+                  
                         <button
                           onClick={() => handleDelete(site.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2206,7 +2372,7 @@ ${new Date().toLocaleDateString()}
             transform: translateY(0);
           }
         }
-  
+ 
         @keyframes fadeIn {
           from {
             opacity: 0;
@@ -2215,11 +2381,11 @@ ${new Date().toLocaleDateString()}
             opacity: 1;
           }
         }
-  
+ 
         .animate-slideUp {
           animation: slideUp 0.3s ease-out;
         }
-  
+ 
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
         }
