@@ -6,8 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
-import SignIn from "./pages/SignIn";
-import Signup from "./pages/Signup";  // ✅ FIXED: lowercase 'u'
+import Login from "./pages/Login";  // ✅ Changed from SignIn
+import Signup from "./pages/Signup";
 import MyWebsites from "./pages/MyWebsites";
 
 const queryClient = new QueryClient();
@@ -22,8 +22,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/app" element={<Index />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<Signup />} />  {/* ✅ FIXED */}
+            <Route path="/login" element={<Login />} />  {/* ✅ Changed from /signin */}
+            <Route path="/signup" element={<Signup />} />
             <Route path="/my-websites" element={<MyWebsites />} />
           </Routes>
         </BrowserRouter>
