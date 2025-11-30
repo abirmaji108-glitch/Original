@@ -33,7 +33,7 @@ const Signup = () => {
     const { error } = await signUp(email, password);
 
     if (!error) {
-      navigate('/app');  // ✅ FIXED: Redirect to dashboard after signup
+      navigate('/app');
     }
 
     setLoading(false);
