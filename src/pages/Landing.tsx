@@ -1,10 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { Sparkles, Zap, Shield, TrendingUp } from "lucide-react";
 
 const Landing = () => {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
       {/* Navigation Bar */}
@@ -18,12 +15,12 @@ const Landing = () => {
         <div className="flex gap-4">
           <Button 
             variant="ghost" 
-            onClick={() => navigate('/login')}  {/* ✅ FIXED */}
+            onClick={() => window.location.href = '/login'}
           >
             Sign In
           </Button>
           <Button 
-            onClick={() => navigate('/signup')}
+            onClick={() => window.location.href = '/signup'} 
             className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
           >
             Get Started Free
@@ -55,7 +52,7 @@ const Landing = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Button 
               size="lg" 
-              onClick={() => navigate('/signup')}  {/* ✅ Already correct */}
+              onClick={() => window.location.href = '/signup'}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
             >
               <Sparkles className="w-5 h-5 mr-2" />
@@ -64,7 +61,7 @@ const Landing = () => {
             <Button 
               size="lg" 
               variant="outline"
-              onClick={() => navigate('/login')}  {/* ✅ FIXED */}
+              onClick={() => window.location.href = '/login'}
               className="text-lg px-8 py-6 h-auto border-2"
             >
               Watch Demo
