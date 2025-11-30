@@ -7,7 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
+import Signup from "./pages/Signup";  // ✅ FIXED: lowercase 'u'
 import MyWebsites from "./pages/MyWebsites";
 
 const queryClient = new QueryClient();
@@ -20,10 +20,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Landing />} />  {/* ✅ Changed from Index */}
-            <Route path="/app" element={<Index />} />  {/* ✅ Move old home here */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/app" element={<Index />} />
             <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
+            <Route path="/signup" element={<Signup />} />  {/* ✅ FIXED */}
             <Route path="/my-websites" element={<MyWebsites />} />
           </Routes>
         </BrowserRouter>
