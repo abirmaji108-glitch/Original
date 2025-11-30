@@ -1,7 +1,7 @@
 export interface SavedWebsite {
   id: string;
   name: string;
-  prompt: string;  // ✅ Changed from 'description' to 'prompt'
+  prompt: string;  // ✅ Changed from 'description'
   htmlCode: string;
   timestamp: number;
   industry?: string;
