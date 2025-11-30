@@ -21,7 +21,7 @@ const Login = () => {
     const { error } = await signIn(email, password);
 
     if (!error) {
-      navigate('/');
+      navigate('/app');  // ✅ FIXED: Redirect to dashboard after login
     }
 
     setLoading(false);
@@ -65,7 +65,7 @@ const Login = () => {
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
               disabled={loading}
             >
               {loading ? (
@@ -86,6 +86,9 @@ const Login = () => {
               Sign up
             </Link>
           </div>
+          <Link to="/" className="text-sm text-center text-gray-500 hover:text-gray-700">
+            ← Back to Home
+          </Link>
         </CardFooter>
       </Card>
     </div>
