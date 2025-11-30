@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Download, ExternalLink, Trash2, RefreshCw, Sparkles, X, Monitor, Tablet, Smartphone, Copy, Check } from "lucide-react";
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
-
 type ViewMode = "desktop" | "tablet" | "mobile";
-
 const MyWebsites = () => {
   const [websites, setWebsites] = useState<SavedWebsite[]>([]);
   const [previewWebsite, setPreviewWebsite] = useState<SavedWebsite | null>(null);
@@ -17,11 +15,9 @@ const MyWebsites = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const navigate = useNavigate();
-
   useEffect(() => {
     loadWebsites();
   }, []);
-
   useEffect(() => {
     if (showToast) {
       const timer = setTimeout(() => {
@@ -30,12 +26,10 @@ const MyWebsites = () => {
       return () => clearTimeout(timer);
     }
   }, [showToast]);
-
   const showNotification = (message: string) => {
     setToastMessage(message);
     setShowToast(true);
   };
-
   const loadWebsites = () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -48,7 +42,6 @@ const MyWebsites = () => {
       showNotification("Failed to load saved websites");
     }
   };
-
   const downloadWebsite = (website: SavedWebsite) => {
     const blob = new Blob([website.htmlCode], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -59,36 +52,30 @@ const MyWebsites = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+   
     showNotification("Website HTML file has been downloaded");
   };
-
   const openPreview = (website: SavedWebsite) => {
     setPreviewWebsite(website);
     setViewMode("desktop");
   };
-
   const closePreview = () => {
     setPreviewWebsite(null);
   };
-
   const handleCopyCode = async () => {
     if (!previewWebsite) return;
-    
+   
     await navigator.clipboard.writeText(previewWebsite.htmlCode);
     showNotification("HTML code copied to clipboard");
   };
-
   const openDeleteModal = (website: SavedWebsite | "all") => {
     setWebsiteToDelete(website);
     setShowDeleteModal(true);
   };
-
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
     setWebsiteToDelete(null);
   };
-
   const confirmDelete = () => {
     if (websiteToDelete === "all") {
       clearAll();
@@ -97,7 +84,6 @@ const MyWebsites = () => {
     }
     closeDeleteModal();
   };
-
   const getIframeWidth = () => {
     switch (viewMode) {
       case "tablet":
@@ -108,50 +94,45 @@ const MyWebsites = () => {
         return "100%";
     }
   };
-
   const deleteWebsite = (id: string) => {
     try {
       const updated = websites.filter(w => w.id !== id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       setWebsites(updated);
-      
+     
       if (previewWebsite?.id === id) {
         closePreview();
       }
-      
+     
       showNotification("Website deleted successfully");
     } catch (error) {
       console.error("Error deleting website:", error);
       showNotification("Failed to delete website");
     }
   };
-
   const clearAll = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
       setWebsites([]);
-      
+     
       showNotification("All websites removed");
     } catch (error) {
       console.error("Error clearing websites:", error);
       showNotification("Failed to clear websites");
     }
   };
-
   const regenerate = (website: SavedWebsite) => {
-    navigate('/', { state: { description: website.description, industry: website.industry } });
+    navigate('/', { state: { description: website.prompt, industry: website.industry } });
   };
-
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
+    return new Date(timestamp).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="container mx-auto px-4 py-8">
@@ -180,7 +161,6 @@ const MyWebsites = () => {
             )}
           </div>
         </div>
-
         {/* Websites Grid */}
         {websites.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -209,37 +189,37 @@ const MyWebsites = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground line-clamp-3">
-                    {website.description}
+                    {website.prompt}
                   </p>
                 </CardContent>
                  <CardFooter className="flex flex-wrap gap-2">
-                  <Button 
-                    onClick={() => openPreview(website)} 
-                    variant="outline" 
+                  <Button
+                    onClick={() => openPreview(website)}
+                    variant="outline"
                     size="sm"
                     className="flex-1"
                   >
                     <ExternalLink className="mr-1 h-3 w-3" />
                     Preview
                   </Button>
-                  <Button 
-                    onClick={() => downloadWebsite(website)} 
-                    variant="outline" 
+                  <Button
+                    onClick={() => downloadWebsite(website)}
+                    variant="outline"
                     size="sm"
                     className="flex-1"
                   >
                     <Download className="mr-1 h-3 w-3" />
                     Download
                   </Button>
-                  <Button 
-                    onClick={() => regenerate(website)} 
-                    variant="outline" 
+                  <Button
+                    onClick={() => regenerate(website)}
+                    variant="outline"
                     size="sm"
                   >
                     <RefreshCw className="h-3 w-3" />
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => openDeleteModal(website)}
                     className="hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
@@ -252,7 +232,6 @@ const MyWebsites = () => {
           </div>
         )}
       </div>
-
       {/* Preview Modal */}
       <Dialog open={!!previewWebsite} onOpenChange={(open) => !open && closePreview()}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] h-[95vh] p-0 gap-0">
@@ -271,7 +250,6 @@ const MyWebsites = () => {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-
             {/* Device Tabs */}
             <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/30">
               <Button
@@ -302,7 +280,6 @@ const MyWebsites = () => {
                 Mobile
               </Button>
             </div>
-
             {/* Preview Area */}
             <div className="flex-1 p-6 bg-muted/20 overflow-auto">
               <div className="h-full flex items-center justify-center">
@@ -325,7 +302,6 @@ const MyWebsites = () => {
                 </div>
               </div>
             </div>
-
             {/* Bottom Actions */}
             <div className="flex items-center justify-center gap-3 px-6 py-4 border-t bg-card">
               <Button
@@ -356,7 +332,6 @@ const MyWebsites = () => {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -364,7 +339,7 @@ const MyWebsites = () => {
             <div className="text-center mb-4">
               <div className="text-4xl text-red-500 mb-2">⚠️</div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">
-                {websiteToDelete === "all" 
+                {websiteToDelete === "all"
                   ? `Delete all ${websites.length} websites?`
                   : `Delete ${websiteToDelete && typeof websiteToDelete !== 'string' ? websiteToDelete.name : 'website'}?`
                 }
@@ -393,7 +368,6 @@ const MyWebsites = () => {
           </div>
         </div>
       )}
-
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
@@ -406,5 +380,4 @@ const MyWebsites = () => {
     </div>
   );
 };
-
 export default MyWebsites;
