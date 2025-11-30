@@ -2,11 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";  // ✅ Changed to HashRouter
 import { AuthProvider } from "@/contexts/AuthContext";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
-import Login from "./pages/Login";  // ✅ Changed from SignIn
+import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MyWebsites from "./pages/MyWebsites";
 
@@ -18,15 +18,15 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <HashRouter>  {/* ✅ Changed from BrowserRouter */}
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/app" element={<Index />} />
-            <Route path="/login" element={<Login />} />  {/* ✅ Changed from /signin */}
+            <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/my-websites" element={<MyWebsites />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
