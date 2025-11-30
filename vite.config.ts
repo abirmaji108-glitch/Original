@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { writeFileSync, mkdirSync, existsSync } from "fs";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -16,17 +17,15 @@ export default defineConfig(({ mode }) => ({
     {
       name: "create-redirects",
       closeBundle() {
-        const fs = require("fs");
-        const path = require("path");
-        const distPath = path.resolve(__dirname, "dist");
-        const redirectsPath = path.join(distPath, "_redirects");
+        const distPath = "./dist";
+        const redirectsPath = "./dist/_redirects";
         const content = "/*    /index.html   200";
         
         try {
-          if (!fs.existsSync(distPath)) {
-            fs.mkdirSync(distPath, { recursive: true });
+          if (!existsSync(distPath)) {
+            mkdirSync(distPath, { recursive: true });
           }
-          fs.writeFileSync(redirectsPath, content);
+          writeFileSync(redirectsPath, content);
           console.log("✅ _redirects file created successfully!");
         } catch (error) {
           console.error("❌ Error creating _redirects:", error);
