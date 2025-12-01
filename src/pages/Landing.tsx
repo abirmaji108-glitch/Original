@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Sparkles, Zap, Shield, TrendingUp, Wand2, Code2, Palette, Smartphone, Globe, Timer } from "lucide-react";
+import { Sparkles, Zap, Shield, TrendingUp, Wand2, Code2, Palette, Smartphone, Globe, Timer, Check, Star } from "lucide-react";
 
 const Landing = () => {
   return (
@@ -109,7 +109,6 @@ const Landing = () => {
               Our AI-powered platform provides all the tools and features you need to create professional websites in minutes
             </p>
           </div>
-
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Feature 1 */}
@@ -122,7 +121,6 @@ const Landing = () => {
                 Describe your vision and watch our AI create professional websites with advanced layouts, styling, and functionality.
               </p>
             </div>
-
             {/* Feature 2 */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
               <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-6">
@@ -133,7 +131,6 @@ const Landing = () => {
                 Get production-ready HTML, CSS, and JavaScript code that follows best practices and modern web standards.
               </p>
             </div>
-
             {/* Feature 3 */}
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
               <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mb-6">
@@ -144,7 +141,6 @@ const Landing = () => {
                 Choose from multiple design styles including modern, minimal, bold, elegant, and playful aesthetics.
               </p>
             </div>
-
             {/* Feature 4 */}
             <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
               <div className="w-14 h-14 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
@@ -155,7 +151,6 @@ const Landing = () => {
                 Every website is mobile-first and looks perfect on all devices - phones, tablets, and desktops.
               </p>
             </div>
-
             {/* Feature 5 */}
             <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
               <div className="w-14 h-14 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl flex items-center justify-center mb-6">
@@ -166,7 +161,6 @@ const Landing = () => {
                 Download your website as a ZIP file or open directly in CodeSandbox or StackBlitz for instant deployment.
               </p>
             </div>
-
             {/* Feature 6 */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
               <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-6">
@@ -177,6 +171,172 @@ const Landing = () => {
                 Generate complete, professional websites in seconds. No more weeks of development time.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+      {/* Pricing Section */}
+      <section className="py-20 bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <div className="container mx-auto px-6">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <Zap className="w-4 h-4" />
+              Simple Pricing
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
+              Choose Your Perfect Plan
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Start free and upgrade as you grow. All plans include core features.
+            </p>
+          </div>
+
+          {/* Pricing Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* Free Plan */}
+            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-xl">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
+                <p className="text-gray-600">Perfect for trying out Sento</p>
+              </div>
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-gray-900">$0</span>
+                  <span className="text-gray-600">/month</span>
+                </div>
+              </div>
+              <Button 
+                onClick={() => window.location.href = '/#/signup'}
+                variant="outline" 
+                className="w-full mb-6 border-2"
+              >
+                Get Started Free
+              </Button>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">5 website generations per month</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">All design styles</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Download as ZIP</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Basic support</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pro Plan - Highlighted */}
+            <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl p-8 border-2 border-purple-600 relative transform md:scale-105 shadow-2xl">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                  <Star className="w-4 h-4" />
+                  MOST POPULAR
+                </div>
+              </div>
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">Pro</h3>
+                <p className="text-purple-100">For professionals & creators</p>
+              </div>
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-white">$29</span>
+                  <span className="text-purple-100">/month</span>
+                </div>
+              </div>
+              <Button 
+                onClick={() => window.location.href = '/#/signup'}
+                className="w-full mb-6 bg-white text-purple-600 hover:bg-gray-100"
+              >
+                Start Pro Trial
+              </Button>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-white mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-medium">Unlimited website generations</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-white mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-medium">All design styles</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-white mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-medium">Priority AI processing</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-white mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-medium">Advanced customization</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-white mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-medium">Priority support</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-white mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-medium">Commercial license</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-xl">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
+                <p className="text-gray-600">For teams & agencies</p>
+              </div>
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-gray-900">$99</span>
+                  <span className="text-gray-600">/month</span>
+                </div>
+              </div>
+              <Button 
+                onClick={() => window.location.href = '/#/signup'}
+                variant="outline" 
+                className="w-full mb-6 border-2"
+              >
+                Contact Sales
+              </Button>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Everything in Pro</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Team collaboration (10 seats)</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Custom AI training</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">White-label options</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">Dedicated support</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-700">SLA guarantee</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Trust Message */}
+          <div className="text-center mt-12">
+            <p className="text-gray-600">
+              🔒 All plans include SSL security and 99.9% uptime guarantee
+            </p>
           </div>
         </div>
       </section>
