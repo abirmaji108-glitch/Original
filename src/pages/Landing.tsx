@@ -94,7 +94,10 @@ const Landing = () => {
         </div>
       </section>
       {/* Features Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white relative overflow-hidden">
+        {/* Floating Gradient Orbs */}
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float"></div>
+        <div className="absolute top-40 right-10 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
         <div className="container mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -112,70 +115,92 @@ const Landing = () => {
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Feature 1 */}
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
-              <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                <Wand2 className="w-7 h-7 text-white" />
+            <div className="relative bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="relative bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl">
+                <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
+                  <Wand2 className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">AI-Powered Generation</h3>
+                <p className="text-gray-600">
+                  Describe your vision and watch our AI create professional websites with advanced layouts, styling, and functionality.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900">AI-Powered Generation</h3>
-              <p className="text-gray-600">
-                Describe your vision and watch our AI create professional websites with advanced layouts, styling, and functionality.
-              </p>
             </div>
             {/* Feature 2 */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
-              <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-6">
-                <Code2 className="w-7 h-7 text-white" />
+            <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl">
+                <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-6">
+                  <Code2 className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">Clean, Modern Code</h3>
+                <p className="text-gray-600">
+                  Get production-ready HTML, CSS, and JavaScript code that follows best practices and modern web standards.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900">Clean, Modern Code</h3>
-              <p className="text-gray-600">
-                Get production-ready HTML, CSS, and JavaScript code that follows best practices and modern web standards.
-              </p>
             </div>
             {/* Feature 3 */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
-              <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mb-6">
-                <Palette className="w-7 h-7 text-white" />
+            <div className="relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl">
+                <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mb-6">
+                  <Palette className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">Beautiful Designs</h3>
+                <p className="text-gray-600">
+                  Choose from multiple design styles including modern, minimal, bold, elegant, and playful aesthetics.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900">Beautiful Designs</h3>
-              <p className="text-gray-600">
-                Choose from multiple design styles including modern, minimal, bold, elegant, and playful aesthetics.
-              </p>
             </div>
             {/* Feature 4 */}
-            <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
-              <div className="w-14 h-14 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                <Smartphone className="w-7 h-7 text-white" />
+            <div className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-blue-600 to-green-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl">
+                <div className="w-14 h-14 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
+                  <Smartphone className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">Fully Responsive</h3>
+                <p className="text-gray-600">
+                  Every website is mobile-first and looks perfect on all devices - phones, tablets, and desktops.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900">Fully Responsive</h3>
-              <p className="text-gray-600">
-                Every website is mobile-first and looks perfect on all devices - phones, tablets, and desktops.
-              </p>
             </div>
             {/* Feature 5 */}
-            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
-              <div className="w-14 h-14 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl flex items-center justify-center mb-6">
-                <Globe className="w-7 h-7 text-white" />
+            <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl">
+                <div className="w-14 h-14 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl flex items-center justify-center mb-6">
+                  <Globe className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">Ready to Deploy</h3>
+                <p className="text-gray-600">
+                  Download your website as a ZIP file or open directly in CodeSandbox or StackBlitz for instant deployment.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900">Ready to Deploy</h3>
-              <p className="text-gray-600">
-                Download your website as a ZIP file or open directly in CodeSandbox or StackBlitz for instant deployment.
-              </p>
             </div>
             {/* Feature 6 */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 hover:shadow-xl transition-shadow duration-300">
-              <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-6">
-                <Timer className="w-7 h-7 text-white" />
+            <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
+                <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-6">
+                  <Timer className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-gray-900">Lightning Fast</h3>
+                <p className="text-gray-600">
+                  Generate complete, professional websites in seconds. No more weeks of development time.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900">Lightning Fast</h3>
-              <p className="text-gray-600">
-                Generate complete, professional websites in seconds. No more weeks of development time.
-              </p>
             </div>
           </div>
         </div>
+        </div>  {/* Close the floating orbs container */}
       </section>
       {/* Pricing Section */}
-      <section className="py-20 bg-gradient-to-br from-purple-50 via-white to-blue-50">
+      <section className="py-20 bg-gradient-to-br from-purple-50 via-white to-blue-50 relative overflow-hidden">
+        {/* Animated Gradient Orbs */}
+        <div className="absolute top-10 left-20 w-96 h-96 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
+        <div className="absolute bottom-10 right-20 w-96 h-96 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '3s' }}></div>
         <div className="container mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -193,7 +218,7 @@ const Landing = () => {
           {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Free Plan */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-2">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
                 <p className="text-gray-600">Perfect for trying out Sento</p>
@@ -282,7 +307,7 @@ const Landing = () => {
               </div>
             </div>
             {/* Enterprise Plan */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-2">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
                 <p className="text-gray-600">For teams & agencies</p>
@@ -336,6 +361,34 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      <style>{`
+        @keyframes gradient-xy {
+          0%, 100% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+        }
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-20px);
+          }
+        }
+
+        .animate-gradient {
+          background-size: 200% 200%;
+          animation: gradient-xy 3s ease infinite;
+        }
+
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };
