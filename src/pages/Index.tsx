@@ -43,8 +43,7 @@ import JSZip from "jszip";
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
 import { supabase } from '@/integrations/supabase/client';
-import { LoadingScreen } from '@/components/spinner'; // Assuming this import path based on spinner.tsx existence
-
+import { LoadingScreen } from '@/components/ui/spinner';
 const TEMPLATES = [
   {
     id: "portfolio",
@@ -230,7 +229,6 @@ const Index = () => {
     const timer = setTimeout(() => {
       setIsPageLoading(false);
     }, 800);
-
     return () => clearTimeout(timer);
   }, []);
   const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
@@ -1112,7 +1110,7 @@ ${new Date().toLocaleDateString()}
                     Websites Generated
                   </div>
                 </div>
-    
+   
                 {/* Average Time */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1131,7 +1129,7 @@ ${new Date().toLocaleDateString()}
                     Avg Generation Time
                   </div>
                 </div>
-    
+   
                 {/* Storage Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1150,7 +1148,7 @@ ${new Date().toLocaleDateString()}
                     Storage Used
                   </div>
                 </div>
-    
+   
                 {/* Templates Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1170,7 +1168,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-  
+ 
               {/* Template Usage Chart */}
               {Object.keys(analytics.templateUsage).length > 0 && (
                 <div className={`p-6 rounded-xl border ${
@@ -1213,7 +1211,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-  
+ 
               {/* Recent Activity */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1264,7 +1262,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
-  
+ 
               {/* Generation Frequency */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1364,7 +1362,6 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
             </div>
- 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chatMessages.length === 0 ? (
@@ -1380,7 +1377,7 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
-       
+      
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1431,7 +1428,7 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
-       
+      
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1448,7 +1445,6 @@ ${new Date().toLocaleDateString()}
                 </>
               )}
             </div>
- 
             {/* Chat Input */}
             <div className={`p-4 border-t ${
               isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
@@ -1518,7 +1514,7 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
-  
+ 
             {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Project Name */}
@@ -1540,7 +1536,7 @@ ${new Date().toLocaleDateString()}
                   }`}
                 />
               </div>
-    
+   
               {/* Tags */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1584,7 +1580,7 @@ ${new Date().toLocaleDateString()}
                       : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                   }`}
                 />
-      
+     
                 {/* Quick Tag Buttons */}
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
@@ -1607,7 +1603,7 @@ ${new Date().toLocaleDateString()}
                   ))}
                 </div>
               </div>
-    
+   
               {/* Notes */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1628,7 +1624,7 @@ ${new Date().toLocaleDateString()}
                 />
               </div>
             </div>
-  
+ 
             {/* Modal Footer */}
             <div className={`p-6 border-t flex justify-end gap-3 ${
               isDarkMode ? 'border-gray-700' : 'border-gray-200'
@@ -1782,7 +1778,7 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-    
+   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -1795,7 +1791,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-          
+         
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -2179,7 +2175,7 @@ ${new Date().toLocaleDateString()}
                 }`}>
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
-      
+     
                 {/* Search and Filters */}
                 <div className="flex flex-wrap gap-3">
                   {/* Search */}
@@ -2194,7 +2190,7 @@ ${new Date().toLocaleDateString()}
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-        
+       
                   {/* Tag Filter */}
                   <select
                     value={filterTag}
@@ -2210,7 +2206,7 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-        
+       
                   {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -2226,7 +2222,7 @@ ${new Date().toLocaleDateString()}
                   </button>
                 </div>
               </div>
-    
+   
               {/* Project Grid */}
               {getFilteredProjects().length === 0 ? (
                 <div className={`text-center py-12 rounded-xl border ${
@@ -2269,7 +2265,7 @@ ${new Date().toLocaleDateString()}
                       >
                         {site.isFavorite ? '⭐' : '☆'}
                       </button>
-            
+           
                       {/* Project Info */}
                       <div className="mb-4">
                         <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2277,7 +2273,7 @@ ${new Date().toLocaleDateString()}
                         }`}>
                           {site.name}
                         </h3>
-              
+             
                         {/* Tags */}
                         {site.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-3">
@@ -2295,13 +2291,13 @@ ${new Date().toLocaleDateString()}
                             ))}
                           </div>
                         )}
-              
+             
                         <p className={`text-sm mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           {site.prompt}
                         </p>
-              
+             
                         {site.notes && (
                           <p className={`text-xs italic mb-2 line-clamp-2 ${
                             isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2309,7 +2305,7 @@ ${new Date().toLocaleDateString()}
                             📝 {site.notes}
                           </p>
                         )}
-              
+             
                         <p className={`text-xs ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
@@ -2317,7 +2313,7 @@ ${new Date().toLocaleDateString()}
                           {new Date(site.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-            
+           
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -2333,7 +2329,7 @@ ${new Date().toLocaleDateString()}
                         >
                           👁️ View
                         </button>
-              
+             
                         <button
                           onClick={() => openEditProject(site)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2344,7 +2340,7 @@ ${new Date().toLocaleDateString()}
                         >
                           ✏️ Edit
                         </button>
-              
+             
                         <button
                           onClick={() => handleDelete(site.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
