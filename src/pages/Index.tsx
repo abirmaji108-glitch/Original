@@ -160,6 +160,7 @@ const Index = () => {
   const [editedCode, setEditedCode] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("modern");
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
@@ -230,6 +231,15 @@ const Index = () => {
       setIsPageLoading(false);
     }, 800);
     return () => clearTimeout(timer);
+  }, []);
+  // Scroll to top button visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+  
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
   const calculateAnalytics = () => {
@@ -1110,7 +1120,6 @@ ${new Date().toLocaleDateString()}
                     Websites Generated
                   </div>
                 </div>
-   
                 {/* Average Time */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1129,7 +1138,6 @@ ${new Date().toLocaleDateString()}
                     Avg Generation Time
                   </div>
                 </div>
-   
                 {/* Storage Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1148,7 +1156,6 @@ ${new Date().toLocaleDateString()}
                     Storage Used
                   </div>
                 </div>
-   
                 {/* Templates Used */}
                 <div className={`p-4 rounded-xl border ${
                   isDarkMode
@@ -1168,7 +1175,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
- 
               {/* Template Usage Chart */}
               {Object.keys(analytics.templateUsage).length > 0 && (
                 <div className={`p-6 rounded-xl border ${
@@ -1211,7 +1217,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
- 
               {/* Recent Activity */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1262,7 +1267,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
- 
               {/* Generation Frequency */}
               <div className={`p-6 rounded-xl border ${
                 isDarkMode
@@ -1377,7 +1381,7 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
-      
+   
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1428,7 +1432,7 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
-      
+   
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1514,7 +1518,6 @@ ${new Date().toLocaleDateString()}
                 </button>
               </div>
             </div>
- 
             {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Project Name */}
@@ -1536,7 +1539,6 @@ ${new Date().toLocaleDateString()}
                   }`}
                 />
               </div>
-   
               {/* Tags */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1580,7 +1582,7 @@ ${new Date().toLocaleDateString()}
                       : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                   }`}
                 />
-     
+  
                 {/* Quick Tag Buttons */}
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
@@ -1603,7 +1605,6 @@ ${new Date().toLocaleDateString()}
                   ))}
                 </div>
               </div>
-   
               {/* Notes */}
               <div>
                 <label className={`block text-sm font-semibold mb-2 ${
@@ -1624,7 +1625,6 @@ ${new Date().toLocaleDateString()}
                 />
               </div>
             </div>
- 
             {/* Modal Footer */}
             <div className={`p-6 border-t flex justify-end gap-3 ${
               isDarkMode ? 'border-gray-700' : 'border-gray-200'
@@ -1778,7 +1778,6 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {TEMPLATES.map((template) => (
                       <button
@@ -1791,7 +1790,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-         
+      
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -2175,7 +2174,7 @@ ${new Date().toLocaleDateString()}
                 }`}>
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
-     
+  
                 {/* Search and Filters */}
                 <div className="flex flex-wrap gap-3">
                   {/* Search */}
@@ -2190,7 +2189,7 @@ ${new Date().toLocaleDateString()}
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-       
+    
                   {/* Tag Filter */}
                   <select
                     value={filterTag}
@@ -2206,7 +2205,7 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-       
+    
                   {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -2222,7 +2221,6 @@ ${new Date().toLocaleDateString()}
                   </button>
                 </div>
               </div>
-   
               {/* Project Grid */}
               {getFilteredProjects().length === 0 ? (
                 <div className={`text-center py-12 rounded-xl border ${
@@ -2265,7 +2263,7 @@ ${new Date().toLocaleDateString()}
                       >
                         {site.isFavorite ? '⭐' : '☆'}
                       </button>
-           
+        
                       {/* Project Info */}
                       <div className="mb-4">
                         <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2273,7 +2271,7 @@ ${new Date().toLocaleDateString()}
                         }`}>
                           {site.name}
                         </h3>
-             
+          
                         {/* Tags */}
                         {site.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-3">
@@ -2291,13 +2289,13 @@ ${new Date().toLocaleDateString()}
                             ))}
                           </div>
                         )}
-             
+          
                         <p className={`text-sm mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           {site.prompt}
                         </p>
-             
+          
                         {site.notes && (
                           <p className={`text-xs italic mb-2 line-clamp-2 ${
                             isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2305,7 +2303,7 @@ ${new Date().toLocaleDateString()}
                             📝 {site.notes}
                           </p>
                         )}
-             
+          
                         <p className={`text-xs ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
@@ -2313,7 +2311,7 @@ ${new Date().toLocaleDateString()}
                           {new Date(site.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-           
+        
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -2329,7 +2327,7 @@ ${new Date().toLocaleDateString()}
                         >
                           👁️ View
                         </button>
-             
+          
                         <button
                           onClick={() => openEditProject(site)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2340,7 +2338,7 @@ ${new Date().toLocaleDateString()}
                         >
                           ✏️ Edit
                         </button>
-             
+          
                         <button
                           onClick={() => handleDelete(site.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2360,6 +2358,22 @@ ${new Date().toLocaleDateString()}
           )}
         </div>
       </main>
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className={`fixed bottom-8 right-8 p-4 rounded-full shadow-2xl transition-all duration-300 z-40 hover:scale-110 ${
+            isDarkMode
+              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+              : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+          }`}
+          aria-label="Scroll to top"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
+      )}
       <style>{`
         @keyframes slideUp {
           from {
