@@ -365,7 +365,7 @@ const Landing = () => {
         {/* Background decorative elements */}
         <div className="absolute top-20 left-20 w-[400px] h-[400px] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float"></div>
         <div className="absolute bottom-20 right-20 w-[400px] h-[400px] bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float" style={{ animationDelay: '2s' }}></div>
-        
+       
         <div className="container mx-auto px-6 relative z-10">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -380,7 +380,6 @@ const Landing = () => {
               Join thousands of satisfied creators who have transformed their web presence with Sento AI
             </p>
           </div>
-
           {/* Testimonials Grid */}
           <div className="grid md:grid-cols-3 gap-8">
             {/* Testimonial 1 */}
@@ -405,7 +404,6 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-
             {/* Testimonial 2 */}
             <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 group">
               <div className="flex items-center gap-1 mb-4">
@@ -428,7 +426,6 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-
             {/* Testimonial 3 */}
             <div className="bg-gradient-to-br from-pink-50 to-white rounded-2xl p-8 hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 group">
               <div className="flex items-center gap-1 mb-4">
@@ -452,7 +449,6 @@ const Landing = () => {
               </div>
             </div>
           </div>
-
           {/* Trust indicators */}
           <div className="mt-16 text-center">
             <p className="text-gray-600 mb-6">Trusted by over 10,000+ creators worldwide</p>
@@ -471,6 +467,141 @@ const Landing = () => {
                 <span className="font-semibold">500+ 5-Star Reviews</span>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+      {/* FAQ Section */}
+      <section className="py-24 bg-gradient-to-br from-purple-50 via-white to-blue-50 relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute top-10 right-20 w-[500px] h-[500px] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float"></div>
+        <div className="absolute bottom-10 left-20 w-[500px] h-[500px] bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float" style={{ animationDelay: '3s' }}></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+              <Sparkles className="w-4 h-4" />
+              Got Questions?
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Everything you need to know about Sento AI
+            </p>
+          </div>
+
+          {/* FAQ Grid */}
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* FAQ Item 1 */}
+            <div className="bg-white rounded-2xl p-8 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    How does Sento AI generate websites?
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Sento AI uses advanced artificial intelligence to understand your requirements and generate production-ready HTML, CSS, and JavaScript code. Simply describe what you want, and our AI creates a fully functional, responsive website following modern web standards and best practices.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Item 2 */}
+            <div className="bg-white rounded-2xl p-8 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Code2 className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    Can I customize the generated code?
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Absolutely! All generated code is clean, well-structured, and fully editable. You own 100% of the code and can modify it however you like. The code follows industry best practices, making it easy to understand and customize even if you're not a coding expert.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Item 3 */}
+            <div className="bg-white rounded-2xl p-8 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Smartphone className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    Are the websites mobile-friendly?
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Yes! Every website generated by Sento AI is fully responsive and optimized for all devices - desktops, tablets, and smartphones. We use modern CSS frameworks and mobile-first design principles to ensure your site looks perfect on any screen size.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Item 4 */}
+            <div className="bg-white rounded-2xl p-8 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Globe className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    How do I deploy my website?
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Deploying is super easy! You can download your website as a ZIP file and upload it to any hosting provider, or deploy directly to platforms like Netlify, Vercel, or GitHub Pages. We also provide integration with CodeSandbox and StackBlitz for instant live previews.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Item 5 */}
+            <div className="bg-white rounded-2xl p-8 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Timer className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    How long does it take to generate a website?
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Most websites are generated in seconds! Simple landing pages take 10-30 seconds, while more complex multi-page websites might take 1-2 minutes. Our AI works incredibly fast while maintaining high quality and attention to detail.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Item 6 */}
+            <div className="bg-white rounded-2xl p-8 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] group">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    Is my data secure and private?
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    Absolutely! We take security seriously. All data is encrypted in transit and at rest. We never share your information with third parties, and you maintain full ownership of all generated code. You can delete your data at any time from your account settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA at bottom */}
+          <div className="mt-16 text-center">
+            <p className="text-gray-600 mb-6 text-lg">Still have questions?</p>
+            <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              Contact Support
+            </Button>
           </div>
         </div>
       </section>
