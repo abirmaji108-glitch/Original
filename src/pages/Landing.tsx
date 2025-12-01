@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, Zap, Shield, TrendingUp, Wand2, Code2, Palette, Smartphone, Globe, Timer, Check, Star } from "lucide-react";
-
 const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
@@ -96,8 +95,8 @@ const Landing = () => {
       {/* Features Section */}
       <section className="py-20 bg-white relative overflow-hidden">
         {/* Floating Gradient Orbs */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute -top-20 -left-20 w-[500px] h-[500px] bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-float"></div>
+        <div className="absolute top-40 -right-20 w-[500px] h-[500px] bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-float" style={{ animationDelay: '2s' }}></div>
         <div className="container mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -116,7 +115,7 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Feature 1 */}
             <div className="relative bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-opacity duration-300 -z-10 animate-gradient"></div>
               <div className="relative bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl">
                 <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
                   <Wand2 className="w-7 h-7 text-white" />
@@ -129,7 +128,7 @@ const Landing = () => {
             </div>
             {/* Feature 2 */}
             <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-opacity duration-300 -z-10 animate-gradient"></div>
               <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl">
                 <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-6">
                   <Code2 className="w-7 h-7 text-white" />
@@ -142,7 +141,7 @@ const Landing = () => {
             </div>
             {/* Feature 3 */}
             <div className="relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-opacity duration-300 -z-10 animate-gradient"></div>
               <div className="relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl">
                 <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mb-6">
                   <Palette className="w-7 h-7 text-white" />
@@ -155,7 +154,7 @@ const Landing = () => {
             </div>
             {/* Feature 4 */}
             <div className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-600 via-blue-600 to-green-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-green-600 via-blue-600 to-green-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-opacity duration-300 -z-10 animate-gradient"></div>
               <div className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl">
                 <div className="w-14 h-14 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
                   <Smartphone className="w-7 h-7 text-white" />
@@ -168,7 +167,7 @@ const Landing = () => {
             </div>
             {/* Feature 5 */}
             <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-opacity duration-300 -z-10 animate-gradient"></div>
               <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl">
                 <div className="w-14 h-14 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl flex items-center justify-center mb-6">
                   <Globe className="w-7 h-7 text-white" />
@@ -181,7 +180,7 @@ const Landing = () => {
             </div>
             {/* Feature 6 */}
             <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-300 -z-10 animate-gradient"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-opacity duration-300 -z-10 animate-gradient"></div>
               <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
                 <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-6">
                   <Timer className="w-7 h-7 text-white" />
@@ -198,8 +197,8 @@ const Landing = () => {
       {/* Pricing Section */}
       <section className="py-20 bg-gradient-to-br from-purple-50 via-white to-blue-50 relative overflow-hidden">
         {/* Animated Gradient Orbs */}
-        <div className="absolute top-10 left-20 w-96 h-96 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
-        <div className="absolute bottom-10 right-20 w-96 h-96 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '3s' }}></div>
+        <div className="absolute -top-20 -left-20 w-[600px] h-[600px] bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-float"></div>
+        <div className="absolute -bottom-20 -right-20 w-[600px] h-[600px] bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-float" style={{ animationDelay: '3s' }}></div>
         <div className="container mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -217,7 +216,7 @@ const Landing = () => {
           {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Free Plan */}
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-2">
+            <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 border-2 border-gray-300/50 hover:border-purple-400 hover:bg-white/70 transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
                 <p className="text-gray-600">Perfect for trying out Sento</p>
@@ -306,7 +305,7 @@ const Landing = () => {
               </div>
             </div>
             {/* Enterprise Plan */}
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-2">
+            <div className="bg-white/60 backdrop-blur-xl rounded-2xl p-8 border-2 border-gray-300/50 hover:border-blue-400 hover:bg-white/70 transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
                 <p className="text-gray-600">For teams & agencies</p>
@@ -369,24 +368,29 @@ const Landing = () => {
             background-position: 100% 50%;
           }
         }
+
         @keyframes float {
           0%, 100% {
-            transform: translateY(0px);
+            transform: translateY(0px) translateX(0px);
           }
-          50% {
-            transform: translateY(-20px);
+          33% {
+            transform: translateY(-30px) translateX(20px);
+          }
+          66% {
+            transform: translateY(30px) translateX(-20px);
           }
         }
+
         .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient-xy 3s ease infinite;
+          background-size: 300% 300%;
+          animation: gradient-xy 4s ease infinite;
         }
+
         .animate-float {
-          animation: float 6s ease-in-out infinite;
+          animation: float 8s ease-in-out infinite;
         }
       `}</style>
     </div>
   );
 };
-
 export default Landing;
