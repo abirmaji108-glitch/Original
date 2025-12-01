@@ -194,7 +194,6 @@ const Landing = () => {
             </div>
           </div>
         </div>
-        </div>  {/* Close the floating orbs container */}
       </section>
       {/* Pricing Section */}
       <section className="py-20 bg-gradient-to-br from-purple-50 via-white to-blue-50 relative overflow-hidden">
@@ -370,7 +369,6 @@ const Landing = () => {
             background-position: 100% 50%;
           }
         }
-
         @keyframes float {
           0%, 100% {
             transform: translateY(0px);
@@ -379,12 +377,10 @@ const Landing = () => {
             transform: translateY(-20px);
           }
         }
-
         .animate-gradient {
           background-size: 200% 200%;
           animation: gradient-xy 3s ease infinite;
         }
-
         .animate-float {
           animation: float 6s ease-in-out infinite;
         }
