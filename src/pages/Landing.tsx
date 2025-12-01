@@ -190,11 +190,10 @@ const Landing = () => {
               Start free and upgrade as you grow. All plans include core features.
             </p>
           </div>
-
           {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Free Plan */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-xl">
+            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Free</h3>
                 <p className="text-gray-600">Perfect for trying out Sento</p>
@@ -205,9 +204,9 @@ const Landing = () => {
                   <span className="text-gray-600">/month</span>
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={() => window.location.href = '/#/signup'}
-                variant="outline" 
+                variant="outline"
                 className="w-full mb-6 border-2"
               >
                 Get Started Free
@@ -231,9 +230,8 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-
             {/* Pro Plan - Highlighted */}
-            <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl p-8 border-2 border-purple-600 relative transform md:scale-105 shadow-2xl">
+            <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl p-8 border-2 border-purple-600 relative transform md:scale-105 shadow-2xl hover:scale-110 hover:-translate-y-3 transition-all duration-300">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
                   <Star className="w-4 h-4" />
@@ -250,7 +248,7 @@ const Landing = () => {
                   <span className="text-purple-100">/month</span>
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={() => window.location.href = '/#/signup'}
                 className="w-full mb-6 bg-white text-purple-600 hover:bg-gray-100"
               >
@@ -283,9 +281,8 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-
             {/* Enterprise Plan */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-xl">
+            <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-2">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
                 <p className="text-gray-600">For teams & agencies</p>
@@ -296,9 +293,9 @@ const Landing = () => {
                   <span className="text-gray-600">/month</span>
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={() => window.location.href = '/#/signup'}
-                variant="outline" 
+                variant="outline"
                 className="w-full mb-6 border-2"
               >
                 Contact Sales
@@ -331,7 +328,6 @@ const Landing = () => {
               </div>
             </div>
           </div>
-
           {/* Trust Message */}
           <div className="text-center mt-12">
             <p className="text-gray-600">
