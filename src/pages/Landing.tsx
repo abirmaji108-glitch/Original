@@ -116,7 +116,7 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Feature 1 */}
             <div className="relative bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-all duration-500 -z-10 animate-gradient group-hover:animate-pulse-slow"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-25 blur-sm transition-all duration-500 -z-10"></div>
               <div className="relative bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl transform transition-transform duration-500 group-hover:rotate-1">
                 <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
                   <Wand2 className="w-7 h-7 text-white" />
@@ -129,7 +129,7 @@ const Landing = () => {
             </div>
             {/* Feature 2 */}
             <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-all duration-500 -z-10 animate-gradient group-hover:animate-pulse-slow"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 rounded-2xl opacity-0 group-hover:opacity-25 blur-sm transition-all duration-500 -z-10"></div>
               <div className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl transform transition-transform duration-500 group-hover:-rotate-1">
                 <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-6">
                   <Code2 className="w-7 h-7 text-white" />
@@ -142,7 +142,7 @@ const Landing = () => {
             </div>
             {/* Feature 3 */}
             <div className="relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-all duration-500 -z-10 animate-gradient group-hover:animate-pulse-slow"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-25 blur-sm transition-all duration-500 -z-10"></div>
               <div className="relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl transform transition-transform duration-500 group-hover:rotate-1">
                 <div className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mb-6">
                   <Palette className="w-7 h-7 text-white" />
@@ -155,7 +155,7 @@ const Landing = () => {
             </div>
             {/* Feature 4 */}
             <div className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-              <div className="absolute -inset-1 bg-gradient-to-r from-green-600 via-blue-600 to-green-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-all duration-500 -z-10 animate-gradient group-hover:animate-pulse-slow"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-green-400 via-blue-400 to-green-400 rounded-2xl opacity-0 group-hover:opacity-25 blur-sm transition-all duration-500 -z-10"></div>
               <div className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl transform transition-transform duration-500 group-hover:-rotate-1">
                 <div className="w-14 h-14 bg-gradient-to-r from-green-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
                   <Smartphone className="w-7 h-7 text-white" />
@@ -168,7 +168,7 @@ const Landing = () => {
             </div>
             {/* Feature 5 */}
             <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-              <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 via-red-600 to-orange-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-all duration-500 -z-10 animate-gradient group-hover:animate-pulse-slow"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-400 via-red-400 to-orange-400 rounded-2xl opacity-0 group-hover:opacity-25 blur-sm transition-all duration-500 -z-10"></div>
               <div className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl transform transition-transform duration-500 group-hover:rotate-1">
                 <div className="w-14 h-14 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl flex items-center justify-center mb-6">
                   <Globe className="w-7 h-7 text-white" />
@@ -181,7 +181,7 @@ const Landing = () => {
             </div>
             {/* Feature 6 */}
             <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-75 blur-md transition-all duration-500 -z-10 animate-gradient group-hover:animate-pulse-slow"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-400 rounded-2xl opacity-0 group-hover:opacity-25 blur-sm transition-all duration-500 -z-10"></div>
               <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl transform transition-transform duration-500 group-hover:-rotate-1">
                 <div className="w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-6">
                   <Timer className="w-7 h-7 text-white" />
@@ -369,7 +369,6 @@ const Landing = () => {
             background-position: 100% 50%;
           }
         }
-
         @keyframes float {
           0%, 100% {
             transform: translateY(0px) translateX(0px);
@@ -381,7 +380,6 @@ const Landing = () => {
             transform: translateY(30px) translateX(-20px);
           }
         }
-
         @keyframes fade-in-up {
           from {
             opacity: 0;
@@ -392,7 +390,6 @@ const Landing = () => {
             transform: translateY(0);
           }
         }
-
         @keyframes pulse-slow {
           0%, 100% {
             opacity: 0.75;
@@ -401,25 +398,20 @@ const Landing = () => {
             opacity: 1;
           }
         }
-
         .animate-gradient {
           background-size: 300% 300%;
           animation: gradient-xy 4s ease infinite;
         }
-
         .animate-float {
           animation: float 8s ease-in-out infinite;
         }
-
         .animate-fade-in-up {
           animation: fade-in-up 0.8s ease-out forwards;
           opacity: 0;
         }
-
         .group:hover .group-hover\\:animate-pulse-slow {
           animation: pulse-slow 2s ease-in-out infinite;
         }
-
         html {
           scroll-behavior: smooth;
         }
