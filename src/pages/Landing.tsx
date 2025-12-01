@@ -360,6 +360,120 @@ const Landing = () => {
           </div>
         </div>
       </section>
+      {/* Testimonials Section */}
+      <section className="py-24 bg-white relative overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute top-20 left-20 w-[400px] h-[400px] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float"></div>
+        <div className="absolute bottom-20 right-20 w-[400px] h-[400px] bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float" style={{ animationDelay: '2s' }}></div>
+        
+        <div className="container mx-auto px-6 relative z-10">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+              <Star className="w-4 h-4" />
+              Loved by Creators
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              What Our Users Say
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Join thousands of satisfied creators who have transformed their web presence with Sento AI
+            </p>
+          </div>
+
+          {/* Testimonials Grid */}
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Testimonial 1 */}
+            <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-8 hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 group">
+              <div className="flex items-center gap-1 mb-4">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+              </div>
+              <p className="text-gray-700 mb-6 leading-relaxed">
+                "Sento AI completely transformed how I build websites. What used to take me weeks now takes minutes. The AI understands exactly what I want!"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  S
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Sarah Johnson</p>
+                  <p className="text-sm text-gray-600">Freelance Designer</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial 2 */}
+            <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 group">
+              <div className="flex items-center gap-1 mb-4">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+              </div>
+              <p className="text-gray-700 mb-6 leading-relaxed">
+                "The clean code output is incredible. I can actually understand and modify what the AI generates. Perfect for my startup's landing pages!"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  M
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Michael Chen</p>
+                  <p className="text-sm text-gray-600">Startup Founder</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial 3 */}
+            <div className="bg-gradient-to-br from-pink-50 to-white rounded-2xl p-8 hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 group">
+              <div className="flex items-center gap-1 mb-4">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+              </div>
+              <p className="text-gray-700 mb-6 leading-relaxed">
+                "Best investment for my agency! My team can now deliver beautiful, responsive websites to clients in record time. ROI has been amazing!"
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-pink-400 to-purple-400 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  E
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Emily Rodriguez</p>
+                  <p className="text-sm text-gray-600">Agency Owner</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Trust indicators */}
+          <div className="mt-16 text-center">
+            <p className="text-gray-600 mb-6">Trusted by over 10,000+ creators worldwide</p>
+            <div className="flex justify-center items-center gap-8 flex-wrap">
+              <div className="flex items-center gap-2 text-gray-700">
+                <div className="flex -space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full border-2 border-white"></div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-full border-2 border-white"></div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-400 rounded-full border-2 border-white"></div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-400 rounded-full border-2 border-white"></div>
+                </div>
+                <span className="font-semibold">4.9/5 Average Rating</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <span className="font-semibold">500+ 5-Star Reviews</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       <style>{`
         @keyframes gradient-xy {
           0%, 100% {
