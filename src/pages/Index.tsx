@@ -834,16 +834,39 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
+      
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
-          title: "Generation cancelled",
-          description: "Website generation was cancelled",
+          title: "❌ Generation Cancelled",
+          description: "You stopped the website generation process.",
+        });
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        // Network error
+        toast({
+          title: "🌐 Network Error",
+          description: "Unable to connect to the server. Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+      } else if (error instanceof Error && error.message.includes('timeout')) {
+        // Timeout error
+        toast({
+          title: "⏱️ Request Timeout",
+          description: "The generation took too long. Please try again with a shorter description.",
+          variant: "destructive",
+        });
+      } else if (error instanceof Error && error.message.includes('429')) {
+        // Rate limit error
+        toast({
+          title: "🚦 Too Many Requests",
+          description: "You're generating too fast! Please wait a moment and try again.",
+          variant: "destructive",
         });
       } else {
+        // Generic error
         console.error('Generation error:', error);
         toast({
-          title: "Generation failed",
-          description: error instanceof Error ? error.message : "Please try again.",
+          title: "❌ Generation Failed",
+          description: error instanceof Error ? `Error: ${error.message}` : "Something went wrong. Please try again or contact support.",
           variant: "destructive",
         });
       }
@@ -936,16 +959,35 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
+      
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
-          title: "Regeneration cancelled",
-          description: "Website regeneration was cancelled",
+          title: "❌ Regeneration Cancelled",
+          description: "You stopped the website regeneration process.",
+        });
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        toast({
+          title: "🌐 Network Error",
+          description: "Unable to connect to the server. Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+      } else if (error instanceof Error && error.message.includes('timeout')) {
+        toast({
+          title: "⏱️ Request Timeout",
+          description: "The regeneration took too long. Please try again with a shorter description.",
+          variant: "destructive",
+        });
+      } else if (error instanceof Error && error.message.includes('429')) {
+        toast({
+          title: "🚦 Too Many Requests",
+          description: "You're generating too fast! Please wait a moment and try again.",
+          variant: "destructive",
         });
       } else {
         console.error('Regeneration error:', error);
         toast({
-          title: "Regeneration failed",
-          description: error instanceof Error ? error.message : "Please try again.",
+          title: "❌ Regeneration Failed",
+          description: error instanceof Error ? `Error: ${error.message}` : "Something went wrong. Please try again or contact support.",
           variant: "destructive",
         });
       }
@@ -2336,7 +2378,7 @@ ${new Date().toLocaleDateString()}
                     >
                       {site.isFavorite ? '⭐' : '☆'}
                     </button>
-    
+   
                     {/* Project Info */}
                     <div className="mb-4">
                       <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2344,7 +2386,7 @@ ${new Date().toLocaleDateString()}
                       }`}>
                         {site.name}
                       </h3>
-    
+   
                       {/* Tags */}
                       {site.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -2362,13 +2404,13 @@ ${new Date().toLocaleDateString()}
                           ))}
                         </div>
                       )}
-    
+   
                       <p className={`text-sm mb-2 line-clamp-2 ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                         {site.prompt}
                       </p>
-    
+   
                       {site.notes && (
                         <p className={`text-xs italic mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2376,7 +2418,7 @@ ${new Date().toLocaleDateString()}
                           📝 {site.notes}
                         </p>
                       )}
-    
+   
                       <p className={`text-xs ${
                         isDarkMode ? 'text-gray-500' : 'text-gray-500'
                       }`}>
@@ -2384,7 +2426,7 @@ ${new Date().toLocaleDateString()}
                         {new Date(site.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
-    
+   
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -2400,7 +2442,7 @@ ${new Date().toLocaleDateString()}
                       >
                         👁️ View
                       </button>
-    
+   
                       <button
                         onClick={() => openEditProject(site)}
                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2411,7 +2453,7 @@ ${new Date().toLocaleDateString()}
                       >
                         ✏️ Edit
                       </button>
-    
+   
                       <button
                         onClick={() => handleDelete(site.id)}
                         className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
