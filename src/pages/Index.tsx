@@ -711,7 +711,7 @@ Generated on: ${new Date().toLocaleDateString()}
     if (!usage.canGenerate) {
       toast({
         title: "Generation Limit Reached",
-        description: `You've used all ${usage.generationsLimit} free generations this month. Upgrade for unlimited access!`,
+        description: `You've reached your ${usage.generationsLimit} free generations for this month. Upgrade to Pro for unlimited website generation! 🚀`,
         variant: "destructive",
       });
       return;
@@ -828,7 +828,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setProgressStage("");
         toast({
           title: "Success! 🎉",
-          description: "Your website has been generated successfully",
+          description: "🎉 Your professional website is ready! Preview it below or download the files.",
         });
       }, 2000);
     } catch (error) {
@@ -930,7 +930,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setProgressStage("");
         toast({
           title: "Regenerated! 🎉",
-          description: "A fresh version of your website has been generated",
+          description: "✨ Fresh version generated! Your website has been regenerated with a new design.",
         });
       }, 2000);
     } catch (error) {
@@ -1849,7 +1849,6 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
- 
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -2337,7 +2336,7 @@ ${new Date().toLocaleDateString()}
                     >
                       {site.isFavorite ? '⭐' : '☆'}
                     </button>
-     
+    
                     {/* Project Info */}
                     <div className="mb-4">
                       <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2345,7 +2344,7 @@ ${new Date().toLocaleDateString()}
                       }`}>
                         {site.name}
                       </h3>
-     
+    
                       {/* Tags */}
                       {site.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -2363,13 +2362,13 @@ ${new Date().toLocaleDateString()}
                           ))}
                         </div>
                       )}
-     
+    
                       <p className={`text-sm mb-2 line-clamp-2 ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                         {site.prompt}
                       </p>
-     
+    
                       {site.notes && (
                         <p className={`text-xs italic mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2377,7 +2376,7 @@ ${new Date().toLocaleDateString()}
                           📝 {site.notes}
                         </p>
                       )}
-     
+    
                       <p className={`text-xs ${
                         isDarkMode ? 'text-gray-500' : 'text-gray-500'
                       }`}>
@@ -2385,7 +2384,7 @@ ${new Date().toLocaleDateString()}
                         {new Date(site.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
-     
+    
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -2401,7 +2400,7 @@ ${new Date().toLocaleDateString()}
                       >
                         👁️ View
                       </button>
-     
+    
                       <button
                         onClick={() => openEditProject(site)}
                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2412,7 +2411,7 @@ ${new Date().toLocaleDateString()}
                       >
                         ✏️ Edit
                       </button>
-     
+    
                       <button
                         onClick={() => handleDelete(site.id)}
                         className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
