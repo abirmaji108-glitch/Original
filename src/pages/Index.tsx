@@ -44,6 +44,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingScreen } from '@/components/ui/spinner';
+import { ChatModal } from "@/components/ChatModal";
+import { AnalyticsModal } from "@/components/AnalyticsModal";
+import { ProjectModal } from "@/components/ProjectModal";
 const TEMPLATES = [
   {
     id: "portfolio",
@@ -834,7 +837,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-      
+     
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Generation Cancelled",
@@ -959,7 +962,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-      
+     
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Regeneration Cancelled",
@@ -1160,588 +1163,33 @@ ${new Date().toLocaleDateString()}
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Analytics Dashboard Modal */}
-      {showAnalytics && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className={`max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl ${
-            isDarkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
-          }`}>
-            {/* Header */}
-            <div className={`sticky top-0 p-6 border-b backdrop-blur-sm ${
-              isDarkMode ? 'bg-gray-900/95 border-gray-700' : 'bg-white/95 border-gray-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className={`text-3xl font-bold ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    📊 Analytics Dashboard
-                  </h2>
-                  <p className={`text-sm mt-1 ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    Track your website generation stats and insights
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowAnalytics(false)}
-                  className={`p-2 rounded-full transition-colors ${
-                    isDarkMode
-                      ? 'hover:bg-gray-800 text-gray-400 hover:text-white'
-                      : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <span className="text-2xl">✕</span>
-                </button>
-              </div>
-            </div>
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Total Generated */}
-                <div className={`p-4 rounded-xl border ${
-                  isDarkMode
-                    ? 'bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30'
-                    : 'bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200'
-                }`}>
-                  <div className="text-3xl mb-2">🎨</div>
-                  <div className={`text-3xl font-bold mb-1 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {analytics.totalGenerated}
-                  </div>
-                  <div className={`text-sm ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    Websites Generated
-                  </div>
-                </div>
-                {/* Average Time */}
-                <div className={`p-4 rounded-xl border ${
-                  isDarkMode
-                    ? 'bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30'
-                    : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
-                }`}>
-                  <div className="text-3xl mb-2">⏱️</div>
-                  <div className={`text-3xl font-bold mb-1 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {analytics.averageTime}s
-                  </div>
-                  <div className={`text-sm ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    Avg Generation Time
-                  </div>
-                </div>
-                {/* Storage Used */}
-                <div className={`p-4 rounded-xl border ${
-                  isDarkMode
-                    ? 'bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/30'
-                    : 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200'
-                }`}>
-                  <div className="text-3xl mb-2">💾</div>
-                  <div className={`text-3xl font-bold mb-1 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {analytics.totalStorageKB}KB
-                  </div>
-                  <div className={`text-sm ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    Storage Used
-                  </div>
-                </div>
-                {/* Templates Used */}
-                <div className={`p-4 rounded-xl border ${
-                  isDarkMode
-                    ? 'bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-500/30'
-                    : 'bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200'
-                }`}>
-                  <div className="text-3xl mb-2">📋</div>
-                  <div className={`text-3xl font-bold mb-1 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {Object.keys(analytics.templateUsage).length}
-                  </div>
-                  <div className={`text-sm ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    Templates Used
-                  </div>
-                </div>
-              </div>
-              {/* Template Usage Chart */}
-              {Object.keys(analytics.templateUsage).length > 0 && (
-                <div className={`p-6 rounded-xl border ${
-                  isDarkMode
-                    ? 'bg-white/5 border-white/10'
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <h3 className={`text-xl font-bold mb-4 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    🎨 Popular Templates
-                  </h3>
-                  <div className="space-y-3">
-                    {Object.entries(analytics.templateUsage)
-                      .sort(([, a], [, b]) => b - a)
-                      .map(([template, count]) => (
-                        <div key={template}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className={`text-sm font-medium ${
-                              isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                            }`}>
-                              {template}
-                            </span>
-                            <span className={`text-sm font-bold ${
-                              isDarkMode ? 'text-white' : 'text-gray-900'
-                            }`}>
-                              {count}
-                            </span>
-                          </div>
-                          <div className={`h-2 rounded-full overflow-hidden ${
-                            isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
-                          }`}>
-                            <div
-                              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-                              style={{ width: `${(count / analytics.totalGenerated) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-              {/* Recent Activity */}
-              <div className={`p-6 rounded-xl border ${
-                isDarkMode
-                  ? 'bg-white/5 border-white/10'
-                  : 'bg-gray-50 border-gray-200'
-              }`}>
-                <h3 className={`text-xl font-bold mb-4 ${
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  🔥 Recent Activity
-                </h3>
-                {websiteHistory.length === 0 ? (
-                  <p className={`text-center py-8 ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    No websites generated yet. Start creating to see your activity!
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {websiteHistory.slice(0, 5).map((site, index) => (
-                      <div
-                        key={site.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg ${
-                          isDarkMode ? 'bg-gray-800/50' : 'bg-white'
-                        }`}
-                      >
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                          isDarkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-600'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate ${
-                            isDarkMode ? 'text-white' : 'text-gray-900'
-                          }`}>
-                            {site.prompt.substring(0, 50)}...
-                          </p>
-                          <p className={`text-xs ${
-                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                          }`}>
-                            {new Date(site.timestamp).toLocaleDateString()} at{' '}
-                            {new Date(site.timestamp).toLocaleTimeString()}
-                          </p>
-                        </div>
-                        <span className="text-xl">✅</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {/* Generation Frequency */}
-              <div className={`p-6 rounded-xl border ${
-                isDarkMode
-                  ? 'bg-white/5 border-white/10'
-                  : 'bg-gray-50 border-gray-200'
-              }`}>
-                <h3 className={`text-xl font-bold mb-4 ${
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  📈 Generation Frequency
-                </h3>
-                <div className="space-y-2">
-                  {Object.entries(getGenerationsPerDay())
-                    .slice(-7)
-                    .map(([date, count]) => (
-                      <div key={date} className="flex items-center gap-3">
-                        <span className={`text-sm w-24 ${
-                          isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                          {date}
-                        </span>
-                        <div className="flex-1 flex items-center gap-1">
-                          {Array.from({ length: count }).map((_, i) => (
-                            <div
-                              key={i}
-                              className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-pink-500"
-                            />
-                          ))}
-                        </div>
-                        <span className={`text-sm font-bold ${
-                          isDarkMode ? 'text-white' : 'text-gray-900'
-                        }`}>
-                          {count}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnalyticsModal 
+        open={showAnalytics}
+        onOpenChange={setShowAnalytics}
+      />
       {/* AI Chat Assistant Panel */}
-      {showChat && (
-        <div className="fixed bottom-4 right-4 z-50 animate-slideUp">
-          <div className={`w-96 h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
-            isDarkMode
-              ? 'bg-gray-900 border border-gray-700'
-              : 'bg-white border border-gray-200'
-          }`}>
-            {/* Chat Header */}
-            <div className={`p-4 border-b ${
-              isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl">
-                    🤖
-                  </div>
-                  <div>
-                    <h3 className={`font-bold ${
-                      isDarkMode ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      AI Assistant
-                    </h3>
-                    <p className={`text-xs ${
-                      isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
-                      {isChatLoading ? 'Typing...' : 'Online'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {chatMessages.length > 0 && (
-                    <button
-                      onClick={clearChat}
-                      className={`p-2 rounded-lg transition-colors ${
-                        isDarkMode
-                          ? 'hover:bg-gray-700 text-gray-400'
-                          : 'hover:bg-gray-200 text-gray-600'
-                      }`}
-                      title="Clear chat"
-                    >
-                      <span className="text-lg">🗑️</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowChat(false)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isDarkMode
-                        ? 'hover:bg-gray-700 text-gray-400'
-                        : 'hover:bg-gray-200 text-gray-600'
-                    }`}
-                  >
-                    <span className="text-lg">✕</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {chatMessages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                  <div className="text-6xl mb-4">💬</div>
-                  <h4 className={`text-lg font-bold mb-2 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    Hi! I'm your AI assistant
-                  </h4>
-                  <p className={`text-sm mb-6 ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
-                    Ask me anything about creating websites!
-                  </p>
-                  {/* Quick Suggestions */}
-                  <div className="space-y-2 w-full">
-                    <p className={`text-xs font-semibold mb-2 ${
-                      isDarkMode ? 'text-gray-500' : 'text-gray-500'
-                    }`}>
-                      Try asking:
-                    </p>
-                    {[
-                      "What makes a great portfolio website?",
-                      "How do I improve my website prompt?",
-                      "Suggest colors for a restaurant site",
-                      "What features should an e-commerce site have?"
-                    ].map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setChatInput(suggestion);
-                          setTimeout(() => sendChatMessage(), 100);
-                        }}
-                        className={`w-full text-left p-3 rounded-lg text-sm transition-all hover:scale-105 ${
-                          isDarkMode
-                            ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        💡 {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {chatMessages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                          message.role === 'user'
-                            ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white'
-                            : isDarkMode
-                            ? 'bg-gray-800 text-gray-200'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {isChatLoading && (
-                    <div className="flex justify-start">
-                      <div className={`rounded-2xl px-4 py-3 ${
-                        isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
-                      }`}>
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-            {/* Chat Input */}
-            <div className={`p-4 border-t ${
-              isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={handleChatKeyPress}
-                  placeholder="Ask me anything..."
-                  disabled={isChatLoading}
-                  className={`flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                    isDarkMode
-                      ? 'bg-gray-700 text-white placeholder-gray-400'
-                      : 'bg-white text-gray-900 placeholder-gray-500 border border-gray-300'
-                  } disabled:opacity-50`}
-                />
-                <button
-                  onClick={sendChatMessage}
-                  disabled={!chatInput.trim() || isChatLoading}
-                  className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                    chatInput.trim() && !isChatLoading
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white'
-                      : isDarkMode
-                      ? 'bg-gray-700 text-gray-500'
-                      : 'bg-gray-200 text-gray-400'
-                  } disabled:cursor-not-allowed`}
-                >
-                  {isChatLoading ? '⏳' : '🚀'}
-                </button>
-              </div>
-              <p className={`text-xs mt-2 text-center ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-500'
-              }`}>
-                Press Enter to send • Shift+Enter for new line
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <ChatModal
+        open={showChat}
+        onOpenChange={setShowChat}
+        websiteCode={generatedCode || ""}
+        onCodeUpdate={(newCode) => setGeneratedCode(newCode)}
+      />
       {/* Project Save/Edit Modal */}
-      {showProjectModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-          <div className={`max-w-2xl w-full rounded-2xl shadow-2xl ${
-            isDarkMode ? 'bg-gray-900 border border-gray-700' : 'bg-white border border-gray-200'
-          }`}>
-            {/* Modal Header */}
-            <div className={`p-6 border-b ${
-              isDarkMode ? 'border-gray-700' : 'border-gray-200'
-            }`}>
-              <div className="flex items-center justify-between">
-                <h2 className={`text-2xl font-bold ${
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  💾 Save Project Details
-                </h2>
-                <button
-                  onClick={() => setShowProjectModal(false)}
-                  className={`p-2 rounded-full transition-colors ${
-                    isDarkMode
-                      ? 'hover:bg-gray-800 text-gray-400'
-                      : 'hover:bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  <span className="text-xl">✕</span>
-                </button>
-              </div>
-            </div>
-            {/* Modal Content */}
-            <div className="p-6 space-y-6">
-              {/* Project Name */}
-              <div>
-                <label className={`block text-sm font-semibold mb-2 ${
-                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Project Name *
-                </label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="e.g., My Portfolio Website"
-                  className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    isDarkMode
-                      ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
-                      : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
-                  }`}
-                />
-              </div>
-              {/* Tags */}
-              <div>
-                <label className={`block text-sm font-semibold mb-2 ${
-                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Tags (Press Enter to add)
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {projectTags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
-                        isDarkMode
-                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                          : 'bg-blue-100 text-blue-700 border border-blue-200'
-                      }`}
-                    >
-                      {tag}
-                      <button
-                        onClick={() => removeTag(tag)}
-                        className="hover:text-red-500 transition-colors"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <input
-                  type="text"
-                  placeholder="Add tags (Portfolio, Business, E-commerce...)"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addTag((e.target as HTMLInputElement).value);
-                      (e.target as HTMLInputElement).value = "";
-                    }
-                  }}
-                  className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    isDarkMode
-                      ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
-                      : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
-                  }`}
-                />
-                {/* Quick Tag Buttons */}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
-                    <button
-                      key={quickTag}
-                      onClick={() => addTag(quickTag)}
-                      disabled={projectTags.includes(quickTag)}
-                      className={`px-3 py-1 rounded-full text-xs transition-all ${
-                        projectTags.includes(quickTag)
-                          ? isDarkMode
-                            ? 'bg-gray-800 text-gray-600'
-                            : 'bg-gray-200 text-gray-400'
-                          : isDarkMode
-                          ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      } disabled:cursor-not-allowed`}
-                    >
-                      + {quickTag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Notes */}
-              <div>
-                <label className={`block text-sm font-semibold mb-2 ${
-                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                }`}>
-                  Notes (Optional)
-                </label>
-                <textarea
-                  value={projectNotes}
-                  onChange={(e) => setProjectNotes(e.target.value)}
-                  placeholder="Add any notes about this project..."
-                  rows={4}
-                  className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
-                    isDarkMode
-                      ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
-                      : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
-                  }`}
-                />
-              </div>
-            </div>
-            {/* Modal Footer */}
-            <div className={`p-6 border-t flex justify-end gap-3 ${
-              isDarkMode ? 'border-gray-700' : 'border-gray-200'
-            }`}>
-              <button
-                onClick={() => setShowProjectModal(false)}
-                className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
-                  isDarkMode
-                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveProjectDetails}
-                className="px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white transition-all"
-              >
-                💾 Save Project
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProjectModal
+        open={showProjectModal}
+        onOpenChange={setShowProjectModal}
+        projects={websiteHistory.map(site => ({
+          id: site.id,
+          name: site.name,
+          date: new Date(site.timestamp).toLocaleDateString(),
+          preview: site.html || ""
+        }))}
+        onProjectSelect={(project) => {
+          setGeneratedCode(project.preview);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onProjectDelete={handleDelete}
+      />
       {/* Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
@@ -2378,7 +1826,7 @@ ${new Date().toLocaleDateString()}
                     >
                       {site.isFavorite ? '⭐' : '☆'}
                     </button>
-   
+  
                     {/* Project Info */}
                     <div className="mb-4">
                       <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2386,7 +1834,7 @@ ${new Date().toLocaleDateString()}
                       }`}>
                         {site.name}
                       </h3>
-   
+  
                       {/* Tags */}
                       {site.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -2404,13 +1852,13 @@ ${new Date().toLocaleDateString()}
                           ))}
                         </div>
                       )}
-   
+  
                       <p className={`text-sm mb-2 line-clamp-2 ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                         {site.prompt}
                       </p>
-   
+  
                       {site.notes && (
                         <p className={`text-xs italic mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2418,7 +1866,7 @@ ${new Date().toLocaleDateString()}
                           📝 {site.notes}
                         </p>
                       )}
-   
+  
                       <p className={`text-xs ${
                         isDarkMode ? 'text-gray-500' : 'text-gray-500'
                       }`}>
@@ -2426,7 +1874,7 @@ ${new Date().toLocaleDateString()}
                         {new Date(site.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
-   
+  
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -2442,7 +1890,7 @@ ${new Date().toLocaleDateString()}
                       >
                         👁️ View
                       </button>
-   
+  
                       <button
                         onClick={() => openEditProject(site)}
                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2453,7 +1901,7 @@ ${new Date().toLocaleDateString()}
                       >
                         ✏️ Edit
                       </button>
-   
+  
                       <button
                         onClick={() => handleDelete(site.id)}
                         className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
