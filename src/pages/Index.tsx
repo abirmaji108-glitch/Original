@@ -237,9 +237,44 @@ const Index = () => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
     };
- 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl/Cmd + Enter - Generate website
+      if (ctrlKey && e.key === 'Enter' && !isGenerating && input.length >= 50) {
+        e.preventDefault();
+        handleGenerate();
+      }
+
+      // Ctrl/Cmd + / - Toggle theme
+      if (ctrlKey && e.key === '/') {
+        e.preventDefault();
+        toggleTheme();
+      }
+
+      // Ctrl/Cmd + S - Download website
+      if (ctrlKey && e.key === 's' && generatedCode) {
+        e.preventDefault();
+        handleDownload();
+      }
+
+      // Escape - Close modals
+      if (e.key === 'Escape') {
+        setShowAnalytics(false);
+        setShowProjectModal(false);
+        setShowShareMenu(false);
+        setShowChat(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
   const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
   const calculateAnalytics = () => {
@@ -1381,7 +1416,7 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
-  
+ 
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1432,7 +1467,7 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
-  
+ 
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1582,7 +1617,6 @@ ${new Date().toLocaleDateString()}
                       : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                   }`}
                 />
- 
                 {/* Quick Tag Buttons */}
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['Portfolio', 'Business', 'E-commerce', 'Blog', 'Restaurant', 'Landing Page'].map(quickTag => (
@@ -1790,7 +1824,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-     
+    
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -1876,6 +1910,7 @@ ${new Date().toLocaleDateString()}
                     onClick={handleGenerate}
                     disabled={isGenerating || input.length < 50 || input.length > 3000}
                     className="flex-1 bg-gradient-primary hover:bg-gradient-primary/90 text-white font-semibold h-12 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Ctrl+Enter to generate"
                   >
                     {isGenerating ? (
                       <>
@@ -1889,6 +1924,15 @@ ${new Date().toLocaleDateString()}
                       </>
                     )}
                   </Button>
+                </div>
+                <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
+                  <span className="text-lg">⌨️</span>
+                  <span className={`text-sm ${dynamicMutedClass}`}>
+                    <kbd className={`px-2 py-1 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> + 
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate • 
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> + 
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>/</kbd> to toggle theme
+                  </span>
                 </div>
               </div>
               {/* Examples Gallery */}
@@ -2174,7 +2218,6 @@ ${new Date().toLocaleDateString()}
                 }`}>
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
- 
                 {/* Search and Filters */}
                 <div className="flex flex-wrap gap-3">
                   {/* Search */}
@@ -2189,7 +2232,7 @@ ${new Date().toLocaleDateString()}
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-   
+  
                   {/* Tag Filter */}
                   <select
                     value={filterTag}
@@ -2205,7 +2248,7 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-   
+  
                   {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -2263,7 +2306,7 @@ ${new Date().toLocaleDateString()}
                       >
                         {site.isFavorite ? '⭐' : '☆'}
                       </button>
-       
+      
                       {/* Project Info */}
                       <div className="mb-4">
                         <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2271,7 +2314,7 @@ ${new Date().toLocaleDateString()}
                         }`}>
                           {site.name}
                         </h3>
-         
+        
                         {/* Tags */}
                         {site.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-3">
@@ -2289,13 +2332,13 @@ ${new Date().toLocaleDateString()}
                             ))}
                           </div>
                         )}
-         
+        
                         <p className={`text-sm mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-400' : 'text-gray-600'
                         }`}>
                           {site.prompt}
                         </p>
-         
+        
                         {site.notes && (
                           <p className={`text-xs italic mb-2 line-clamp-2 ${
                             isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2303,7 +2346,7 @@ ${new Date().toLocaleDateString()}
                             📝 {site.notes}
                           </p>
                         )}
-         
+        
                         <p className={`text-xs ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
@@ -2311,7 +2354,7 @@ ${new Date().toLocaleDateString()}
                           {new Date(site.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-       
+      
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -2327,7 +2370,7 @@ ${new Date().toLocaleDateString()}
                         >
                           👁️ View
                         </button>
-         
+        
                         <button
                           onClick={() => openEditProject(site)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2338,7 +2381,7 @@ ${new Date().toLocaleDateString()}
                         >
                           ✏️ Edit
                         </button>
-         
+        
                         <button
                           onClick={() => handleDelete(site.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
