@@ -105,6 +105,31 @@ const STYLE_DESCRIPTIONS: Record<string, string> = {
   professional: "Corporate, trustworthy design with structured layouts, conservative colors (blues, grays), and business-focused aesthetic."
 };
 type ViewMode = "desktop" | "tablet" | "mobile";
+// Skeleton Loading Components
+const SkeletonCard = ({ isDarkMode }: { isDarkMode: boolean }) => (
+  <div className={`backdrop-blur-sm rounded-xl p-6 animate-pulse ${
+    isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
+  }`}>
+    <div className={`h-6 rounded mb-4 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '70%' }}></div>
+    <div className={`h-4 rounded mb-2 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '100%' }}></div>
+    <div className={`h-4 rounded mb-4 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '80%' }}></div>
+    <div className="flex gap-2">
+      <div className={`h-10 rounded flex-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}></div>
+      <div className={`h-10 rounded flex-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}></div>
+      <div className={`h-10 rounded w-10 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}></div>
+    </div>
+  </div>
+);
+
+const SkeletonTemplate = ({ isDarkMode }: { isDarkMode: boolean }) => (
+  <div className={`backdrop-blur-sm rounded-xl p-6 animate-pulse ${
+    isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
+  }`}>
+    <div className={`h-16 w-16 rounded-full mb-4 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}></div>
+    <div className={`h-6 rounded mb-2 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '80%' }}></div>
+    <div className={`h-4 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '60%' }}></div>
+  </div>
+);
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -245,25 +270,21 @@ const Index = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
-
       // Ctrl/Cmd + Enter - Generate website
       if (ctrlKey && e.key === 'Enter' && !isGenerating && input.length >= 50) {
         e.preventDefault();
         handleGenerate();
       }
-
       // Ctrl/Cmd + / - Toggle theme
       if (ctrlKey && e.key === '/') {
         e.preventDefault();
         toggleTheme();
       }
-
       // Ctrl/Cmd + S - Download website
       if (ctrlKey && e.key === 's' && generatedCode) {
         e.preventDefault();
         handleDownload();
       }
-
       // Escape - Close modals
       if (e.key === 'Escape') {
         setShowAnalytics(false);
@@ -272,7 +293,6 @@ const Index = () => {
         setShowChat(false);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -1416,7 +1436,6 @@ ${new Date().toLocaleDateString()}
                   }`}>
                     Ask me anything about creating websites!
                   </p>
- 
                   {/* Quick Suggestions */}
                   <div className="space-y-2 w-full">
                     <p className={`text-xs font-semibold mb-2 ${
@@ -1467,7 +1486,6 @@ ${new Date().toLocaleDateString()}
                       </div>
                     </div>
                   ))}
- 
                   {isChatLoading && (
                     <div className="flex justify-start">
                       <div className={`rounded-2xl px-4 py-3 ${
@@ -1812,8 +1830,16 @@ ${new Date().toLocaleDateString()}
                     <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {TEMPLATES.map((template) => (
+                  {isPageLoading ? (
+  // Skeleton Loading State for Templates
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
+    ))}
+  </div>
+) : (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {TEMPLATES.map((template) => (
                       <button
                         key={template.id}
                         onClick={() => handleTemplateClick(template.prompt)}
@@ -1824,7 +1850,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-    
+   
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -1836,6 +1862,7 @@ ${new Date().toLocaleDateString()}
                     ))}
                   </div>
                 </div>
+                )}
                 {/* Industry Select */}
                 <div className="flex items-center gap-4">
                   <Select value={industry} onValueChange={handleIndustryChange}>
@@ -1928,9 +1955,9 @@ ${new Date().toLocaleDateString()}
                 <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
                   <span className="text-lg">⌨️</span>
                   <span className={`text-sm ${dynamicMutedClass}`}>
-                    <kbd className={`px-2 py-1 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> + 
-                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate • 
-                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> + 
+                    <kbd className={`px-2 py-1 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate •
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
                     <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>/</kbd> to toggle theme
                   </span>
                 </div>
@@ -2232,7 +2259,7 @@ ${new Date().toLocaleDateString()}
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-  
+ 
                   {/* Tag Filter */}
                   <select
                     value={filterTag}
@@ -2248,7 +2275,7 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-  
+ 
                   {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
@@ -2288,115 +2315,122 @@ ${new Date().toLocaleDateString()}
                     Clear Filters
                   </button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {getFilteredProjects().map((site) => (
-                    <div
-                      key={site.id}
-                      className={`backdrop-blur-sm rounded-xl p-6 transition-all hover:scale-105 relative ${
-                        isDarkMode
-                          ? 'bg-white/5 border border-white/10 hover:bg-white/10'
-                          : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
-                      }`}
+              ) : usageLoading ? (
+  // Skeleton Loading State for Projects
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <SkeletonCard key={i} isDarkMode={isDarkMode} />
+    ))}
+  </div>
+) : (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {getFilteredProjects().map((site) => (
+                  <div
+                    key={site.id}
+                    className={`backdrop-blur-sm rounded-xl p-6 transition-all hover:scale-105 relative ${
+                      isDarkMode
+                        ? 'bg-white/5 border border-white/10 hover:bg-white/10'
+                        : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
+                    }`}
+                  >
+                    {/* Favorite Star */}
+                    <button
+                      onClick={() => toggleFavorite(site.id)}
+                      className="absolute top-4 right-4 text-2xl transition-transform hover:scale-125"
                     >
-                      {/* Favorite Star */}
-                      <button
-                        onClick={() => toggleFavorite(site.id)}
-                        className="absolute top-4 right-4 text-2xl transition-transform hover:scale-125"
-                      >
-                        {site.isFavorite ? '⭐' : '☆'}
-                      </button>
-      
-                      {/* Project Info */}
-                      <div className="mb-4">
-                        <h3 className={`text-xl font-bold mb-2 pr-8 ${
-                          isDarkMode ? 'text-white' : 'text-gray-900'
-                        }`}>
-                          {site.name}
-                        </h3>
-        
-                        {/* Tags */}
-                        {site.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {site.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className={`px-2 py-1 rounded-full text-xs ${
-                                  isDarkMode
-                                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                    : 'bg-blue-100 text-blue-700 border border-blue-200'
-                                }`}
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-        
-                        <p className={`text-sm mb-2 line-clamp-2 ${
-                          isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                          {site.prompt}
-                        </p>
-        
-                        {site.notes && (
-                          <p className={`text-xs italic mb-2 line-clamp-2 ${
-                            isDarkMode ? 'text-gray-500' : 'text-gray-500'
-                          }`}>
-                            📝 {site.notes}
-                          </p>
-                        )}
-        
-                        <p className={`text-xs ${
+                      {site.isFavorite ? '⭐' : '☆'}
+                    </button>
+       
+                    {/* Project Info */}
+                    <div className="mb-4">
+                      <h3 className={`text-xl font-bold mb-2 pr-8 ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {site.name}
+                      </h3>
+       
+                      {/* Tags */}
+                      {site.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {site.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                isDarkMode
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                  : 'bg-blue-100 text-blue-700 border border-blue-200'
+                              }`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+       
+                      <p className={`text-sm mb-2 line-clamp-2 ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                        {site.prompt}
+                      </p>
+       
+                      {site.notes && (
+                        <p className={`text-xs italic mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
                         }`}>
-                          Created: {new Date(site.timestamp).toLocaleDateString()} at{' '}
-                          {new Date(site.timestamp).toLocaleTimeString()}
+                          📝 {site.notes}
                         </p>
-                      </div>
-      
-                      {/* Action Buttons */}
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => {
-                            setGeneratedCode(site.html || "");
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                          }}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                            isDarkMode
-                              ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          }`}
-                        >
-                          👁️ View
-                        </button>
-        
-                        <button
-                          onClick={() => openEditProject(site)}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                            isDarkMode
-                              ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                          }`}
-                        >
-                          ✏️ Edit
-                        </button>
-        
-                        <button
-                          onClick={() => handleDelete(site.id)}
-                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                            isDarkMode
-                              ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
-                          }`}
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                      )}
+       
+                      <p className={`text-xs ${
+                        isDarkMode ? 'text-gray-500' : 'text-gray-500'
+                      }`}>
+                        Created: {new Date(site.timestamp).toLocaleDateString()} at{' '}
+                        {new Date(site.timestamp).toLocaleTimeString()}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
+       
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          setGeneratedCode(site.html || "");
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          isDarkMode
+                            ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
+                      >
+                        👁️ View
+                      </button>
+       
+                      <button
+                        onClick={() => openEditProject(site)}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          isDarkMode
+                            ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        }`}
+                      >
+                        ✏️ Edit
+                      </button>
+       
+                      <button
+                        onClick={() => handleDelete(site.id)}
+                        className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          isDarkMode
+                            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                        }`}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             </div>
           )}
         </div>
