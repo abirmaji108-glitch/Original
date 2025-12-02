@@ -1849,7 +1849,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-  
+ 
                         {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
@@ -1860,8 +1860,8 @@ ${new Date().toLocaleDateString()}
                       </button>
                     ))}
                   </div>
-                </div>
                 )}
+                </div>
                 {/* Industry Select */}
                 <div className="flex items-center gap-4">
                   <Select value={industry} onValueChange={handleIndustryChange}>
@@ -2337,7 +2337,7 @@ ${new Date().toLocaleDateString()}
                     >
                       {site.isFavorite ? '⭐' : '☆'}
                     </button>
-      
+     
                     {/* Project Info */}
                     <div className="mb-4">
                       <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -2345,7 +2345,7 @@ ${new Date().toLocaleDateString()}
                       }`}>
                         {site.name}
                       </h3>
-      
+     
                       {/* Tags */}
                       {site.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -2363,13 +2363,13 @@ ${new Date().toLocaleDateString()}
                           ))}
                         </div>
                       )}
-      
+     
                       <p className={`text-sm mb-2 line-clamp-2 ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                         {site.prompt}
                       </p>
-      
+     
                       {site.notes && (
                         <p className={`text-xs italic mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -2377,7 +2377,7 @@ ${new Date().toLocaleDateString()}
                           📝 {site.notes}
                         </p>
                       )}
-      
+     
                       <p className={`text-xs ${
                         isDarkMode ? 'text-gray-500' : 'text-gray-500'
                       }`}>
@@ -2385,7 +2385,7 @@ ${new Date().toLocaleDateString()}
                         {new Date(site.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
-      
+     
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -2401,7 +2401,7 @@ ${new Date().toLocaleDateString()}
                       >
                         👁️ View
                       </button>
-      
+     
                       <button
                         onClick={() => openEditProject(site)}
                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -2412,7 +2412,7 @@ ${new Date().toLocaleDateString()}
                       >
                         ✏️ Edit
                       </button>
-      
+     
                       <button
                         onClick={() => handleDelete(site.id)}
                         className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
