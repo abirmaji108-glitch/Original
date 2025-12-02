@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,9 +44,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingScreen } from '@/components/ui/spinner';
-import { ChatModal } from "@/components/ChatModal";
-import { AnalyticsModal } from "@/components/AnalyticsModal";
-import { ProjectModal } from "@/components/ProjectModal";
+
+const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
+const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
+const ProjectModal = lazy(() => import("@/components/ProjectModal").then(m => ({ default: m.ProjectModal })));
+
 const TEMPLATES = [
   {
     id: "portfolio",
@@ -837,7 +839,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-     
+    
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Generation Cancelled",
@@ -962,7 +964,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-     
+    
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Regeneration Cancelled",
@@ -1163,33 +1165,41 @@ ${new Date().toLocaleDateString()}
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Analytics Dashboard Modal */}
-      <AnalyticsModal 
-        open={showAnalytics}
-        onOpenChange={setShowAnalytics}
-      />
+      <Suspense fallback={<div />}>
+        <AnalyticsModal 
+          open={showAnalytics}
+          onOpenChange={setShowAnalytics}
+        />
+      </Suspense>
+
       {/* AI Chat Assistant Panel */}
-      <ChatModal
-        open={showChat}
-        onOpenChange={setShowChat}
-        websiteCode={generatedCode || ""}
-        onCodeUpdate={(newCode) => setGeneratedCode(newCode)}
-      />
+      <Suspense fallback={<div />}>
+        <ChatModal
+          open={showChat}
+          onOpenChange={setShowChat}
+          websiteCode={generatedCode || ""}
+          onCodeUpdate={(newCode) => setGeneratedCode(newCode)}
+        />
+      </Suspense>
+
       {/* Project Save/Edit Modal */}
-      <ProjectModal
-        open={showProjectModal}
-        onOpenChange={setShowProjectModal}
-        projects={websiteHistory.map(site => ({
-          id: site.id,
-          name: site.name,
-          date: new Date(site.timestamp).toLocaleDateString(),
-          preview: site.html || ""
-        }))}
-        onProjectSelect={(project) => {
-          setGeneratedCode(project.preview);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-        onProjectDelete={handleDelete}
-      />
+      <Suspense fallback={<div />}>
+        <ProjectModal
+          open={showProjectModal}
+          onOpenChange={setShowProjectModal}
+          projects={websiteHistory.map(site => ({
+            id: site.id,
+            name: site.name,
+            date: new Date(site.timestamp).toLocaleDateString(),
+            preview: site.html || ""
+          }))}
+          onProjectSelect={(project) => {
+            setGeneratedCode(project.preview);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onProjectDelete={handleDelete}
+        />
+      </Suspense>
       {/* Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
@@ -1826,7 +1836,7 @@ ${new Date().toLocaleDateString()}
                     >
                       {site.isFavorite ? '⭐' : '☆'}
                     </button>
-  
+ 
                     {/* Project Info */}
                     <div className="mb-4">
                       <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -1834,7 +1844,7 @@ ${new Date().toLocaleDateString()}
                       }`}>
                         {site.name}
                       </h3>
-  
+ 
                       {/* Tags */}
                       {site.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -1852,13 +1862,13 @@ ${new Date().toLocaleDateString()}
                           ))}
                         </div>
                       )}
-  
+ 
                       <p className={`text-sm mb-2 line-clamp-2 ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                         {site.prompt}
                       </p>
-  
+ 
                       {site.notes && (
                         <p className={`text-xs italic mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -1866,7 +1876,7 @@ ${new Date().toLocaleDateString()}
                           📝 {site.notes}
                         </p>
                       )}
-  
+ 
                       <p className={`text-xs ${
                         isDarkMode ? 'text-gray-500' : 'text-gray-500'
                       }`}>
@@ -1874,7 +1884,7 @@ ${new Date().toLocaleDateString()}
                         {new Date(site.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
-  
+ 
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -1890,7 +1900,7 @@ ${new Date().toLocaleDateString()}
                       >
                         👁️ View
                       </button>
-  
+ 
                       <button
                         onClick={() => openEditProject(site)}
                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -1901,7 +1911,7 @@ ${new Date().toLocaleDateString()}
                       >
                         ✏️ Edit
                       </button>
-  
+ 
                       <button
                         onClick={() => handleDelete(site.id)}
                         className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
