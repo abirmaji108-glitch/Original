@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, Zap, Shield, TrendingUp, Wand2, Code2, Palette, Smartphone, Globe, Timer, Check, Star } from "lucide-react";
-
 const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 scroll-smooth">
@@ -88,6 +87,7 @@ const Landing = () => {
                 src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&h=700&fit=crop"
                 alt="Sento Dashboard Preview"
                 className="rounded-lg w-full"
+                loading="lazy"
               />
             </div>
           </div>
@@ -365,7 +365,6 @@ const Landing = () => {
         {/* Background decorative elements */}
         <div className="absolute top-20 left-20 w-[400px] h-[400px] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float"></div>
         <div className="absolute bottom-20 right-20 w-[400px] h-[400px] bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float" style={{ animationDelay: '2s' }}></div>
- 
         <div className="container mx-auto px-6 relative z-10">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -475,7 +474,6 @@ const Landing = () => {
         {/* Background decorative elements */}
         <div className="absolute top-10 right-20 w-[500px] h-[500px] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float"></div>
         <div className="absolute bottom-10 left-20 w-[500px] h-[500px] bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float" style={{ animationDelay: '3s' }}></div>
- 
         <div className="container mx-auto px-6 relative z-10">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -606,24 +604,20 @@ const Landing = () => {
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
           <div className="absolute top-40 right-20 w-64 h-64 bg-blue-300 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '4s' }}></div>
         </div>
-
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             {/* Icon */}
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full mb-8 animate-bounce">
               <Zap className="w-10 h-10 text-white" />
             </div>
-
             {/* Heading */}
             <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
               Ready to Build Your Dream Website?
             </h2>
-
             {/* Subheading */}
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
               Join 10,000+ creators who are building stunning websites with AI. Start your free trial today—no credit card required.
             </p>
-
             {/* Features List */}
             <div className="flex flex-wrap justify-center gap-6 mb-10">
               <div className="flex items-center gap-2 text-white/90">
@@ -651,7 +645,6 @@ const Landing = () => {
                 <span className="font-semibold">Cancel anytime</span>
               </div>
             </div>
-
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
               <Button className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg font-bold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105 group">
@@ -665,7 +658,6 @@ const Landing = () => {
                 </svg>
               </Button>
             </div>
-
             {/* Trust Indicators */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-white/80 text-sm">
               <div className="flex items-center gap-2">
@@ -683,7 +675,6 @@ const Landing = () => {
             </div>
           </div>
         </div>
-
         {/* Bottom wave decoration */}
         <div className="absolute bottom-0 left-0 w-full">
           <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
@@ -695,7 +686,7 @@ const Landing = () => {
       <footer className="bg-gray-900 text-white relative overflow-hidden">
         {/* Background decorative gradient */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600"></div>
-        
+       
         <div className="container mx-auto px-6 py-16">
           {/* Main Footer Content */}
           <div className="grid md:grid-cols-4 gap-12 mb-12">
@@ -723,7 +714,6 @@ const Landing = () => {
                 </a>
               </div>
             </div>
-
             {/* Column 2: Product */}
             <div>
               <h3 className="text-lg font-bold mb-4 text-white">Product</h3>
@@ -735,7 +725,6 @@ const Landing = () => {
                 <li><a href="#" className="text-gray-400 hover:text-purple-400 transition-colors duration-300">Changelog</a></li>
               </ul>
             </div>
-
             {/* Column 3: Resources */}
             <div>
               <h3 className="text-lg font-bold mb-4 text-white">Resources</h3>
@@ -747,7 +736,6 @@ const Landing = () => {
                 <li><a href="#" className="text-gray-400 hover:text-purple-400 transition-colors duration-300">Support</a></li>
               </ul>
             </div>
-
             {/* Column 4: Company */}
             <div>
               <h3 className="text-lg font-bold mb-4 text-white">Company</h3>
@@ -760,7 +748,6 @@ const Landing = () => {
               </ul>
             </div>
           </div>
-
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -835,5 +822,4 @@ const Landing = () => {
     </div>
   );
 };
-
 export default Landing;
