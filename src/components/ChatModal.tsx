@@ -27,44 +27,33 @@ export function ChatModal({ open, onOpenChange, websiteCode, onCodeUpdate }: Cha
     setChatHistory(newChatHistory);
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      // Use your backend API instead of calling Anthropic directly
+      const response = await fetch("https://original-lbxv.onrender.com/api/generate", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
-          messages: [
-            {
-              role: "user",
-              content: `You are a helpful AI assistant that modifies website code based on user requests.
+          prompt: `You are a helpful AI assistant that modifies website code based on user requests.
 
 Current website code:
 ${websiteCode}
 
 User's modification request: ${userMessage}
 
-Please provide ONLY the complete modified HTML code with no explanations or markdown. The code should be a complete, valid HTML document.`,
-            },
-          ],
-        }),
+Please provide ONLY the complete modified HTML code with no explanations or markdown. The code should be a complete, valid HTML document.`
+        })
       });
 
       if (!response.ok) throw new Error("Failed to get AI response");
 
       const data = await response.json();
-      const aiResponse = data.content[0].text;
+      const aiResponse = data.htmlCode || "I'm here to help! Could you please rephrase your question?";
 
       setChatHistory([...newChatHistory, { role: "assistant", content: aiResponse }]);
 
-      const codeMatch = aiResponse.match(/```html\n([\s\S]*?)\n```/) || 
-                       aiResponse.match(/```\n([\s\S]*?)\n```/);
-      
-      if (codeMatch) {
-        onCodeUpdate(codeMatch[1]);
-      } else if (aiResponse.includes("<!DOCTYPE html>") || aiResponse.includes("<html")) {
+      // Check if response contains HTML code
+      if (aiResponse.includes("<!DOCTYPE html>") || aiResponse.includes("<html")) {
         onCodeUpdate(aiResponse);
       }
     } catch (error) {
