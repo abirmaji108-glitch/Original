@@ -185,6 +185,7 @@ const Index = () => {
   const [selectedStyle, setSelectedStyle] = useState("modern");
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
@@ -788,7 +789,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
- 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Generation Cancelled",
@@ -907,7 +907,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
- 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Regeneration Cancelled",
@@ -1155,22 +1154,26 @@ ${new Date().toLocaleDateString()}
       </div>
       {/* Navigation */}
       <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-4 sm:gap-6">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/app')}>
-              <Sparkles className={`w-6 h-6 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
-              <span className={`text-xl font-bold tracking-tight ${dynamicTextClass}`}>Sento</span>
+              <Sparkles className={`w-5 h-5 sm:w-6 sm:h-6 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
+              <span className={`text-lg sm:text-xl font-bold tracking-tight ${dynamicTextClass}`}>Sento</span>
             </div>
+            {/* Desktop: My Websites Button */}
             <Button
               variant="ghost"
               onClick={() => navigate('/my-websites')}
-              className="flex items-center gap-2 hover:bg-white/10"
+              className="hidden md:flex items-center gap-2 hover:bg-white/10"
             >
               <FolderOpen className={`w-4 h-4 ${dynamicSubtleClass}`} />
               <span className={dynamicSubtleClass}>My Websites</span>
             </Button>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Desktop Menu */}
+          <div className="hidden lg:flex items-center gap-3">
             <button
               onClick={() => setShowChat(!showChat)}
               className={`px-4 py-2 rounded-full transition-all duration-300 font-semibold relative ${
@@ -1226,21 +1229,113 @@ ${new Date().toLocaleDateString()}
               Sign Out
             </Button>
           </div>
+
+          {/* Mobile: Theme Toggle + Hamburger Menu Button */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-lg ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-900 hover:bg-gray-100'}`}
+            >
+              <span className="text-xl">{isDarkMode ? '☀️' : '🌙'}</span>
+            </button>
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className={`p-2 rounded-lg ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-900 hover:bg-gray-100'}`}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className={`lg:hidden border-t ${isDarkMode ? 'border-white/10 bg-black/90' : 'border-gray-200 bg-white/95'} backdrop-blur-md`}>
+            <div className="px-4 py-4 space-y-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  navigate('/my-websites');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full justify-start"
+              >
+                <FolderOpen className="w-4 h-4 mr-2" />
+                My Websites
+              </Button>
+              <button
+                onClick={() => {
+                  setShowChat(!showChat);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-3 rounded-lg ${
+                  isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                <span className="text-xl mr-2">💬</span>
+                AI Chat Assistant
+              </button>
+              <button
+                onClick={() => {
+                  setShowAnalytics(!showAnalytics);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-4 py-3 rounded-lg ${
+                  isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                <span className="text-xl mr-2">📊</span>
+                Analytics
+              </button>
+              <div className={`px-4 py-3 rounded-lg ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="text-sm">
+                    <div className={dynamicTextClass}>Free Plan</div>
+                    <div className={`text-xs ${dynamicSubtleClass}`}>
+                      {usage.generationsUsed}/{usage.generationsLimit} credits
+                    </div>
+                  </div>
+                </div>
+                <a href="#" className={`text-sm hover:underline ${isDarkMode ? 'text-primary' : 'text-purple-600'}`}>
+                  Upgrade to Pro
+                </a>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  signOut();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full justify-start"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        )}
       </nav>
       {/* Main Content */}
-      <main className="relative pt-24 pb-12 px-6">
+      <main className="relative pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           {!generatedCode && !isGenerating && (
             <>
               {/* Hero Section */}
-              <div className="text-center mb-16 space-y-8">
+              <div className="text-center mb-12 sm:mb-16 space-y-6 sm:space-y-8">
                 <div className="space-y-6">
-                  <h1 className={`text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight ${dynamicTextClass}`}>
+                  <h1 className={`text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight ${dynamicTextClass}`}>
                     Create Stunning Websites{" "}
                     <span className="gradient-text animate-glow">with AI</span>
                   </h1>
-                  <p className={`text-2xl md:text-3xl max-w-3xl mx-auto font-light ${dynamicMutedClass}`}>
+                  <p className={`text-lg sm:text-2xl md:text-3xl max-w-3xl mx-auto font-light ${dynamicMutedClass}`}>
                     Describe your vision. Watch AI build it in seconds.
                   </p>
                 </div>
@@ -1274,35 +1369,35 @@ ${new Date().toLocaleDateString()}
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
                   {isPageLoading ? (
-  // Skeleton Loading State for Templates
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {[1, 2, 3, 4, 5, 6].map((i) => (
-      <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
-    ))}
-  </div>
-) : (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {TEMPLATES.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => handleTemplateClick(template.prompt)}
-                        disabled={isGenerating}
-                        className={`group relative ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
-                      >
-                        {/* Template Icon */}
-                        <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                          {template.icon}
-                        </div>
-                        {/* Template Title */}
-                        <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
-                          {template.title}
-                        </h3>
-                        <p className={`text-sm ${dynamicMutedClass}`}>
-                          {template.description}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+    // Skeleton Loading State for Templates
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
+      ))}
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {TEMPLATES.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => handleTemplateClick(template.prompt)}
+                      disabled={isGenerating}
+                      className={`group relative ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+                    >
+                      {/* Template Icon */}
+                      <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                        {template.icon}
+                      </div>
+                      {/* Template Title */}
+                      <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
+                        {template.title}
+                      </h3>
+                      <p className={`text-sm ${dynamicMutedClass}`}>
+                        {template.description}
+                      </p>
+                    </button>
+                  ))}
+                </div>
                 )}
                 </div>
                 {/* Industry Select */}
