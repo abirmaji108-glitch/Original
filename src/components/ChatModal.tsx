@@ -13,7 +13,7 @@ interface ChatModalProps {
 
 export function ChatModal({ open, onOpenChange, websiteCode, onCodeUpdate }: ChatModalProps) {
   const [chatMessage, setChatMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string }>>([]);
+  const [chatHistory, setChatHistory] = useState<Array<{ role: string; content: string; isHtml?: boolean }>>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
 
   const handleChatSubmit = async () => {
@@ -27,77 +27,113 @@ export function ChatModal({ open, onOpenChange, websiteCode, onCodeUpdate }: Cha
     setChatHistory(newChatHistory);
 
     try {
-      // Use your backend API instead of calling Anthropic directly
+      // Use your backend API
       const response = await fetch("https://original-lbxv.onrender.com/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          prompt: `You are Sento AI, a friendly chat assistant for building/modifying websites. Respond conversationally unless the user asks to change the code.
+          prompt: `You are Sento AI, a super-friendly chat buddy for website creation. ALWAYS check the user's intent FIRST before responding.
 
-Current website code (for reference if modifying):
+Context: User has this current website code (use ONLY if modifying):
+\`\`\`
 ${websiteCode}
+\`\`\`
 
-User message: ${userMessage}
+User's exact message: "${userMessage}"
 
-Rules:
-- If this is a greeting, question, or non-code request (e.g., "Hi", "What can you do?"), reply helpfully in plain text only. Keep it short, fun, and suggest code ideas.
-- If the user requests a code change (e.g., "add red header", "make it mobile-friendly"), provide ONLY the complete modified HTML code. No explanations, no markdown, no extra text—just valid <!DOCTYPE html> full document.
-- Always ensure output HTML is self-contained: inline all critical styles (no external CDNs like Tailwind CDN or Google Fonts to avoid CSP blocks). Use simple CSS for everything.
+STRICT RULES - Follow EXACTLY or your response will be rejected:
+1. **CHAT MODE (90% of cases)**: If the message is a greeting (e.g., "Hi", "Hello"), question (e.g., "How are you?", "What can you do?"), casual talk, or non-code request, respond ONLY with plain, fun, short TEXT. NO HTML, NO CODE, NO MARKDOWN. Examples:
+   - "Hi" → "Hey there! I'm Sento—your AI sidekick for epic sites. What's your dream website vibe?"
+   - "How are you?" → "Pumped and ready to code! Tell me how to jazz up your page."
+   - Suggest ideas: End with "Try asking: 'Add a blue hero section' for magic!"
+   Keep under 100 words. Be witty, helpful.
 
-Respond now based on the message.`
+2. **CODE MODE (ONLY if explicit mod request)**: If the message clearly asks to change/add/remove code (keywords: add, change, make, remove, update, modify, etc., e.g., "Add a red header", "Make it responsive"), respond with EXACTLY ONE THING: The FULL modified HTML document starting with <!DOCTYPE html>. NOTHING ELSE—no intro, no explanation, no markdown, no "Here's your code". Make it:
+   - Complete, valid HTML.
+   - Self-contained: INLINE all CSS (no <link> to CDNs like Tailwind or Google Fonts—CSP blocks them). Use plain <style> tags with simple rules.
+   - Based on current code, apply ONLY the requested change.
+
+Output NOW based on rules. If chat: Plain text. If code: Pure HTML.`
         })
       });
 
       if (!response.ok) throw new Error("Failed to get AI response");
 
       const data = await response.json();
-      const aiResponse = data.htmlCode || "I'm here to help! Could you please rephrase your question?";
+      let aiResponse = data.htmlCode || "Oops—try rephrasing! I'm here for site tweaks or quick chats.";
 
-      setChatHistory([...newChatHistory, { role: "assistant", content: aiResponse }]);
+      // Debug: Log raw response
+      console.log("Raw backend response:", aiResponse);
+      console.log("Is HTML?", aiResponse.includes("<!DOCTYPE html>") || aiResponse.includes("<html>"));
 
-      // Check if response contains HTML code
-      if (aiResponse.includes("<!DOCTYPE html>") || aiResponse.includes("<html")) {
+      const isHtml = aiResponse.includes("<!DOCTYPE html>") || aiResponse.includes("<html>");
+      if (isHtml) {
         onCodeUpdate(aiResponse);
       }
+
+      setChatHistory([...newChatHistory, { role: "assistant", content: aiResponse, isHtml }]);
     } catch (error) {
       console.error("Chat error:", error);
       setChatHistory([
         ...newChatHistory,
-        { role: "assistant", content: "Sorry, I encountered an error. Please try again." },
+        { role: "assistant", content: "Sorry—network hiccup! Try again. (Check console for details.)" },
       ]);
     } finally {
       setIsChatLoading(false);
     }
   };
 
+  const renderMessageContent = (content: string, isHtml: boolean) => {
+    if (!isHtml) {
+      return <p className="text-sm whitespace-pre-wrap">{content}</p>;
+    }
+    // Format HTML as code block for readability
+    return (
+      <div className="text-sm">
+        <p className="text-xs text-gray-500 mb-1">Updated code applied—preview below! 📄</p>
+        <pre className="bg-gray-900 text-green-400 p-2 rounded overflow-x-auto text-xs font-mono max-h-40 overflow-y-auto">
+          <code>{content}</code>
+        </pre>
+      </div>
+    );
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange} aria-describedby="chat-description">
+      <DialogContent id="chat-description" className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Chat with AI Assistant</DialogTitle>
+          <DialogTitle>Chat with Sento AI</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-4 mb-4">
           {chatHistory.map((msg, idx) => (
             <div
               key={idx}
-              className={`p-3 rounded-lg ${
-                msg.role === "user"
-                  ? "bg-purple-100 ml-8"
-                  : "bg-gray-100 mr-8"
+              className={`p-3 rounded-lg flex ${
+                msg.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              <p className="text-sm font-semibold mb-1">
-                {msg.role === "user" ? "You" : "AI Assistant"}
-              </p>
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              <div
+                className={`max-w-[80%] ${
+                  msg.role === "user"
+                    ? "bg-purple-100 ml-8"
+                    : "bg-gray-100 mr-8"
+                }`}
+              >
+                <p className="text-sm font-semibold mb-1 px-2 pt-2">
+                  {msg.role === "user" ? "You" : "Sento AI"}
+                </p>
+                {renderMessageContent(msg.content, msg.isHtml || false)}
+              </div>
             </div>
           ))}
           {isChatLoading && (
-            <div className="flex items-center gap-2 text-gray-600">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">AI is thinking...</span>
+            <div className="flex justify-start p-3">
+              <div className="bg-gray-100 mr-8 p-3 rounded-lg flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm text-gray-600">Sento is thinking...</span>
+              </div>
             </div>
           )}
         </div>
@@ -105,7 +141,7 @@ Respond now based on the message.`
           <Textarea
             value={chatMessage}
             onChange={(e) => setChatMessage(e.target.value)}
-            placeholder="Ask AI to modify your website..."
+            placeholder="Chat casually or say 'Add a blue button' to modify..."
             className="flex-1"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -114,7 +150,7 @@ Respond now based on the message.`
               }
             }}
           />
-          <Button onClick={handleChatSubmit} disabled={isChatLoading}>
+          <Button onClick={handleChatSubmit} disabled={isChatLoading || !chatMessage.trim()}>
             <Send className="w-4 h-4" />
           </Button>
         </div>
