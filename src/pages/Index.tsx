@@ -44,11 +44,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingScreen } from '@/components/ui/spinner';
-
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
 const ProjectModal = lazy(() => import("@/components/ProjectModal").then(m => ({ default: m.ProjectModal })));
-
 const TEMPLATES = [
   {
     id: "portfolio",
@@ -810,14 +808,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-      // Show save project modal after generation
-      setTimeout(() => {
-        setEditingProject(newWebsite.id);
-        setProjectName(newWebsite.name);
-        setProjectTags([]);
-        setProjectNotes("");
-        setShowProjectModal(true);
-      }, 1000);
+      // DON'T auto-show project modal - let user view the website first
+      // Modal can be opened manually if user wants to edit project details
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
       // Increment usage counter
@@ -839,7 +831,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-    
+   
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Generation Cancelled",
@@ -937,14 +929,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-      // Show save project modal after generation
-      setTimeout(() => {
-        setEditingProject(newWebsite.id);
-        setProjectName(newWebsite.name);
-        setProjectTags([]);
-        setProjectNotes("");
-        setShowProjectModal(true);
-      }, 1000);
+      // DON'T auto-show project modal - let user view the website first
+      // Modal can be opened manually if user wants to edit project details
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
       // Show success state for 2 seconds
@@ -964,7 +950,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-    
+   
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Regeneration Cancelled",
@@ -1110,6 +1096,14 @@ ${new Date().toLocaleDateString()}
         return "aspect-video";
     }
   };
+  const handleOpenFullScreen = () => {
+    if (!generatedCode) return;
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(generatedCode);
+      newWindow.document.close();
+    }
+  };
   const characterLimit = 3000;
   const characterCount = input.length;
   const examples = [
@@ -1166,12 +1160,11 @@ ${new Date().toLocaleDateString()}
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Analytics Dashboard Modal */}
       <Suspense fallback={<div />}>
-        <AnalyticsModal 
+        <AnalyticsModal
           open={showAnalytics}
           onOpenChange={setShowAnalytics}
         />
       </Suspense>
-
       {/* AI Chat Assistant Panel */}
       <Suspense fallback={<div />}>
         <ChatModal
@@ -1181,7 +1174,6 @@ ${new Date().toLocaleDateString()}
           onCodeUpdate={(newCode) => setGeneratedCode(newCode)}
         />
       </Suspense>
-
       {/* Project Save/Edit Modal */}
       <Suspense fallback={<div />}>
         <ProjectModal
@@ -1651,6 +1643,13 @@ ${new Date().toLocaleDateString()}
                   Copy Code
                 </Button>
                 <Button
+                  onClick={handleOpenFullScreen}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                  Open Full Screen
+                </Button>
+                <Button
                   onClick={handleDownload}
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                 >
@@ -1836,7 +1835,6 @@ ${new Date().toLocaleDateString()}
                     >
                       {site.isFavorite ? '⭐' : '☆'}
                     </button>
- 
                     {/* Project Info */}
                     <div className="mb-4">
                       <h3 className={`text-xl font-bold mb-2 pr-8 ${
@@ -1844,7 +1842,6 @@ ${new Date().toLocaleDateString()}
                       }`}>
                         {site.name}
                       </h3>
- 
                       {/* Tags */}
                       {site.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -1862,13 +1859,11 @@ ${new Date().toLocaleDateString()}
                           ))}
                         </div>
                       )}
- 
                       <p className={`text-sm mb-2 line-clamp-2 ${
                         isDarkMode ? 'text-gray-400' : 'text-gray-600'
                       }`}>
                         {site.prompt}
                       </p>
- 
                       {site.notes && (
                         <p className={`text-xs italic mb-2 line-clamp-2 ${
                           isDarkMode ? 'text-gray-500' : 'text-gray-500'
@@ -1876,7 +1871,6 @@ ${new Date().toLocaleDateString()}
                           📝 {site.notes}
                         </p>
                       )}
- 
                       <p className={`text-xs ${
                         isDarkMode ? 'text-gray-500' : 'text-gray-500'
                       }`}>
@@ -1884,7 +1878,6 @@ ${new Date().toLocaleDateString()}
                         {new Date(site.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
- 
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -1900,7 +1893,6 @@ ${new Date().toLocaleDateString()}
                       >
                         👁️ View
                       </button>
- 
                       <button
                         onClick={() => openEditProject(site)}
                         className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -1911,7 +1903,6 @@ ${new Date().toLocaleDateString()}
                       >
                         ✏️ Edit
                       </button>
- 
                       <button
                         onClick={() => handleDelete(site.id)}
                         className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
