@@ -200,12 +200,21 @@ const Index = () => {
   useEffect(() => {
     calculateAnalytics();
   }, [websiteHistory]);
+  // Load theme preference
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
       setIsDarkMode(savedTheme === 'dark');
     }
   }, []);
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
   // Get authenticated user ID
   useEffect(() => {
     if (user?.id) {
@@ -779,7 +788,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-  
+ 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Generation Cancelled",
@@ -898,7 +907,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-  
+ 
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Regeneration Cancelled",
