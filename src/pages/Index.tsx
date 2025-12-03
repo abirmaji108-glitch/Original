@@ -171,9 +171,6 @@ const Index = () => {
     totalStorageKB: 0
   });
   const [showChat, setShowChat] = useState(false);
-  const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [isChatLoading, setIsChatLoading] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("");
@@ -342,57 +339,8 @@ const Index = () => {
     });
     return dateCount;
   };
-  const sendChatMessage = async () => {
-    if (!chatInput.trim() || isChatLoading) return;
-    const userMessage = chatInput.trim();
-    setChatInput("");
-    // Add user message to chat
-    const newMessages = [...chatMessages, { role: 'user' as const, content: userMessage }];
-    setChatMessages(newMessages);
-    setIsChatLoading(true);
-    try {
-      // Call Backend API
-      const response = await fetch("https://original-lbxv.onrender.com/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          prompt: userMessage
-        })
-      });
-      const data = await response.json();
-      // Extract text from response (assuming backend returns response in htmlCode field for chat)
-      const assistantMessage = data.htmlCode || "I'm here to help! Could you please rephrase your question?";
-      // Add assistant response to chat
-      setChatMessages([...newMessages, {
-        role: 'assistant' as const,
-        content: assistantMessage
-      }]);
-    } catch (error) {
-      console.error("Chat error:", error);
-      setChatMessages([...newMessages, {
-        role: 'assistant' as const,
-        content: "Sorry, I encountered an error. Please try again!"
-      }]);
-    } finally {
-      setIsChatLoading(false);
-    }
-  };
-  const handleChatKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendChatMessage();
-    }
-  };
-  const clearChat = () => {
-    setChatMessages([]);
-    setChatInput("");
-  };
-  const startNewChat = () => {
-    clearChat();
-    setShowChat(true);
-  };
+  // Chat is now handled entirely by ChatModal component
+  // No duplicate chat logic needed here
   // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
     setIndustry(value);
@@ -831,7 +779,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-   
+  
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Generation Cancelled",
@@ -950,7 +898,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-   
+  
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Regeneration Cancelled",
@@ -1225,11 +1173,6 @@ ${new Date().toLocaleDateString()}
             >
               <span className="text-xl mr-2">💬</span>
               AI Help
-              {chatMessages.length > 0 && !showChat && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {chatMessages.length}
-                </span>
-              )}
             </button>
             <button
               onClick={() => setShowAnalytics(!showAnalytics)}
