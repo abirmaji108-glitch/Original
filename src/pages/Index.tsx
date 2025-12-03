@@ -1171,7 +1171,6 @@ ${new Date().toLocaleDateString()}
               <span className={dynamicSubtleClass}>My Websites</span>
             </Button>
           </div>
-
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-3">
             <button
@@ -1229,7 +1228,6 @@ ${new Date().toLocaleDateString()}
               Sign Out
             </Button>
           </div>
-
           {/* Mobile: Theme Toggle + Hamburger Menu Button */}
           <div className="flex items-center gap-2 lg:hidden">
             <button
@@ -1252,7 +1250,6 @@ ${new Date().toLocaleDateString()}
             </button>
           </div>
         </div>
-
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
           <div className={`lg:hidden border-t ${isDarkMode ? 'border-white/10 bg-black/90' : 'border-gray-200 bg-white/95'} backdrop-blur-md`}>
@@ -1377,12 +1374,13 @@ ${new Date().toLocaleDateString()}
     </div>
   ) : (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {TEMPLATES.map((template) => (
+      {TEMPLATES.map((template, index) => (
                     <button
                       key={template.id}
+                      style={{ animationDelay: `${index * 0.1}s` }}
                       onClick={() => handleTemplateClick(template.prompt)}
                       disabled={isGenerating}
-                      className={`group relative ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+                      className={`group relative ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed card-hover animate-fadeIn`}
                     >
                       {/* Template Icon */}
                       <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -1473,7 +1471,7 @@ ${new Date().toLocaleDateString()}
                   <Button
                     onClick={handleGenerate}
                     disabled={isGenerating || input.length < 50 || input.length > 3000}
-                    className="flex-1 bg-gradient-primary hover:bg-gradient-primary/90 text-white font-semibold h-12 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gradient-primary hover:bg-gradient-primary/90 text-white font-semibold h-12 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover-scale animate-gradient"
                     title="Ctrl+Enter to generate"
                   >
                     {isGenerating ? (
@@ -1483,7 +1481,7 @@ ${new Date().toLocaleDateString()}
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-5 h-5 mr-2" />
+                        <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
                         Generate Website
                       </>
                     )}
@@ -1539,9 +1537,11 @@ ${new Date().toLocaleDateString()}
                 </div>
                 <div className={`w-full bg-white/10 rounded-full h-3 relative overflow-hidden ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>
                   <div
-                    className="h-full bg-gradient-primary rounded-full transition-all duration-300 ease-out absolute left-0 top-0"
+                    className="h-full bg-gradient-primary rounded-full transition-all duration-300 ease-out absolute left-0 top-0 animate-gradient"
                     style={{ width: `${progress}%` }}
                   />
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
                 </div>
                 <p className={`text-lg font-medium ${dynamicMutedClass}`}>{progressStage}</p>
                 <p className={`text-sm ${dynamicSubtleClass}`}>
@@ -1769,9 +1769,9 @@ ${new Date().toLocaleDateString()}
               )}
               {/* Success Animation */}
               {showSuccess && (
-                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40">
-                  <div className={`p-8 rounded-2xl text-center shadow-2xl transform animate-bounce ${isDarkMode ? 'bg-green-900/20 text-green-300 border-green-500/30' : 'bg-green-50 text-green-800 border-green-200'}`}>
-                    <PartyPopper className="w-16 h-16 mx-auto mb-4 text-green-500 animate-pulse" />
+                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 animate-fadeIn">
+                  <div className={`p-8 rounded-2xl text-center shadow-2xl transform animate-bounce ${isDarkMode ? 'bg-green-900/20 text-green-300 border-green-500/30' : 'bg-green-50 text-green-800 border-green-200'} border-2 animate-pulse-glow`}>
+                    <PartyPopper className="w-16 h-16 mx-auto mb-4 text-green-500 animate-spin" style={{ animationDuration: '0.5s' }} />
                     <h3 className="text-2xl font-bold mb-2">Website Generated!</h3>
                     <p className="text-lg">Your site is being prepared for preview...</p>
                   </div>
@@ -1869,7 +1869,7 @@ ${new Date().toLocaleDateString()}
     {getFilteredProjects().map((site) => (
                   <div
                     key={site.id}
-                    className={`backdrop-blur-sm rounded-xl p-6 transition-all hover:scale-105 relative ${
+                    className={`backdrop-blur-sm rounded-xl p-6 transition-all relative card-hover ${
                       isDarkMode
                         ? 'bg-white/5 border border-white/10 hover:bg-white/10'
                         : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
@@ -1986,31 +1986,89 @@ ${new Date().toLocaleDateString()}
         </button>
       )}
       <style>{`
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  /* NEW: Enhanced Button Animations */
+  .hover-scale {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
+  }
+  
+  .hover-scale:active {
+    transform: scale(0.98);
+  }
+  
+  /* NEW: Smooth Card Hover */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* NEW: Gradient Animation */
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+  }
+  
+  /* NEW: Pulse Glow */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+    50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  /* NEW: Shimmer Effect */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+  
+  .animate-slideUp {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+`}</style>
     </div>
   );
 };
