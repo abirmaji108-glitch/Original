@@ -34,14 +34,19 @@ export function ChatModal({ open, onOpenChange, websiteCode, onCodeUpdate }: Cha
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          prompt: `You are a helpful AI assistant that modifies website code based on user requests.
+          prompt: `You are Sento AI, a friendly chat assistant for building/modifying websites. Respond conversationally unless the user asks to change the code.
 
-Current website code:
+Current website code (for reference if modifying):
 ${websiteCode}
 
-User's modification request: ${userMessage}
+User message: ${userMessage}
 
-Please provide ONLY the complete modified HTML code with no explanations or markdown. The code should be a complete, valid HTML document.`
+Rules:
+- If this is a greeting, question, or non-code request (e.g., "Hi", "What can you do?"), reply helpfully in plain text only. Keep it short, fun, and suggest code ideas.
+- If the user requests a code change (e.g., "add red header", "make it mobile-friendly"), provide ONLY the complete modified HTML code. No explanations, no markdown, no extra text—just valid <!DOCTYPE html> full document.
+- Always ensure output HTML is self-contained: inline all critical styles (no external CDNs like Tailwind CDN or Google Fonts to avoid CSP blocks). Use simple CSS for everything.
+
+Respond now based on the message.`
         })
       });
 
