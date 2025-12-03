@@ -18,14 +18,11 @@ export function ChatModal({ open, onOpenChange, websiteCode, onCodeUpdate }: Cha
 
   const handleChatSubmit = async () => {
     if (!chatMessage.trim() || isChatLoading) return;
-
     const userMessage = chatMessage;
     setChatMessage("");
     setIsChatLoading(true);
-
     const newChatHistory = [...chatHistory, { role: "user", content: userMessage }];
     setChatHistory(newChatHistory);
-
     try {
       // Use your backend API
       const response = await fetch("https://original-lbxv.onrender.com/api/generate", {
@@ -34,45 +31,33 @@ export function ChatModal({ open, onOpenChange, websiteCode, onCodeUpdate }: Cha
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          prompt: `You are Sento AI, a super-friendly chat buddy for website creation. ALWAYS check the user's intent FIRST before responding.
+          prompt: `You are Sento AI, a friendly website assistant. Respond naturally to the user.
 
-Context: User has this current website code (use ONLY if modifying):
-\`\`\`
-${websiteCode}
-\`\`\`
+Current website code (if any):
+${websiteCode ? '(User has generated a website)' : '(No website generated yet)'}
 
-User's exact message: "${userMessage}"
+User's message: "${userMessage}"
 
-STRICT RULES - Follow EXACTLY or your response will be rejected:
-1. **CHAT MODE (90% of cases)**: If the message is a greeting (e.g., "Hi", "Hello"), question (e.g., "How are you?", "What can you do?"), casual talk, or non-code request, respond ONLY with plain, fun, short TEXT. NO HTML, NO CODE, NO MARKDOWN. Examples:
-   - "Hi" → "Hey there! I'm Sento—your AI sidekick for epic sites. What's your dream website vibe?"
-   - "How are you?" → "Pumped and ready to code! Tell me how to jazz up your page."
-   - Suggest ideas: End with "Try asking: 'Add a blue hero section' for magic!"
-   Keep under 100 words. Be witty, helpful.
+IMPORTANT RULES:
+1. For greetings or questions (like "hi", "hello", "how are you"), respond conversationally in 1-2 sentences.
+2. For website help questions, give helpful advice in plain text.
+3. ONLY if the user explicitly asks to modify code (e.g., "add a button", "change the color to blue"), then provide the modified HTML.
+4. Never generate a full website unless explicitly asked.
+5. Keep responses friendly and under 100 words for chat.
 
-2. **CODE MODE (ONLY if explicit mod request)**: If the message clearly asks to change/add/remove code (keywords: add, change, make, remove, update, modify, etc., e.g., "Add a red header", "Make it responsive"), respond with EXACTLY ONE THING: The FULL modified HTML document starting with <!DOCTYPE html>. NOTHING ELSE—no intro, no explanation, no markdown, no "Here's your code". Make it:
-   - Complete, valid HTML.
-   - Self-contained: INLINE all CSS (no <link> to CDNs like Tailwind or Google Fonts—CSP blocks them). Use plain <style> tags with simple rules.
-   - Based on current code, apply ONLY the requested change.
-
-Output NOW based on rules. If chat: Plain text. If code: Pure HTML.`
+Respond now:`
         })
       });
-
       if (!response.ok) throw new Error("Failed to get AI response");
-
       const data = await response.json();
       let aiResponse = data.htmlCode || "Oops—try rephrasing! I'm here for site tweaks or quick chats.";
-
       // Debug: Log raw response
       console.log("Raw backend response:", aiResponse);
       console.log("Is HTML?", aiResponse.includes("<!DOCTYPE html>") || aiResponse.includes("<html>"));
-
       const isHtml = aiResponse.includes("<!DOCTYPE html>") || aiResponse.includes("<html>");
       if (isHtml) {
         onCodeUpdate(aiResponse);
       }
-
       setChatHistory([...newChatHistory, { role: "assistant", content: aiResponse, isHtml }]);
     } catch (error) {
       console.error("Chat error:", error);
@@ -101,8 +86,18 @@ Output NOW based on rules. If chat: Plain text. If code: Pure HTML.`
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} aria-describedby="chat-description">
-      <DialogContent id="chat-description" className="max-w-2xl max-h-[80vh] flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="fixed right-4 bottom-4 top-4 w-[400px] max-w-[90vw] h-auto max-h-[600px] flex flex-col p-0 m-0 translate-x-0 translate-y-0"
+        style={{ 
+          position: 'fixed',
+          right: '1rem',
+          bottom: '1rem',
+          top: 'auto',
+          left: 'auto',
+          transform: 'none'
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Chat with Sento AI</DialogTitle>
         </DialogHeader>
