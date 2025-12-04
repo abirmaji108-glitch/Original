@@ -1328,9 +1328,12 @@ ${new Date().toLocaleDateString()}
               {/* Hero Section */}
               <div className="text-center mb-12 sm:mb-16 space-y-6 sm:space-y-8">
                 <div className="space-y-6">
-                  <h1 className={`text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight ${dynamicTextClass}`}>
-                    Create Stunning Websites{" "}
-                    <span className="gradient-text animate-glow">with AI</span>
+                  <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
+                    <span className={dynamicTextClass}>Create Stunning Websites</span>
+                    <br />
+                    <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent animate-gradient-shift">
+                      with AI
+                    </span>
                   </h1>
                   <p className={`text-lg sm:text-2xl md:text-3xl max-w-3xl mx-auto font-light ${dynamicMutedClass}`}>
                     Describe your vision. Watch AI build it in seconds.
@@ -1996,7 +1999,6 @@ ${new Date().toLocaleDateString()}
       transform: translateY(0);
     }
   }
-  
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -2005,66 +2007,53 @@ ${new Date().toLocaleDateString()}
       opacity: 1;
     }
   }
-  
   /* NEW: Enhanced Button Animations */
   .hover-scale {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  
   .hover-scale:hover {
     transform: scale(1.05);
     box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
   }
-  
   .hover-scale:active {
     transform: scale(0.98);
   }
-  
   /* NEW: Smooth Card Hover */
   .card-hover {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
   .card-hover:hover {
     transform: translateY(-8px);
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
   }
-  
   /* NEW: Gradient Animation */
   @keyframes gradient-shift {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
   }
-  
   .animate-gradient {
     background-size: 200% 200%;
     animation: gradient-shift 3s ease infinite;
   }
-  
   /* NEW: Pulse Glow */
   @keyframes pulse-glow {
     0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
     50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
   }
-  
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
-  
   /* NEW: Shimmer Effect */
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
-  
   .animate-shimmer {
     animation: shimmer 2s infinite;
   }
-  
   .animate-slideUp {
     animation: slideUp 0.3s ease-out;
   }
-  
   .animate-fadeIn {
     animation: fadeIn 0.3s ease-out;
   }
