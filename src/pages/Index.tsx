@@ -1328,13 +1328,22 @@ ${new Date().toLocaleDateString()}
               {/* Hero Section */}
               <div className="text-center mb-12 sm:mb-16 space-y-6 sm:space-y-8">
                 <div className="space-y-6">
-                  <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight">
-                    <span className={dynamicTextClass}>Create Stunning Websites</span>
-                    <br />
-                    <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent animate-gradient-shift">
-                      with AI
-                    </span>
-                  </h1>
+                  <div className="relative">
+                    {/* Animated Gradient Background */}
+                    <div className="absolute inset-0 -z-10">
+                      <div className="absolute top-20 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
+                      <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+                      <div className="absolute top-60 left-1/3 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
+                    </div>
+                    
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight animate-fade-in-up">
+                      <span className={dynamicTextClass}>Create Stunning Websites</span>
+                      <br />
+                      <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent animate-gradient-shift" style={{ backgroundSize: '200% 200%' }}>
+                        with AI
+                      </span>
+                    </h1>
+                  </div>
                   <p className={`text-lg sm:text-2xl md:text-3xl max-w-3xl mx-auto font-light ${dynamicMutedClass}`}>
                     Describe your vision. Watch AI build it in seconds.
                   </p>
@@ -1361,7 +1370,9 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
               {/* Input Card */}
-              <div className={`glass-card rounded-2xl p-8 shadow-card animate-slide-up space-y-6 transition-colors duration-300 ${dynamicGlassClass}`}>
+              <div className={`glass-card-enhanced rounded-2xl p-8 shadow-card animate-fade-in-up space-y-6 transition-colors duration-300 ${dynamicGlassClass}`} style={{ animationDelay: '0.2s' }}>
+                {/* Floating gradient border effect */}
+                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
                 {/* Template Gallery */}
                 <div className="mb-12">
                   <div className="text-center mb-8">
@@ -1383,8 +1394,10 @@ ${new Date().toLocaleDateString()}
                       style={{ animationDelay: `${index * 0.1}s` }}
                       onClick={() => handleTemplateClick(template.prompt)}
                       disabled={isGenerating}
-                      className={`group relative ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed card-hover animate-fadeIn`}
+                      className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
                     >
+                      {/* Shimmer effect on hover */}
+                      <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       {/* Template Icon */}
                       <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                         {template.icon}
@@ -1456,38 +1469,73 @@ ${new Date().toLocaleDateString()}
                     </p>
                   )}
                 </div>
-                {/* Textarea */}
-                <Textarea
-                  placeholder="Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  className={`min-h-[120px] ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
-                  rows={4}
-                />
-                {/* Character Count */}
-                <div className="flex justify-between items-center text-xs">
-                  <span className={dynamicSubtleClass}>{characterCount}/{characterLimit} characters</span>
-                  <span className={dynamicSubtleClass}>Min 50 chars for best results</span>
+                {/* Smart Textarea with Glow */}
+                <div className="relative">
+                  <Textarea
+                    placeholder="✨ Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className={`min-h-[140px] input-glow transition-all duration-300 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
+                    rows={5}
+                  />
+                  {/* Live Character Counter with Colors */}
+                  <div className="flex justify-between items-center text-sm mt-2">
+                    <span className={
+                      characterCount < 50 ? 'char-counter-red font-semibold' :
+                      characterCount < 100 ? 'char-counter-yellow font-semibold' :
+                      'char-counter-green font-semibold'
+                    }>
+                      {characterCount < 50 && '⚠️ '}
+                      {characterCount >= 50 && characterCount < 100 && '⚡ '}
+                      {characterCount >= 100 && '✅ '}
+                      {characterCount}/{characterLimit} characters
+                    </span>
+                    <span className={dynamicSubtleClass}>
+                      {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! 🎉'}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Live Suggestions (show when user starts typing) */}
+                {input.length > 10 && input.length < 50 && (
+                  <div className="flex flex-wrap gap-2 animate-fade-in-up">
+                    <div className={`text-sm ${dynamicMutedClass} mb-2`}>💡 Quick suggestions:</div>
+                    {['Add "with dark theme"', 'Add "mobile responsive"', 'Add "modern design"'].map((suggestion, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setInput(input + ' ' + suggestion.replace('Add ', ''))}
+                        className="suggestion-chip"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {/* Generate Button */}
                 <div className="flex gap-4 pt-4">
                   <Button
                     onClick={handleGenerate}
                     disabled={isGenerating || input.length < 50 || input.length > 3000}
-                    className="flex-1 bg-gradient-primary hover:bg-gradient-primary/90 text-white font-semibold h-12 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover-scale animate-gradient"
+                    className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 hover:shadow-2xl animate-gradient-shift overflow-hidden"
+                    style={{ backgroundSize: '200% 200%' }}
                     title="Ctrl+Enter to generate"
                   >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Generating... {elapsedTime}s
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
-                        Generate Website
-                      </>
-                    )}
+                    {/* Shimmer effect */}
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Generating... {elapsedTime}s
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
+                          Generate Website
+                        </>
+                      )}
+                    </span>
                   </Button>
                 </div>
                 <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
@@ -1532,7 +1580,26 @@ ${new Date().toLocaleDateString()}
           )}
           {/* Generating State */}
           {isGenerating && (
-            <div className="text-center space-y-8">
+            <div className="text-center space-y-8 animate-fade-in-up">
+              {/* Step-by-step Progress Visualization */}
+              <div className="flex justify-center items-center gap-6 mb-8">
+                <div className={`step-circle ${progress >= 25 ? 'active' : ''} ${progress >= 50 ? 'complete' : ''}`}>
+                  🧠
+                </div>
+                <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 50 ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'bg-white/20'}`}></div>
+                <div className={`step-circle ${progress >= 50 ? 'active' : ''} ${progress >= 75 ? 'complete' : ''}`}>
+                  🎨
+                </div>
+                <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 75 ? 'bg-gradient-to-r from-pink-500 to-blue-500' : 'bg-white/20'}`}></div>
+                <div className={`step-circle ${progress >= 75 ? 'active' : ''} ${progress >= 95 ? 'complete' : ''}`}>
+                  ⚡
+                </div>
+                <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-gradient-to-r from-blue-500 to-green-500' : 'bg-white/20'}`}></div>
+                <div className={`step-circle ${progress >= 95 ? 'active' : ''} ${progress === 100 ? 'complete' : ''}`}>
+                  ✅
+                </div>
+              </div>
+              
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 text-2xl mb-4">
                   <Loader2 className={`w-8 h-8 animate-spin ${dynamicTextClass}`} />
@@ -1674,13 +1741,42 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               ) : (
-                <div className={`relative ${getAspectRatio()} mx-auto max-w-4xl rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 ${isDarkMode ? 'bg-black/20' : 'bg-white/50'}`}>
-                  <iframe
-                    srcDoc={generatedCode}
-                    className="w-full h-full border-0"
-                    title="Generated Website Preview"
-                    sandbox="allow-scripts allow-same-origin"
-                  />
+                <div className="relative mx-auto max-w-6xl">
+                  {/* Device Frame Container */}
+                  <div className={`
+                    ${viewMode === 'desktop' ? 'device-frame-desktop max-w-5xl' : ''}
+                    ${viewMode === 'tablet' ? 'device-frame-tablet max-w-2xl' : ''}
+                    ${viewMode === 'mobile' ? 'device-frame-mobile max-w-sm' : ''}
+                    mx-auto overflow-hidden bg-black/90 transition-all duration-500 animate-fade-in-up
+                  `}>
+                    {/* Notch for mobile */}
+                    {viewMode === 'mobile' && (
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10"></div>
+                    )}
+                    
+                    <iframe
+                      srcDoc={generatedCode}
+                      className="w-full h-full border-0"
+                      style={{ 
+                        height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px'
+                      }}
+                      title="Generated Website Preview"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  </div>
+                  
+                  {/* Zoom Controls */}
+                  <div className="flex justify-center gap-3 mt-6">
+                    <button className="zoom-control">
+                      <ZoomOut className="w-5 h-5" />
+                    </button>
+                    <button className="zoom-control">
+                      <ZoomIn className="w-5 h-5" />
+                    </button>
+                    <button className="zoom-control">
+                      <Maximize2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               )}
               {/* Action Buttons */}
@@ -2056,6 +2152,121 @@ ${new Date().toLocaleDateString()}
   }
   .animate-fadeIn {
     animation: fadeIn 0.3s ease-out;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+  .input-glow {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  }
+  .char-counter-red {
+    color: #ef4444;
+  }
+  .char-counter-yellow {
+    color: #eab308;
+  }
+  .char-counter-green {
+    color: #22c55e;
+  }
+  .suggestion-chip {
+    padding: 4px 8px;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 12px;
+    color: #a855f7;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .suggestion-chip:hover {
+    background: rgba(168, 85, 247, 0.3);
+    transform: scale(1.05);
+  }
+  .step-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+  .step-circle.active {
+    border-color: #a855f7;
+    background: rgba(168, 85, 247, 0.2);
+    transform: scale(1.1);
+  }
+  .step-circle.complete {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.2);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .device-frame-desktop {
+    border-radius: 20px;
+    border: 20px solid #000;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .device-frame-desktop iframe {
+    border-radius: 0;
+  }
+  .device-frame-tablet {
+    border-radius: 30px;
+    border: 15px solid #000;
+    max-width: 768px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .device-frame-tablet iframe {
+    border-radius: 0;
+  }
+  .device-frame-mobile {
+    border-radius: 40px;
+    border: 10px solid #000;
+    max-width: 375px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .device-frame-mobile iframe {
+    border-radius: 0;
+  }
+  .zoom-control {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .zoom-control:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
   }
 `}</style>
     </div>
