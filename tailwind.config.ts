@@ -82,23 +82,67 @@ export default {
           },
         },
         "slide-in-right": {
-          "0%": { 
+          "0%": {
             transform: "translateX(100%)",
             opacity: "0"
           },
-          "100%": { 
+          "100%": {
             transform: "translateX(0)",
             opacity: "1"
           }
         },
         "slide-out-right": {
-          "0%": { 
+          "0%": {
             transform: "translateX(0)",
             opacity: "1"
           },
-          "100%": { 
+          "100%": {
             transform: "translateX(100%)",
             opacity: "0"
+          }
+        },
+        "float": {
+          "0%, 100%": { 
+            transform: "translateY(0px)",
+            opacity: "0.8"
+          },
+          "50%": { 
+            transform: "translateY(-20px)",
+            opacity: "1"
+          }
+        },
+        "fade-in-up": {
+          "0%": {
+            opacity: "0",
+            transform: "translateY(30px)"
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateY(0)"
+          }
+        },
+        "gradient-shift": {
+          "0%, 100%": {
+            backgroundPosition: "0% 50%"
+          },
+          "50%": {
+            backgroundPosition: "100% 50%"
+          }
+        },
+        "shimmer": {
+          "0%": {
+            backgroundPosition: "-1000px 0"
+          },
+          "100%": {
+            backgroundPosition: "1000px 0"
+          }
+        },
+        "pulse-glow": {
+          "0%, 100%": {
+            boxShadow: "0 0 20px rgba(168, 85, 247, 0.4)"
+          },
+          "50%": {
+            boxShadow: "0 0 40px rgba(168, 85, 247, 0.8)"
           }
         },
       },
@@ -107,6 +151,11 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "slide-out-right": "slide-out-right 0.3s ease-out",
+        "float": "float 6s ease-in-out infinite",
+        "fade-in-up": "fade-in-up 0.6s ease-out",
+        "gradient-shift": "gradient-shift 3s ease infinite",
+        "shimmer": "shimmer 2s infinite",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
       },
     },
   },
