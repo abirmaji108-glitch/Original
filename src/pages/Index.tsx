@@ -1348,202 +1348,181 @@ ${new Date().toLocaleDateString()}
                     Describe your vision. Watch AI build it in seconds.
                   </p>
                 </div>
-                {/* Demo Video Placeholder */}
-                <div className="max-w-4xl mx-auto mt-12">
-                  <div className={`glass-card rounded-2xl p-2 shadow-glow transition-colors duration-300 ${dynamicGlassClass}`}>
-                    <div className={`relative aspect-video rounded-xl flex items-center justify-center overflow-hidden ${isDarkMode ? 'bg-gradient-to-br from-purple-900/40 to-indigo-900/40' : 'bg-gradient-to-br from-blue-900/20 to-purple-900/20'}`}>
-                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1547658719-da2b51169166?w=1200&h=675&fit=crop')] bg-cover bg-center opacity-30"></div>
-                      <div className="relative z-10 text-center space-y-4">
-                        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-primary flex items-center justify-center shadow-glow hover-scale cursor-pointer">
-                          <Play className="w-8 h-8 text-white ml-1" />
-                        </div>
-                        <p className={`text-lg font-medium ${dynamicTextClass}`}>Watch How It Works</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* Video section removed - moved to input-first design */}
                 <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass}`}>
                   <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
                   <span className={dynamicMutedClass}>
                     Powered by Groq & Llama 3.3
                   </span>
                 </div>
-              </div>
-              {/* Input Card */}
-              <div className={`glass-card-enhanced rounded-2xl p-8 shadow-card animate-fade-in-up space-y-6 transition-colors duration-300 ${dynamicGlassClass}`} style={{ animationDelay: '0.2s' }}>
-                {/* Floating gradient border effect */}
-                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
-                {/* Template Gallery */}
-                <div className="mb-12">
-                  <div className="text-center mb-8">
-                    <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
-                    <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
-                  </div>
-                  {isPageLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
+
+                {/* INPUT SECTION - MOVED TO HERO */}
+                <div className={`glass-card-enhanced rounded-2xl p-8 shadow-card animate-fade-in-up space-y-6 transition-colors duration-300 max-w-4xl mx-auto mt-12 ${dynamicGlassClass}`} style={{ animationDelay: '0.2s' }}>
+                  {/* Floating gradient border effect */}
+                  <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
+                  
+                  {/* Style Selector */}
+                  <div className="space-y-3">
+                    <label className={`text-sm font-semibold ${dynamicTextClass}`}>
+                      🎨 Design Style
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { id: 'modern', label: 'Modern', icon: '✨', color: 'from-blue-500 to-purple-500' },
+                        { id: 'minimal', label: 'Minimal', icon: '⚪', color: 'from-gray-400 to-gray-600' },
+                        { id: 'bold', label: 'Bold', icon: '🔥', color: 'from-red-500 to-orange-500' },
+                        { id: 'elegant', label: 'Elegant', icon: '💎', color: 'from-purple-500 to-pink-500' },
+                        { id: 'playful', label: 'Playful', icon: '🎈', color: 'from-green-400 to-blue-400' },
+                        { id: 'professional', label: 'Professional', icon: '💼', color: 'from-blue-600 to-indigo-600' }
+                      ].map((style) => (
+                        <button
+                          key={style.id}
+                          onClick={() => setSelectedStyle(style.id)}
+                          className={`relative p-4 rounded-xl border-2 transition-all ${
+                            selectedStyle === style.id
+                              ? `border-transparent bg-gradient-to-r ${style.color} text-white shadow-lg scale-105`
+                              : isDarkMode
+                              ? 'border-white/20 bg-white/5 text-gray-300 hover:bg-white/10'
+                              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">{style.icon}</div>
+                          <div className="font-semibold text-sm">{style.label}</div>
+                          {selectedStyle === style.id && (
+                            <div className="absolute top-2 right-2 text-white">✓</div>
+                          )}
+                        </button>
                       ))}
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {TEMPLATES.map((template, index) => (
+                    {selectedStyle && (
+                      <p className={`text-xs ${dynamicSubtleClass}`}>
+                        {STYLE_DESCRIPTIONS[selectedStyle]}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Smart Textarea with Glow */}
+                  <div className="relative">
+                    <Textarea
+                      placeholder="✨ Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      className={`min-h-[140px] input-glow transition-all duration-300 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
+                      rows={5}
+                    />
+                    {/* Live Character Counter with Colors */}
+                    <div className="flex justify-between items-center text-sm mt-2">
+                      <span className={
+                        characterCount < 50 ? 'char-counter-red font-semibold' :
+                        characterCount < 100 ? 'char-counter-yellow font-semibold' :
+                        'char-counter-green font-semibold'
+                      }>
+                        {characterCount < 50 && '⚠️ '}
+                        {characterCount >= 50 && characterCount < 100 && '⚡ '}
+                        {characterCount >= 100 && '✅ '}
+                        {characterCount}/{characterLimit} characters
+                      </span>
+                      <span className={dynamicSubtleClass}>
+                        {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! 🎉'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Live Suggestions */}
+                  {input.length > 10 && input.length < 50 && (
+                    <div className="flex flex-wrap gap-2 animate-fade-in-up">
+                      <div className={`text-sm ${dynamicMutedClass} mb-2`}>💡 Quick suggestions:</div>
+                      {['Add "with dark theme"', 'Add "mobile responsive"', 'Add "modern design"'].map((suggestion, i) => (
                         <button
-                          key={template.id}
-                          style={{ animationDelay: `${index * 0.1}s` }}
-                          onClick={() => handleTemplateClick(template.prompt)}
-                          disabled={isGenerating}
-                          className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
+                          key={i}
+                          onClick={() => setInput(input + ' ' + suggestion.replace('Add ', ''))}
+                          className="suggestion-chip"
                         >
-                          {/* Shimmer effect on hover */}
-                          <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                          {/* Template Icon */}
-                          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                            {template.icon}
-                          </div>
-                          {/* Template Title */}
-                          <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
-                            {template.title}
-                          </h3>
-                          <p className={`text-sm ${dynamicMutedClass}`}>
-                            {template.description}
-                          </p>
+                          {suggestion}
                         </button>
                       ))}
                     </div>
                   )}
-                </div>
-                {/* Industry Select */}
-                <div className="flex items-center gap-4">
-                  <Select value={industry} onValueChange={handleIndustryChange}>
-                    <SelectTrigger className={`flex-1 ${isDarkMode ? 'bg-white/10 border-white/20 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
-                      <SelectValue placeholder="Select industry template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="custom">Custom Description</SelectItem>
-                      <SelectItem value="restaurant">Restaurant</SelectItem>
-                      <SelectItem value="gym">Gym/Fitness</SelectItem>
-                      <SelectItem value="portfolio">Portfolio</SelectItem>
-                      <SelectItem value="ecommerce">E-commerce</SelectItem>
-                      <SelectItem value="agency">Agency</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {/* Style Selector */}
-                <div className="space-y-3">
-                  <label className={`text-sm font-semibold ${dynamicTextClass}`}>
-                    🎨 Design Style
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {[
-                      { id: 'modern', label: 'Modern', icon: '✨', color: 'from-blue-500 to-purple-500' },
-                      { id: 'minimal', label: 'Minimal', icon: '⚪', color: 'from-gray-400 to-gray-600' },
-                      { id: 'bold', label: 'Bold', icon: '🔥', color: 'from-red-500 to-orange-500' },
-                      { id: 'elegant', label: 'Elegant', icon: '💎', color: 'from-purple-500 to-pink-500' },
-                      { id: 'playful', label: 'Playful', icon: '🎈', color: 'from-green-400 to-blue-400' },
-                      { id: 'professional', label: 'Professional', icon: '💼', color: 'from-blue-600 to-indigo-600' }
-                    ].map((style) => (
-                      <button
-                        key={style.id}
-                        onClick={() => setSelectedStyle(style.id)}
-                        className={`relative p-4 rounded-xl border-2 transition-all ${
-                          selectedStyle === style.id
-                            ? `border-transparent bg-gradient-to-r ${style.color} text-white shadow-lg scale-105`
-                            : isDarkMode
-                            ? 'border-white/20 bg-white/5 text-gray-300 hover:bg-white/10'
-                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="text-2xl mb-1">{style.icon}</div>
-                        <div className="font-semibold text-sm">{style.label}</div>
-                        {selectedStyle === style.id && (
-                          <div className="absolute top-2 right-2 text-white">✓</div>
+
+                  {/* Generate Button */}
+                  <div className="flex gap-4 pt-4">
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={isGenerating || input.length < 50 || input.length > 3000}
+                      className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 hover:shadow-2xl animate-gradient-shift overflow-hidden"
+                      style={{ backgroundSize: '200% 200%' }}
+                      title="Ctrl+Enter to generate"
+                    >
+                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Generating... {elapsedTime}s
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
+                            Generate Website
+                          </>
                         )}
-                      </button>
+                      </span>
+                    </Button>
+                  </div>
+
+                  <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
+                    <span className="text-lg">⌨️</span>
+                    <span className={`text-sm ${dynamicMutedClass}`}>
+                      <kbd className={`px-2 py-1 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
+                      <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate •
+                      <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
+                      <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>/</kbd> to toggle theme
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Template Gallery - Moved below input */}
+              <div className="mt-16">
+                <div className="text-center mb-8">
+                  <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
+                  <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
+                </div>
+                {isPageLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
                     ))}
                   </div>
-                  {selectedStyle && (
-                    <p className={`text-xs ${dynamicSubtleClass}`}>
-                      {STYLE_DESCRIPTIONS[selectedStyle]}
-                    </p>
-                  )}
-                </div>
-                {/* Smart Textarea with Glow */}
-                <div className="relative">
-                  <Textarea
-                    placeholder="✨ Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className={`min-h-[140px] input-glow transition-all duration-300 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
-                    rows={5}
-                  />
-                  {/* Live Character Counter with Colors */}
-                  <div className="flex justify-between items-center text-sm mt-2">
-                    <span className={
-                      characterCount < 50 ? 'char-counter-red font-semibold' :
-                      characterCount < 100 ? 'char-counter-yellow font-semibold' :
-                      'char-counter-green font-semibold'
-                    }>
-                      {characterCount < 50 && '⚠️ '}
-                      {characterCount >= 50 && characterCount < 100 && '⚡ '}
-                      {characterCount >= 100 && '✅ '}
-                      {characterCount}/{characterLimit} characters
-                    </span>
-                    <span className={dynamicSubtleClass}>
-                      {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! 🎉'}
-                    </span>
-                  </div>
-                </div>
-                {/* Live Suggestions */}
-                {input.length > 10 && input.length < 50 && (
-                  <div className="flex flex-wrap gap-2 animate-fade-in-up">
-                    <div className={`text-sm ${dynamicMutedClass} mb-2`}>💡 Quick suggestions:</div>
-                    {['Add "with dark theme"', 'Add "mobile responsive"', 'Add "modern design"'].map((suggestion, i) => (
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {TEMPLATES.map((template, index) => (
                       <button
-                        key={i}
-                        onClick={() => setInput(input + ' ' + suggestion.replace('Add ', ''))}
-                        className="suggestion-chip"
+                        key={template.id}
+                        style={{ animationDelay: `${index * 0.1}s` }}
+                        onClick={() => handleTemplateClick(template.prompt)}
+                        disabled={isGenerating}
+                        className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
                       >
-                        {suggestion}
+                        {/* Shimmer effect on hover */}
+                        <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        {/* Template Icon */}
+                        <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                          {template.icon}
+                        </div>
+                        {/* Template Title */}
+                        <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
+                          {template.title}
+                        </h3>
+                        <p className={`text-sm ${dynamicMutedClass}`}>
+                          {template.description}
+                        </p>
                       </button>
                     ))}
                   </div>
                 )}
-                {/* Generate Button */}
-                <div className="flex gap-4 pt-4">
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={isGenerating || input.length < 50 || input.length > 3000}
-                    className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 hover:shadow-2xl animate-gradient-shift overflow-hidden"
-                    style={{ backgroundSize: '200% 200%' }}
-                    title="Ctrl+Enter to generate"
-                  >
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Generating... {elapsedTime}s
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
-                          Generate Website
-                        </>
-                      )}
-                    </span>
-                  </Button>
-                </div>
-                <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
-                  <span className="text-lg">⌨️</span>
-                  <span className={`text-sm ${dynamicMutedClass}`}>
-                    <kbd className={`px-2 py-1 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
-                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate •
-                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
-                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>/</kbd> to toggle theme
-                  </span>
-                </div>
               </div>
+
               {/* Examples Gallery */}
               <div className="mt-16">
                 <h2 className={`text-3xl font-bold mb-8 text-center ${dynamicTextClass}`}>Quick Start Examples</h2>
