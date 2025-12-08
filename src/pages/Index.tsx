@@ -50,42 +50,42 @@ const ProjectModal = lazy(() => import("@/components/ProjectModal").then(m => ({
 const TEMPLATES = [
   {
     id: "portfolio",
-    icon: "ðŸŽ¨",
+    icon: "🎨",
     title: "Portfolio Website",
     description: "Showcase your work and skills",
     prompt: "Create a modern portfolio website with a hero section, about me section, skills grid with icons, project gallery with 6 projects showing images and descriptions, contact form, and smooth scrolling navigation. Use a gradient background from purple to blue. Make it clean and professional."
   },
   {
     id: "ecommerce",
-    icon: "ðŸª",
+    icon: "🛪",
     title: "E-commerce Store",
     description: "Online shopping experience",
     prompt: "Build an e-commerce website with a header with shopping cart icon, featured products grid showing 8 products with images, prices, and 'Add to Cart' buttons, product categories sidebar, promotional banner, customer testimonials section, and footer with social links. Use a modern, trustworthy design with green accents."
   },
   {
     id: "blog",
-    icon: "ðŸ“°",
+    icon: "📰",
     title: "Blog/News Site",
     description: "Content-focused publishing platform",
     prompt: "Design a blog website with a clean header, featured article hero section with large image, grid of 6 blog post cards showing thumbnails, titles, excerpts, and dates, sidebar with popular posts and categories, author bio section, and newsletter signup form. Use a minimal, readable design with plenty of white space."
   },
   {
     id: "restaurant",
-    icon: "ðŸ•",
+    icon: "🍕",
     title: "Restaurant Menu",
     description: "Delicious food showcase",
     prompt: "Create a restaurant website with a hero section showing food imagery, about the restaurant section, interactive menu with categories (Appetizers, Main Courses, Desserts, Drinks) showing dish names, descriptions, and prices, gallery of food photos, reservation form, location map, and opening hours. Use warm colors like orange and red."
   },
   {
     id: "business",
-    icon: "ðŸ’¼",
+    icon: "💼",
     title: "Business Landing",
     description: "Professional company page",
     prompt: "Build a business landing page with a bold hero section with call-to-action button, services section with 4 service cards with icons, company statistics (clients, projects, awards), team members grid with photos and roles, client logos section, pricing tables with 3 tiers, and contact form. Use a corporate blue and white color scheme."
   },
   {
     id: "gaming",
-    icon: "ðŸŽ®",
+    icon: "🎮",
     title: "Gaming Community",
     description: "Gamers unite platform",
     prompt: "Design a gaming community website with an energetic hero section, featured games carousel, leaderboard table showing top 10 players, upcoming tournaments section with dates and prizes, gaming news cards, live stream section, join community form, and Discord integration button. Use dark theme with neon purple and cyan accents."
@@ -393,7 +393,7 @@ const Index = () => {
   };
   const handleShareTwitter = () => {
     const link = generateShareLink();
-    const text = "Check out this website I created with AI! ðŸš€";
+    const text = "Check out this website I created with AI! 🚀";
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
@@ -515,11 +515,11 @@ Generated on: ${new Date().toLocaleDateString()}
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
   const getStatusForProgress = (progress: number): string => {
-    if (progress < 20) return "ðŸ¤– AI analyzing your requirements...";
-    if (progress < 40) return "ðŸŽ¨ Designing perfect layout structure...";
-    if (progress < 60) return "âœ¨ Crafting beautiful visual elements...";
-    if (progress < 80) return "ðŸ“± Optimizing for all devices...";
-    return "ðŸš€ Finalizing your professional website...";
+    if (progress < 20) return "🤔 AI analyzing your requirements...";
+    if (progress < 40) return "🎨 Designing perfect layout structure...";
+    if (progress < 60) return "✨ Crafting beautiful visual elements...";
+    if (progress < 80) return "📱 Optimizing for all devices...";
+    return "🚀 Finalizing your professional website...";
   };
   const saveWebsite = async (htmlCode: string) => {
     try {
@@ -541,7 +541,7 @@ Generated on: ${new Date().toLocaleDateString()}
         .select()
         .single();
       if (error) {
-        console.error('âŒ FULL SUPABASE ERROR:', {
+        console.error('❌ FULL SUPABASE ERROR:', {
           message: error.message,
           details: error.details,
           hint: error.hint,
@@ -569,7 +569,7 @@ Generated on: ${new Date().toLocaleDateString()}
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
       toast({
-        title: "Saved! ðŸ’¾",
+        title: "Saved! 💾",
         description: "Website saved to your account",
       });
     } catch (error) {
@@ -578,10 +578,10 @@ Generated on: ${new Date().toLocaleDateString()}
   };
   const simulateProgress = () => {
     const stages = [
-      { progress: 25, message: "ðŸ” Analyzing your requirements..." },
-      { progress: 50, message: "ðŸŽ¨ Designing layout and structure..." },
-      { progress: 75, message: "ðŸ’» Writing HTML, CSS, and JavaScript..." },
-      { progress: 90, message: "âœ¨ Finalizing your website..." }
+      { progress: 25, message: "🔍 Analyzing your requirements..." },
+      { progress: 50, message: "🎨 Designing layout and structure..." },
+      { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
+      { progress: 90, message: "✨ Finalizing your website..." }
     ];
     let currentStage = 0;
     setProgress(0);
@@ -672,7 +672,7 @@ Generated on: ${new Date().toLocaleDateString()}
     if (!usage.canGenerate) {
       toast({
         title: "Generation Limit Reached",
-        description: `You've reached your ${usage.generationsLimit} free generations for this month. Upgrade to Pro for unlimited website generation! ðŸš€`,
+        description: `You've reached your ${usage.generationsLimit} free generations for this month. Upgrade to Pro for unlimited website generation! 🚀`,
         variant: "destructive",
       });
       return;
@@ -769,7 +769,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       // DON'T auto-show project modal - let user view the website first
       // Modal can be opened manually if user wants to edit project details
       setProgress(100);
-      setProgressStage("âœ… Complete! Your website is ready.");
+      setProgressStage("✅ Complete! Your website is ready.");
       // Increment usage counter
       await incrementUsage();
       // Show success state for 2 seconds
@@ -782,8 +782,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setProgress(0);
         setProgressStage("");
         toast({
-          title: "Success! ðŸŽ‰",
-          description: "ðŸŽ‰ Your professional website is ready! Preview it below or download the files.",
+          title: "Success! 🎉",
+          description: "🎉 Your professional website is ready! Preview it below or download the files.",
         });
       }, 2000);
     } catch (error) {
@@ -791,27 +791,27 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       clearInterval(progressInterval2);
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
-          title: "âŒ Generation Cancelled",
+          title: "❌ Generation Cancelled",
           description: "You stopped the website generation process.",
         });
       } else if (error instanceof TypeError && error.message.includes('fetch')) {
         // Network error
         toast({
-          title: "ðŸŒ Network Error",
+          title: "🌐 Network Error",
           description: "Unable to connect to the server. Please check your internet connection and try again.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('timeout')) {
         // Timeout error
         toast({
-          title: "â±ï¸ Request Timeout",
+          title: "⏱️ Request Timeout",
           description: "The generation took too long. Please try again with a shorter description.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('429')) {
         // Rate limit error
         toast({
-          title: "ðŸš¦ Too Many Requests",
+          title: "🚦 Too Many Requests",
           description: "You're generating too fast! Please wait a moment and try again.",
           variant: "destructive",
         });
@@ -819,7 +819,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         // Generic error
         console.error('Generation error:', error);
         toast({
-          title: "âŒ Generation Failed",
+          title: "❌ Generation Failed",
           description: error instanceof Error ? `Error: ${error.message}` : "Something went wrong. Please try again or contact support.",
           variant: "destructive",
         });
@@ -889,7 +889,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       // DON'T auto-show project modal - let user view the website first
       // Modal can be opened manually if user wants to edit project details
       setProgress(100);
-      setProgressStage("âœ… Complete! Your website is ready.");
+      setProgressStage("✅ Complete! Your website is ready.");
       // Show success state for 2 seconds
       setShowSuccess(true);
       setTimeout(async () => {
@@ -900,8 +900,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setProgress(0);
         setProgressStage("");
         toast({
-          title: "Regenerated! ðŸŽ‰",
-          description: "âœ¨ Fresh version generated! Your website has been regenerated with a new design.",
+          title: "Regenerated! 🎉",
+          description: "✨ Fresh version generated! Your website has been regenerated with a new design.",
         });
       }, 2000);
     } catch (error) {
@@ -909,31 +909,31 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       clearInterval(progressInterval2);
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
-          title: "âŒ Regeneration Cancelled",
+          title: "❌ Regeneration Cancelled",
           description: "You stopped the website regeneration process.",
         });
       } else if (error instanceof TypeError && error.message.includes('fetch')) {
         toast({
-          title: "ðŸŒ Network Error",
+          title: "🌐 Network Error",
           description: "Unable to connect to the server. Please check your internet connection and try again.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('timeout')) {
         toast({
-          title: "â±ï¸ Request Timeout",
+          title: "⏱️ Request Timeout",
           description: "The regeneration took too long. Please try again with a shorter description.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('429')) {
         toast({
-          title: "ðŸš¦ Too Many Requests",
+          title: "🚦 Too Many Requests",
           description: "You're generating too fast! Please wait a moment and try again.",
           variant: "destructive",
         });
       } else {
         console.error('Regeneration error:', error);
         toast({
-          title: "âŒ Regeneration Failed",
+          title: "❌ Regeneration Failed",
           description: error instanceof Error ? `Error: ${error.message}` : "Something went wrong. Please try again or contact support.",
           variant: "destructive",
         });
@@ -976,16 +976,16 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     zip.file("styles.css", styles);
     zip.file("script.js", scripts);
     zip.file("README.md", `# Your AI-Generated Website
-## ðŸ“ Files Included:
+## 📁 Files Included:
 - index.html - Main HTML file
 - styles.css - All styling
 - script.js - JavaScript functionality
-## ðŸš€ How to Use:
+## 🚀 How to Use:
 1. Extract this ZIP file
 2. Open index.html in your browser
 3. Edit files as needed
 4. Host on any web server
-## ðŸ“ Notes:
+## 📝 Notes:
 - All files are linked and ready to use
 - Modify styles.css to change design
 - Edit script.js for functionality changes
@@ -1182,7 +1182,7 @@ ${new Date().toLocaleDateString()}
               }`}
               title="AI Chat Assistant"
             >
-              <span className="text-xl mr-2">ðŸ’¬</span>
+              <span className="text-xl mr-2">💬</span>
               AI Help
             </button>
             <button
@@ -1194,7 +1194,7 @@ ${new Date().toLocaleDateString()}
               }`}
               title="View Analytics Dashboard"
             >
-              <span className="text-xl mr-2">ðŸ“Š</span>
+              <span className="text-xl mr-2">📊</span>
               Analytics
             </button>
             <button
@@ -1202,7 +1202,7 @@ ${new Date().toLocaleDateString()}
               className={`p-3 rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-yellow-300' : 'bg-gray-800/10 hover:bg-gray-800/20 text-gray-800'}`}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              <span className="text-2xl">{isDarkMode ? 'â˜€ï¸' : 'ðŸŒ™'}</span>
+              <span className="text-2xl">{isDarkMode ? '☀️' : '🌙'}</span>
             </button>
             <div className={`glass-card px-4 py-2 flex items-center gap-3 transition-colors duration-300 ${isDarkMode ? 'bg-white/10 border-white/20' : 'bg-gray-50 border-gray-200'}`}>
               <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
@@ -1234,7 +1234,7 @@ ${new Date().toLocaleDateString()}
               onClick={toggleTheme}
               className={`p-2 rounded-lg ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-900 hover:bg-gray-100'}`}
             >
-              <span className="text-xl">{isDarkMode ? 'â˜€ï¸' : 'ðŸŒ™'}</span>
+              <span className="text-xl">{isDarkMode ? '☀️' : '🌙'}</span>
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -1274,7 +1274,7 @@ ${new Date().toLocaleDateString()}
                   isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                <span className="text-xl mr-2">ðŸ’¬</span>
+                <span className="text-xl mr-2">💬</span>
                 AI Chat Assistant
               </button>
               <button
@@ -1286,7 +1286,7 @@ ${new Date().toLocaleDateString()}
                   isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                <span className="text-xl mr-2">ðŸ“Š</span>
+                <span className="text-xl mr-2">📊</span>
                 Analytics
               </button>
               <div className={`px-4 py-3 rounded-lg ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
@@ -1335,7 +1335,7 @@ ${new Date().toLocaleDateString()}
                       <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
                       <div className="absolute top-60 left-1/3 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
                     </div>
-                    
+                   
                     <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight animate-fade-in-up">
                       <span className={dynamicTextClass}>Create Stunning Websites</span>
                       <br />
@@ -1376,43 +1376,42 @@ ${new Date().toLocaleDateString()}
                 {/* Template Gallery */}
                 <div className="mb-12">
                   <div className="text-center mb-8">
-                    <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>âœ¨ Start with a Template</h2>
+                    <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
                     <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
                   </div>
                   {isPageLoading ? (
-    // Skeleton Loading State for Templates
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
-      ))}
-    </div>
-  ) : (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {TEMPLATES.map((template, index) => (
-                    <button
-                      key={template.id}
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                      onClick={() => handleTemplateClick(template.prompt)}
-                      disabled={isGenerating}
-                      className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
-                    >
-                      {/* Shimmer effect on hover */}
-                      <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      {/* Template Icon */}
-                      <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                        {template.icon}
-                      </div>
-                      {/* Template Title */}
-                      <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
-                        {template.title}
-                      </h3>
-                      <p className={`text-sm ${dynamicMutedClass}`}>
-                        {template.description}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-                )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {TEMPLATES.map((template, index) => (
+                        <button
+                          key={template.id}
+                          style={{ animationDelay: `${index * 0.1}s` }}
+                          onClick={() => handleTemplateClick(template.prompt)}
+                          disabled={isGenerating}
+                          className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
+                        >
+                          {/* Shimmer effect on hover */}
+                          <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                          {/* Template Icon */}
+                          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                            {template.icon}
+                          </div>
+                          {/* Template Title */}
+                          <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
+                            {template.title}
+                          </h3>
+                          <p className={`text-sm ${dynamicMutedClass}`}>
+                            {template.description}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {/* Industry Select */}
                 <div className="flex items-center gap-4">
@@ -1433,16 +1432,16 @@ ${new Date().toLocaleDateString()}
                 {/* Style Selector */}
                 <div className="space-y-3">
                   <label className={`text-sm font-semibold ${dynamicTextClass}`}>
-                    ðŸŽ¨ Design Style
+                    🎨 Design Style
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {[
-                      { id: 'modern', label: 'Modern', icon: 'âœ¨', color: 'from-blue-500 to-purple-500' },
-                      { id: 'minimal', label: 'Minimal', icon: 'âšª', color: 'from-gray-400 to-gray-600' },
-                      { id: 'bold', label: 'Bold', icon: 'ðŸ”¥', color: 'from-red-500 to-orange-500' },
-                      { id: 'elegant', label: 'Elegant', icon: 'ðŸ‘‘', color: 'from-purple-500 to-pink-500' },
-                      { id: 'playful', label: 'Playful', icon: 'ðŸŽˆ', color: 'from-green-400 to-blue-400' },
-                      { id: 'professional', label: 'Professional', icon: 'ðŸ’¼', color: 'from-blue-600 to-indigo-600' }
+                      { id: 'modern', label: 'Modern', icon: '✨', color: 'from-blue-500 to-purple-500' },
+                      { id: 'minimal', label: 'Minimal', icon: '⚪', color: 'from-gray-400 to-gray-600' },
+                      { id: 'bold', label: 'Bold', icon: '🔥', color: 'from-red-500 to-orange-500' },
+                      { id: 'elegant', label: 'Elegant', icon: '💎', color: 'from-purple-500 to-pink-500' },
+                      { id: 'playful', label: 'Playful', icon: '🎈', color: 'from-green-400 to-blue-400' },
+                      { id: 'professional', label: 'Professional', icon: '💼', color: 'from-blue-600 to-indigo-600' }
                     ].map((style) => (
                       <button
                         key={style.id}
@@ -1458,7 +1457,7 @@ ${new Date().toLocaleDateString()}
                         <div className="text-2xl mb-1">{style.icon}</div>
                         <div className="font-semibold text-sm">{style.label}</div>
                         {selectedStyle === style.id && (
-                          <div className="absolute top-2 right-2 text-white">âœ“</div>
+                          <div className="absolute top-2 right-2 text-white">✓</div>
                         )}
                       </button>
                     ))}
@@ -1472,7 +1471,7 @@ ${new Date().toLocaleDateString()}
                 {/* Smart Textarea with Glow */}
                 <div className="relative">
                   <Textarea
-                    placeholder="âœ¨ Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
+                    placeholder="✨ Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     className={`min-h-[140px] input-glow transition-all duration-300 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
@@ -1485,21 +1484,20 @@ ${new Date().toLocaleDateString()}
                       characterCount < 100 ? 'char-counter-yellow font-semibold' :
                       'char-counter-green font-semibold'
                     }>
-                      {characterCount < 50 && 'âš ï¸ '}
-                      {characterCount >= 50 && characterCount < 100 && 'âš¡ '}
-                      {characterCount >= 100 && 'âœ… '}
+                      {characterCount < 50 && '⚠️ '}
+                      {characterCount >= 50 && characterCount < 100 && '⚡ '}
+                      {characterCount >= 100 && '✅ '}
                       {characterCount}/{characterLimit} characters
                     </span>
                     <span className={dynamicSubtleClass}>
-                      {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! ðŸŽ‰'}
+                      {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! 🎉'}
                     </span>
                   </div>
                 </div>
-
-                {/* Live Suggestions (show when user starts typing) */}
+                {/* Live Suggestions */}
                 {input.length > 10 && input.length < 50 && (
                   <div className="flex flex-wrap gap-2 animate-fade-in-up">
-                    <div className={`text-sm ${dynamicMutedClass} mb-2`}>ðŸ’¡ Quick suggestions:</div>
+                    <div className={`text-sm ${dynamicMutedClass} mb-2`}>💡 Quick suggestions:</div>
                     {['Add "with dark theme"', 'Add "mobile responsive"', 'Add "modern design"'].map((suggestion, i) => (
                       <button
                         key={i}
@@ -1520,9 +1518,7 @@ ${new Date().toLocaleDateString()}
                     style={{ backgroundSize: '200% 200%' }}
                     title="Ctrl+Enter to generate"
                   >
-                    {/* Shimmer effect */}
                     <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                    
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       {isGenerating ? (
                         <>
@@ -1539,10 +1535,10 @@ ${new Date().toLocaleDateString()}
                   </Button>
                 </div>
                 <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
-                  <span className="text-lg">âŒ¨ï¸</span>
+                  <span className="text-lg">⌨️</span>
                   <span className={`text-sm ${dynamicMutedClass}`}>
                     <kbd className={`px-2 py-1 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
-                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate â€¢
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate •
                     <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
                     <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>/</kbd> to toggle theme
                   </span>
@@ -1581,25 +1577,23 @@ ${new Date().toLocaleDateString()}
           {/* Generating State */}
           {isGenerating && (
             <div className="text-center space-y-8 animate-fade-in-up">
-              {/* Step-by-step Progress Visualization */}
               <div className="flex justify-center items-center gap-6 mb-8">
                 <div className={`step-circle ${progress >= 25 ? 'active' : ''} ${progress >= 50 ? 'complete' : ''}`}>
-                  ðŸ§ 
+                  🧠
                 </div>
                 <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 50 ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'bg-white/20'}`}></div>
                 <div className={`step-circle ${progress >= 50 ? 'active' : ''} ${progress >= 75 ? 'complete' : ''}`}>
-                  ðŸŽ¨
+                  🎨
                 </div>
                 <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 75 ? 'bg-gradient-to-r from-pink-500 to-blue-500' : 'bg-white/20'}`}></div>
                 <div className={`step-circle ${progress >= 75 ? 'active' : ''} ${progress >= 95 ? 'complete' : ''}`}>
-                  âš¡
+                  ⚡
                 </div>
                 <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-gradient-to-r from-blue-500 to-green-500' : 'bg-white/20'}`}></div>
                 <div className={`step-circle ${progress >= 95 ? 'active' : ''} ${progress === 100 ? 'complete' : ''}`}>
-                  âœ…
+                  ✅
                 </div>
               </div>
-              
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 text-2xl mb-4">
                   <Loader2 className={`w-8 h-8 animate-spin ${dynamicTextClass}`} />
@@ -1610,7 +1604,6 @@ ${new Date().toLocaleDateString()}
                     className="h-full bg-gradient-primary rounded-full transition-all duration-300 ease-out absolute left-0 top-0 animate-gradient"
                     style={{ width: `${progress}%` }}
                   />
-                  {/* Shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
                 </div>
                 <p className={`text-lg font-medium ${dynamicMutedClass}`}>{progressStage}</p>
@@ -1633,7 +1626,6 @@ ${new Date().toLocaleDateString()}
           {/* Generated Preview */}
           {generatedCode && (
             <div className="space-y-8">
-              {/* Preview Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-3">
                   <PartyPopper className="w-6 h-6 text-green-500" />
@@ -1643,13 +1635,12 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {/* Edit/Preview Toggle */}
                   <div className={`flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
                     <button
                       onClick={() => setIsEditMode(false)}
                       className={`px-4 py-2 rounded-full transition-all font-semibold ${!isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
                     >
-                      ðŸ‘ï¸ Preview
+                      👁️ Preview
                     </button>
                     <button
                       onClick={() => {
@@ -1658,10 +1649,9 @@ ${new Date().toLocaleDateString()}
                       }}
                       className={`px-4 py-2 rounded-full transition-all font-semibold ${isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
                     >
-                      âœï¸ Edit Code
+                      ✏️ Edit Code
                     </button>
                   </div>
-                  {/* View Mode Toggle (only in preview mode) */}
                   {!isEditMode && (
                     <div className={`flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
                       {[{ icon: Monitor, mode: 'desktop' as const }, { icon: Tablet, mode: 'tablet' as const }, { icon: Smartphone, mode: 'mobile' as const }].map(({ icon: Icon, mode }) => (
@@ -1675,7 +1665,6 @@ ${new Date().toLocaleDateString()}
                       ))}
                     </div>
                   )}
-                  {/* Action Buttons */}
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -1698,13 +1687,11 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-              {/* Preview/Edit Container */}
               {isEditMode ? (
                 <div className="space-y-4">
-                  {/* Code Editor */}
                   <div className={`relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? 'border-white/20 bg-gray-900' : 'border-gray-300 bg-white'}`}>
                     <div className={`flex items-center justify-between px-4 py-2 border-b ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                      <span className={`text-sm font-semibold ${dynamicTextClass}`}>ðŸ“ HTML Editor</span>
+                      <span className={`text-sm font-semibold ${dynamicTextClass}`}>📝 HTML Editor</span>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -1715,7 +1702,7 @@ ${new Date().toLocaleDateString()}
                           }}
                           className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                         >
-                          ðŸ’¾ Save & Preview
+                          💾 Save & Preview
                         </Button>
                         <Button
                           size="sm"
@@ -1726,7 +1713,7 @@ ${new Date().toLocaleDateString()}
                           }}
                           className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                         >
-                          âŒ Cancel
+                          ❌ Cancel
                         </Button>
                       </div>
                     </div>
@@ -1742,30 +1729,25 @@ ${new Date().toLocaleDateString()}
                 </div>
               ) : (
                 <div className="relative mx-auto max-w-6xl">
-                  {/* Device Frame Container */}
                   <div className={`
                     ${viewMode === 'desktop' ? 'device-frame-desktop max-w-5xl' : ''}
                     ${viewMode === 'tablet' ? 'device-frame-tablet max-w-2xl' : ''}
                     ${viewMode === 'mobile' ? 'device-frame-mobile max-w-sm' : ''}
                     mx-auto overflow-hidden bg-black/90 transition-all duration-500 animate-fade-in-up
                   `}>
-                    {/* Notch for mobile */}
                     {viewMode === 'mobile' && (
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10"></div>
                     )}
-                    
                     <iframe
                       srcDoc={generatedCode}
                       className="w-full h-full border-0"
-                      style={{ 
+                      style={{
                         height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px'
                       }}
                       title="Generated Website Preview"
                       sandbox="allow-scripts allow-same-origin"
                     />
                   </div>
-                  
-                  {/* Zoom Controls */}
                   <div className="flex justify-center gap-3 mt-6">
                     <button className="zoom-control">
                       <ZoomOut className="w-5 h-5" />
@@ -1779,52 +1761,30 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-              {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 justify-center">
-                <Button
-                  onClick={handleCopy}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                >
+                <Button onClick={handleCopy} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                   <Copy className="w-4 h-4" />
                   Copy Code
                 </Button>
-                <Button
-                  onClick={handleOpenFullScreen}
-                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
+                <Button onClick={handleOpenFullScreen} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
                   <Maximize2 className="w-4 h-4" />
                   Open Full Screen
                 </Button>
-                <Button
-                  onClick={handleDownload}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
+                <Button onClick={handleDownload} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white">
                   <Download className="w-4 h-4" />
                   Download ZIP
                 </Button>
-                <Button
-                  onClick={() => setShowShareMenu(true)}
-                  className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white"
-                >
+                <Button onClick={() => setShowShareMenu(true)} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white">
                   <Share2 className="w-4 h-4" />
                   Share
                 </Button>
-                <Button
-                  onClick={handleOpenInCodeSandbox}
-                  variant="outline"
-                  className="px-4"
-                >
+                <Button onClick={handleOpenInCodeSandbox} variant="outline" className="px-4">
                   Open in CodeSandbox
                 </Button>
-                <Button
-                  onClick={handleOpenInStackBlitz}
-                  variant="outline"
-                  className="px-4"
-                >
+                <Button onClick={handleOpenInStackBlitz} variant="outline" className="px-4">
                   Open in StackBlitz
                 </Button>
               </div>
-              {/* Share Menu */}
               {showShareMenu && (
                 <div className="relative">
                   <div className={`absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} z-50`}>
@@ -1866,7 +1826,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-              {/* Success Animation */}
               {showSuccess && (
                 <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 animate-fadeIn">
                   <div className={`p-8 rounded-2xl text-center shadow-2xl transform animate-bounce ${isDarkMode ? 'bg-green-900/20 text-green-300 border-green-500/30' : 'bg-green-50 text-green-800 border-green-200'} border-2 animate-pulse-glow`}>
@@ -1878,31 +1837,24 @@ ${new Date().toLocaleDateString()}
               )}
             </div>
           )}
-          {/* My Projects Section */}
           {websiteHistory.length > 0 && (
             <div className="mt-12">
-              {/* Section Header with Filters */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                <h2 className={`text-2xl font-bold transition-colors ${
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}>
-                  ðŸ“‚ My Projects ({getFilteredProjects().length})
+                <h2 className={`text-2xl font-bold transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  📂 My Projects ({getFilteredProjects().length})
                 </h2>
-                {/* Search and Filters */}
                 <div className="flex flex-wrap gap-3">
-                  {/* Search */}
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="ðŸ” Search projects..."
+                    placeholder="🔍 Search projects..."
                     className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       isDarkMode
                         ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
                         : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
                     }`}
                   />
-                  {/* Tag Filter */}
                   <select
                     value={filterTag}
                     onChange={(e) => setFilterTag(e.target.value)}
@@ -1917,7 +1869,6 @@ ${new Date().toLocaleDateString()}
                       <option key={tag} value={tag}>{tag}</option>
                     ))}
                   </select>
-                  {/* Favorites Toggle */}
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                     className={`px-4 py-2 rounded-lg font-semibold transition-all ${
@@ -1928,18 +1879,13 @@ ${new Date().toLocaleDateString()}
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    â­ Favorites
+                    ⭐ Favorites
                   </button>
                 </div>
               </div>
-              {/* Project Grid */}
               {getFilteredProjects().length === 0 ? (
-                <div className={`text-center py-12 rounded-xl border ${
-                  isDarkMode
-                    ? 'bg-white/5 border-white/10 text-gray-400'
-                    : 'bg-gray-50 border-gray-200 text-gray-600'
-                }`}>
-                  <div className="text-6xl mb-4">ðŸ”</div>
+                <div className={`text-center py-12 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                  <div className="text-6xl mb-4">🔍</div>
                   <p className="text-lg">No projects found matching your filters</p>
                   <button
                     onClick={() => {
@@ -1947,128 +1893,110 @@ ${new Date().toLocaleDateString()}
                       setFilterTag("all");
                       setShowFavoritesOnly(false);
                     }}
-                    className={`mt-4 px-6 py-2 rounded-lg ${
-                      isDarkMode
-                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                    }`}
+                    className={`mt-4 px-6 py-2 rounded-lg ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                   >
                     Clear Filters
                   </button>
                 </div>
               ) : usageLoading ? (
-  // Skeleton Loading State for Projects
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {[1, 2, 3, 4, 5, 6].map((i) => (
-      <SkeletonCard key={i} isDarkMode={isDarkMode} />
-    ))}
-  </div>
-) : (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {getFilteredProjects().map((site) => (
-                  <div
-                    key={site.id}
-                    className={`backdrop-blur-sm rounded-xl p-6 transition-all relative card-hover ${
-                      isDarkMode
-                        ? 'bg-white/5 border border-white/10 hover:bg-white/10'
-                        : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
-                    }`}
-                  >
-                    {/* Favorite Star */}
-                    <button
-                      onClick={() => toggleFavorite(site.id)}
-                      className="absolute top-4 right-4 text-2xl transition-transform hover:scale-125"
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <SkeletonCard key={i} isDarkMode={isDarkMode} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {getFilteredProjects().map((site) => (
+                    <div
+                      key={site.id}
+                      className={`backdrop-blur-sm rounded-xl p-6 transition-all relative card-hover ${
+                        isDarkMode
+                          ? 'bg-white/5 border border-white/10 hover:bg-white/10'
+                          : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
+                      }`}
                     >
-                      {site.isFavorite ? 'â­' : 'â˜†'}
-                    </button>
-                    {/* Project Info */}
-                    <div className="mb-4">
-                      <h3 className={`text-xl font-bold mb-2 pr-8 ${
-                        isDarkMode ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {site.name}
-                      </h3>
-                      {/* Tags */}
-                      {site.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {site.tags.map((tag, index) => (
-                            <span
-                              key={index}
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                isDarkMode
-                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                                  : 'bg-blue-100 text-blue-700 border border-blue-200'
-                              }`}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <p className={`text-sm mb-2 line-clamp-2 ${
-                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                      }`}>
-                        {site.prompt}
-                      </p>
-                      {site.notes && (
-                        <p className={`text-xs italic mb-2 line-clamp-2 ${
-                          isDarkMode ? 'text-gray-500' : 'text-gray-500'
-                        }`}>
-                          ðŸ“ {site.notes}
+                      <button
+                        onClick={() => toggleFavorite(site.id)}
+                        className="absolute top-4 right-4 text-2xl transition-transform hover:scale-125"
+                      >
+                        {site.isFavorite ? '⭐' : '☆'}
+                      </button>
+                      <div className="mb-4">
+                        <h3 className={`text-xl font-bold mb-2 pr-8 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {site.name}
+                        </h3>
+                        {site.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {site.tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  isDarkMode
+                                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                    : 'bg-blue-100 text-blue-700 border border-blue-200'
+                                }`}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className={`text-sm mb-2 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {site.prompt}
                         </p>
-                      )}
-                      <p className={`text-xs ${
-                        isDarkMode ? 'text-gray-500' : 'text-gray-500'
-                      }`}>
-                        Created: {new Date(site.timestamp).toLocaleDateString()} at{' '}
-                        {new Date(site.timestamp).toLocaleTimeString()}
-                      </p>
+                        {site.notes && (
+                          <p className={`text-xs italic mb-2 line-clamp-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                            📝 {site.notes}
+                          </p>
+                        )}
+                        <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                          Created: {new Date(site.timestamp).toLocaleDateString()} at{' '}
+                          {new Date(site.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            setGeneratedCode(site.html || "");
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isDarkMode
+                              ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                          }`}
+                        >
+                          👁️ View
+                        </button>
+                        <button
+                          onClick={() => openEditProject(site)}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isDarkMode
+                              ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                          }`}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(site.id)}
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isDarkMode
+                              ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                          }`}
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => {
-                          setGeneratedCode(site.html || "");
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          isDarkMode
-                            ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        }`}
-                      >
-                        ðŸ‘ï¸ View
-                      </button>
-                      <button
-                        onClick={() => openEditProject(site)}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          isDarkMode
-                            ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                        }`}
-                      >
-                        âœï¸ Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(site.id)}
-                        className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          isDarkMode
-                            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                            : 'bg-red-100 text-red-700 hover:bg-red-200'
-                        }`}
-                      >
-                        ðŸ—‘ï¸
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       </main>
-      {/* Scroll to Top Button */}
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -2085,191 +2013,46 @@ ${new Date().toLocaleDateString()}
         </button>
       )}
       <style>{`
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  /* NEW: Enhanced Button Animations */
-  .hover-scale {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  .hover-scale:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
-  }
-  .hover-scale:active {
-    transform: scale(0.98);
-  }
-  /* NEW: Smooth Card Hover */
-  .card-hover {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .card-hover:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-  }
-  /* NEW: Gradient Animation */
-  @keyframes gradient-shift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-  .animate-gradient {
-    background-size: 200% 200%;
-    animation: gradient-shift 3s ease infinite;
-  }
-  /* NEW: Pulse Glow */
-  @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
-    50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
-  }
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-  /* NEW: Shimmer Effect */
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-  .animate-shimmer {
-    animation: shimmer 2s infinite;
-  }
-  .animate-slideUp {
-    animation: slideUp 0.3s ease-out;
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.3s ease-out;
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-  }
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out;
-  }
-  .input-glow {
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
-  }
-  .char-counter-red {
-    color: #ef4444;
-  }
-  .char-counter-yellow {
-    color: #eab308;
-  }
-  .char-counter-green {
-    color: #22c55e;
-  }
-  .suggestion-chip {
-    padding: 4px 8px;
-    background: rgba(168, 85, 247, 0.2);
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    border-radius: 12px;
-    color: #a855f7;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .suggestion-chip:hover {
-    background: rgba(168, 85, 247, 0.3);
-    transform: scale(1.05);
-  }
-  .step-circle {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    border: 3px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-  }
-  .step-circle.active {
-    border-color: #a855f7;
-    background: rgba(168, 85, 247, 0.2);
-    transform: scale(1.1);
-  }
-  .step-circle.complete {
-    border-color: #22c55e;
-    background: rgba(34, 197, 94, 0.2);
-    animation: pulse 1s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  .device-frame-desktop {
-    border-radius: 20px;
-    border: 20px solid #000;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  }
-  .device-frame-desktop iframe {
-    border-radius: 0;
-  }
-  .device-frame-tablet {
-    border-radius: 30px;
-    border: 15px solid #000;
-    max-width: 768px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  }
-  .device-frame-tablet iframe {
-    border-radius: 0;
-  }
-  .device-frame-mobile {
-    border-radius: 40px;
-    border: 10px solid #000;
-    max-width: 375px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  }
-  .device-frame-mobile iframe {
-    border-radius: 0;
-  }
-  .zoom-control {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  .zoom-control:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
-  }
-`}</style>
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .hover-scale { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .hover-scale:hover { transform: scale(1.05); box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4); }
+        .hover-scale:active { transform: scale(0.98); }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-8px); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2); }
+        @keyframes gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .animate-gradient { background-size: 200% 200%; animation: gradient-shift 3s ease infinite; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); } 50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); } }
+        .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .animate-shimmer { animation: shimmer 2s infinite; }
+        .animate-slideUp { animation: slideUp 0.3s ease-out; }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.6s ease-out; }
+        .input-glow { box-shadow: 0 0 20px rgba(168, 85, 247, 0.3); }
+        .char-counter-red { color: #ef4444; }
+        .char-counter-yellow { color: #eab308; }
+        .char-counter-green { color: #22c55e; }
+        .suggestion-chip { padding: 4px 8px; background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; color: #a855f7; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .suggestion-chip:hover { background: rgba(168, 85, 247, 0.3); transform: scale(1.05); }
+        .step-circle { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 3px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); transition: all 0.3s ease; }
+        .step-circle.active { border-color: #a855f7; background: rgba(168, 85, 247, 0.2); transform: scale(1.1); }
+        .step-circle.complete { border-color: #22c55e; background: rgba(34, 197, 94, 0.2); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .device-frame-desktop { border-radius: 20px; border: 20px solid #000; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+        .device-frame-desktop iframe { border-radius: 0; }
+        .device-frame-tablet { border-radius: 30px; border: 15px solid #000; max-width: 768px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+        .device-frame-tablet iframe { border-radius: 0; }
+        .device-frame-mobile { border-radius: 40px; border: 10px solid #000; max-width: 375px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+        .device-frame-mobile iframe { border-radius: 0; }
+        .zoom-control { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; color: white; transition: all 0.2s; cursor: pointer; }
+        .zoom-control:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
+      `}</style>
     </div>
   );
 };
+
 export default Index;
