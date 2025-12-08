@@ -2,7 +2,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 /* Premium Dark Theme Design System */
 @layer base {
   :root {
@@ -39,32 +38,18 @@
     --shadow-card: 0 20px 60px -10px hsl(0 0% 0% / 0.3);
   }
 }
-
 @layer base {
   * {
     @apply border-border;
-    box-sizing: border-box;
   }
-  
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
-  }
-  
   body {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-    margin: 0;
-    padding: 0;
-    @apply text-foreground;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
   }
-  
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight font-bold;
   }
 }
-
 @layer utilities {
   .glass-card {
     @apply bg-card border border-white/10 backdrop-blur-xl;
@@ -85,10 +70,6 @@
     animation: glow 2s ease-in-out infinite;
   }
 }
-
-/* ============================================
-   CUSTOM ANIMATIONS & KEYFRAMES
-   ============================================ */
 @keyframes glow {
   0%, 100% {
     opacity: 1;
@@ -97,7 +78,6 @@
     opacity: 0.6;
   }
 }
-
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -108,7 +88,13 @@
     transform: translateY(0);
   }
 }
-
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+/* ============================================
+   LOVABLE-INSPIRED ANIMATIONS
+   ============================================ */
+/* Floating animation for gradient orbs */
 @keyframes float {
   0%, 100% {
     transform: translate(0, 0) scale(1);
@@ -120,7 +106,6 @@
     transform: translate(-20px, 20px) scale(0.9);
   }
 }
-
 @keyframes float-delayed {
   0%, 100% {
     transform: translate(0, 0) scale(1);
@@ -132,7 +117,14 @@
     transform: translate(20px, -20px) scale(0.9);
   }
 }
-
+.animate-float {
+  animation: float 20s ease-in-out infinite;
+}
+.animate-float-delayed {
+  animation: float-delayed 25s ease-in-out infinite;
+  animation-delay: 5s;
+}
+/* Slow pulse for empty state */
 @keyframes pulse-slow {
   0%, 100% {
     opacity: 1;
@@ -143,7 +135,10 @@
     transform: scale(1.05);
   }
 }
-
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+/* Fade in up animation for cards */
 @keyframes fade-in-up {
   from {
     opacity: 0;
@@ -154,7 +149,11 @@
     transform: translateY(0);
   }
 }
-
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+  /* opacity: 0 removed - animation will handle visibility */
+}
+/* Gradient shift for buttons */
 @keyframes gradient-shift {
   0%, 100% {
     background-position: 0% 50%;
@@ -163,7 +162,11 @@
     background-position: 100% 50%;
   }
 }
-
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+/* Shimmer effect */
 @keyframes shimmer {
   0% {
     background-position: -1000px 0;
@@ -172,87 +175,6 @@
     background-position: 1000px 0;
   }
 }
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes buttonClick {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.95);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Animated gradient background for hero */
-@keyframes gradientShift {
-  0%, 100% { 
-    background-position: 0% 50%;
-  }
-  50% { 
-    background-position: 100% 50%;
-  }
-}
-
-/* ============================================
-   ANIMATION CLASSES
-   ============================================ */
-.animate-slide-up {
-  animation: slideUp 0.5s ease-out;
-}
-
-.animate-float {
-  animation: float 20s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float-delayed 25s ease-in-out infinite;
-  animation-delay: 5s;
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 3s ease-in-out infinite;
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out forwards;
-}
-
-.animate-gradient-shift {
-  background-size: 200% 200%;
-  animation: gradient-shift 3s ease infinite;
-}
-
 .animate-shimmer {
   background: linear-gradient(
     90deg,
@@ -263,24 +185,10 @@
   background-size: 1000px 100%;
   animation: shimmer 2s infinite;
 }
-
-.fade-in {
-  animation: fadeIn 0.5s ease-out;
-}
-
-.loading {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s ease-in-out infinite;
-}
-
 /* ============================================
-   ENHANCED COMPONENTS
+   PHASE 2: ENHANCED ANIMATIONS & EFFECTS
    ============================================ */
+/* Glassmorphic card with glow effect */
 .glass-card-enhanced {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
@@ -288,38 +196,35 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
 }
-
 .glass-card-enhanced:hover {
   border-color: rgba(168, 85, 247, 0.3);
   box-shadow: 0 8px 32px rgba(168, 85, 247, 0.2);
 }
-
+/* Glowing focus effect for input */
 .input-glow:focus {
   border-color: rgba(168, 85, 247, 0.5);
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1),
               0 0 20px rgba(168, 85, 247, 0.3);
 }
-
+/* Device frame mockups */
 .device-frame-desktop {
   border-radius: 12px;
   border: 8px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
-
 .device-frame-mobile {
   border-radius: 40px;
   border: 12px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   aspect-ratio: 9/19.5;
 }
-
 .device-frame-tablet {
   border-radius: 20px;
   border: 10px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   aspect-ratio: 3/4;
 }
-
+/* Animated gradient background */
 .animated-gradient-bg {
   background: linear-gradient(135deg,
     rgba(168, 85, 247, 0.1) 0%,
@@ -331,7 +236,7 @@
   background-size: 400% 400%;
   animation: gradient-shift 15s ease infinite;
 }
-
+/* Floating particles effect */
 .floating-particle {
   position: absolute;
   border-radius: 50%;
@@ -339,16 +244,15 @@
   pointer-events: none;
   animation: float 20s ease-in-out infinite;
 }
-
+/* Quick action button hover */
 .quick-action-btn {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .quick-action-btn:hover {
   transform: translateY(-4px) scale(1.05);
   box-shadow: 0 10px 30px rgba(168, 85, 247, 0.3);
 }
-
+/* Step indicator circles */
 .step-circle {
   width: 60px;
   height: 60px;
@@ -361,31 +265,27 @@
   border: 2px solid rgba(255, 255, 255, 0.2);
   transition: all 0.5s ease;
 }
-
 .step-circle.active {
   background: linear-gradient(135deg, #a855f7, #7c3aed);
   border-color: #a855f7;
   box-shadow: 0 0 30px rgba(168, 85, 247, 0.6);
   transform: scale(1.2);
 }
-
 .step-circle.complete {
   background: linear-gradient(135deg, #10b981, #059669);
   border-color: #10b981;
 }
-
+/* Character counter colors */
 .char-counter-green {
   color: #10b981;
 }
-
 .char-counter-yellow {
   color: #fbbf24;
 }
-
 .char-counter-red {
   color: #ef4444;
 }
-
+/* Suggestion chip */
 .suggestion-chip {
   display: inline-flex;
   align-items: center;
@@ -397,19 +297,17 @@
   cursor: pointer;
   transition: all 0.3s ease;
 }
-
 .suggestion-chip:hover {
   background: rgba(168, 85, 247, 0.2);
   border-color: rgba(168, 85, 247, 0.5);
   transform: translateY(-2px);
 }
-
+/* Enhanced template card */
 .template-card-enhanced {
   position: relative;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .template-card-enhanced::before {
   content: '';
   position: absolute;
@@ -426,16 +324,14 @@
   transform: rotate(45deg);
   transition: all 0.6s ease;
 }
-
 .template-card-enhanced:hover::before {
   left: 100%;
 }
-
 .template-card-enhanced:hover {
   transform: translateY(-12px);
   box-shadow: 0 25px 60px rgba(168, 85, 247, 0.3);
 }
-
+/* Zoom controls */
 .zoom-control {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -445,179 +341,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
 }
-
 .zoom-control:hover {
   background: rgba(168, 85, 247, 0.2);
   border-color: rgba(168, 85, 247, 0.4);
-}
-
-/* ============================================
-   ENHANCED NAVIGATION
-   ============================================ */
-.navbar, header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  transition: all 0.3s;
-}
-
-.navbar:hover, header:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-/* Navigation links */
-nav a, .nav-link {
-  color: #333;
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  transition: all 0.3s;
-  font-weight: 500;
-}
-
-nav a:hover, .nav-link:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-}
-
-/* Active navigation link */
-nav a.active, .nav-link.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-/* ============================================
-   CUSTOM SCROLLBAR
-   ============================================ */
-::-webkit-scrollbar {
-  width: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-}
-
-/* ============================================
-   DETAILS ELEMENT STYLING
-   ============================================ */
-details summary {
-  transition: all 0.3s;
-}
-
-details[open] summary {
-  margin-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 1rem;
-}
-
-details summary:hover {
-  color: #667eea;
-}
-
-/* ============================================
-   FOCUS STATES FOR ACCESSIBILITY
-   ============================================ */
-button:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
-}
-
-button {
-  font-family: inherit;
-}
-
-button:active {
-  animation: buttonClick 0.2s ease-out;
-}
-
-/* ============================================
-   UTILITY CLASSES
-   ============================================ */
-.glass-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.hover-lift {
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.gradient-bg {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.text-gradient-purple {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================
-   MOBILE RESPONSIVENESS
-   ============================================ */
-@media (max-width: 768px) {
-  .hero-section {
-    min-height: 70vh !important;
-    padding: 1rem !important;
-  }
-
-  .hero-section h1 {
-    font-size: 2rem !important;
-  }
-
-  .hero-section p {
-    font-size: 1rem !important;
-  }
-
-  /* Stack buttons vertically on mobile */
-  .hero-section > div > div:last-child {
-    flex-direction: column !important;
-  }
-
-  .hero-section button,
-  .hero-section select {
-    width: 100% !important;
-  }
-
-  /* Projects grid - single column on mobile */
-  div[style*="grid-template-columns"] {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .hero-section {
-    min-height: 60vh !important;
-  }
-
-  details {
-    padding: 1rem !important;
-  }
-
-  summary {
-    font-size: 1rem !important;
-  }
 }
