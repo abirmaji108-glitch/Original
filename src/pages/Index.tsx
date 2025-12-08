@@ -44,56 +44,53 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingScreen } from '@/components/ui/spinner';
-
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
 const ProjectModal = lazy(() => import("@/components/ProjectModal").then(m => ({ default: m.ProjectModal })));
-
 const TEMPLATES = [
   {
     id: "portfolio",
-    icon: "🎨",
+    icon: "ðŸŽ¨",
     title: "Portfolio Website",
     description: "Showcase your work and skills",
     prompt: "Create a modern portfolio website with a hero section, about me section, skills grid with icons, project gallery with 6 projects showing images and descriptions, contact form, and smooth scrolling navigation. Use a gradient background from purple to blue. Make it clean and professional."
   },
   {
     id: "ecommerce",
-    icon: "🏪",
+    icon: "ðŸª",
     title: "E-commerce Store",
     description: "Online shopping experience",
     prompt: "Build an e-commerce website with a header with shopping cart icon, featured products grid showing 8 products with images, prices, and 'Add to Cart' buttons, product categories sidebar, promotional banner, customer testimonials section, and footer with social links. Use a modern, trustworthy design with green accents."
   },
   {
     id: "blog",
-    icon: "📰",
+    icon: "ðŸ“°",
     title: "Blog/News Site",
     description: "Content-focused publishing platform",
     prompt: "Design a blog website with a clean header, featured article hero section with large image, grid of 6 blog post cards showing thumbnails, titles, excerpts, and dates, sidebar with popular posts and categories, author bio section, and newsletter signup form. Use a minimal, readable design with plenty of white space."
   },
   {
     id: "restaurant",
-    icon: "🍕",
+    icon: "ðŸ•",
     title: "Restaurant Menu",
     description: "Delicious food showcase",
     prompt: "Create a restaurant website with a hero section showing food imagery, about the restaurant section, interactive menu with categories (Appetizers, Main Courses, Desserts, Drinks) showing dish names, descriptions, and prices, gallery of food photos, reservation form, location map, and opening hours. Use warm colors like orange and red."
   },
   {
     id: "business",
-    icon: "💼",
+    icon: "ðŸ’¼",
     title: "Business Landing",
     description: "Professional company page",
     prompt: "Build a business landing page with a bold hero section with call-to-action button, services section with 4 service cards with icons, company statistics (clients, projects, awards), team members grid with photos and roles, client logos section, pricing tables with 3 tiers, and contact form. Use a corporate blue and white color scheme."
   },
   {
     id: "gaming",
-    icon: "🎮",
+    icon: "ðŸŽ®",
     title: "Gaming Community",
     description: "Gamers unite platform",
     prompt: "Design a gaming community website with an energetic hero section, featured games carousel, leaderboard table showing top 10 players, upcoming tournaments section with dates and prizes, gaming news cards, live stream section, join community form, and Discord integration button. Use dark theme with neon purple and cyan accents."
   }
 ];
-
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
   gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
@@ -102,7 +99,6 @@ const INDUSTRY_TEMPLATES: Record<string, string> = {
   agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
   custom: "",
 };
-
 const STYLE_DESCRIPTIONS: Record<string, string> = {
   modern: "Clean, contemporary design with smooth animations, gradients, and glass-morphism effects. Uses bold colors and modern typography.",
   minimal: "Simple, elegant design with lots of white space, subtle colors, and focus on content. Typography-focused with minimal decorative elements.",
@@ -111,9 +107,7 @@ const STYLE_DESCRIPTIONS: Record<string, string> = {
   playful: "Fun, energetic design with bright colors, rounded shapes, playful illustrations, and dynamic animations. Youthful vibe.",
   professional: "Corporate, trustworthy design with structured layouts, conservative colors (blues, grays), and business-focused aesthetic."
 };
-
 type ViewMode = "desktop" | "tablet" | "mobile";
-
 // Skeleton Loading Components
 const SkeletonCard = ({ isDarkMode }: { isDarkMode: boolean }) => (
   <div className={`backdrop-blur-sm rounded-xl p-6 animate-pulse ${
@@ -129,7 +123,6 @@ const SkeletonCard = ({ isDarkMode }: { isDarkMode: boolean }) => (
     </div>
   </div>
 );
-
 const SkeletonTemplate = ({ isDarkMode }: { isDarkMode: boolean }) => (
   <div className={`backdrop-blur-sm rounded-xl p-6 animate-pulse ${
     isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
@@ -139,35 +132,18 @@ const SkeletonTemplate = ({ isDarkMode }: { isDarkMode: boolean }) => (
     <div className={`h-4 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '60%' }}></div>
   </div>
 );
-
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // CRITICAL: Ensure all required state variables exist
-  const [prompt, setPrompt] = useState("");
-  const [selectedStyle, setSelectedStyle] = useState("modern");
-  const [selectedIndustry, setSelectedIndustry] = useState("custom");
+  const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [projects, setProjects] = useState<Array<{
-    id: string;
-    name: string;
-    prompt: string;
-    html?: string;
-    timestamp: number;
-    tags: string[];
-    isFavorite: boolean;
-    notes: string;
-    thumbnail?: string;
-  }>>([]);
-  const [templates] = useState(TEMPLATES); // Using the static TEMPLATES array
-
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressStage, setProgressStage] = useState("");
   const [status, setStatus] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("desktop");
   const [previewMode, setPreviewMode] = useState<"mobile" | "tablet" | "desktop">("desktop");
+  const [industry, setIndustry] = useState("custom");
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
@@ -206,33 +182,25 @@ const Index = () => {
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedCode, setEditedCode] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState("modern");
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
-
-  // Initialize projects from websiteHistory
-  useEffect(() => {
-    setProjects(websiteHistory);
-  }, [websiteHistory]);
-
   // Load history from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('websiteHistory');
     if (saved) {
       const history = JSON.parse(saved);
       setWebsiteHistory(history);
-      setProjects(history);
       calculateAnalytics();
     }
   }, []);
-
   useEffect(() => {
     calculateAnalytics();
   }, [websiteHistory]);
-
   // Load theme preference
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -240,7 +208,6 @@ const Index = () => {
       setIsDarkMode(savedTheme === 'dark');
     }
   }, []);
-
   // Apply dark mode class to document
   useEffect(() => {
     if (isDarkMode) {
@@ -249,14 +216,12 @@ const Index = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
-
   // Get authenticated user ID
   useEffect(() => {
     if (user?.id) {
       setUserId(user.id);
     }
   }, [user]);
-
   // Check if there's a shared website in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -274,7 +239,6 @@ const Index = () => {
       }
     }
   }, []);
-
   // Close share menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -286,17 +250,15 @@ const Index = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
-
   // Load from navigation state if regenerating
   useEffect(() => {
     if (location.state?.description) {
-      setPrompt(location.state.description);
+      setInput(location.state.description);
       if (location.state.industry) {
-        setSelectedIndustry(location.state.industry);
+        setIndustry(location.state.industry);
       }
     }
   }, [location.state]);
-
   // Initial page load
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -304,7 +266,6 @@ const Index = () => {
     }, 800);
     return () => clearTimeout(timer);
   }, []);
-
   // Scroll to top button visibility
   useEffect(() => {
     const handleScroll = () => {
@@ -313,14 +274,13 @@ const Index = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
       // Ctrl/Cmd + Enter - Generate website
-      if (ctrlKey && e.key === 'Enter' && !isGenerating && prompt.length >= 50) {
+      if (ctrlKey && e.key === 'Enter' && !isGenerating && input.length >= 50) {
         e.preventDefault();
         handleGenerate();
       }
@@ -344,10 +304,8 @@ const Index = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [prompt, isGenerating, generatedCode]);
-
+  }, []);
   const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
-
   const calculateAnalytics = () => {
     const history = websiteHistory;
     // Total generated
@@ -383,7 +341,6 @@ const Index = () => {
       totalStorageKB
     });
   };
-
   const getGenerationsPerDay = () => {
     const dateCount: Record<string, number> = {};
     websiteHistory.forEach(site => {
@@ -392,20 +349,17 @@ const Index = () => {
     });
     return dateCount;
   };
-
   // Chat is now handled entirely by ChatModal component
   // No duplicate chat logic needed here
-
   // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
-    setSelectedIndustry(value);
+    setIndustry(value);
     if (value !== "custom" && INDUSTRY_TEMPLATES[value]) {
-      setPrompt(INDUSTRY_TEMPLATES[value]);
+      setInput(INDUSTRY_TEMPLATES[value]);
     } else if (value === "custom") {
-      setPrompt("");
+      setInput("");
     }
   };
-
   // Elapsed time counter
   useEffect(() => {
     if (isGenerating) {
@@ -418,13 +372,11 @@ const Index = () => {
       setElapsedTime(0);
     }
   }, [isGenerating]);
-
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     localStorage.setItem('theme', newTheme ? 'dark' : 'light');
   };
-
   const generateShareLink = () => {
     if (!generatedCode) return "";
     // Encode HTML to base64 for URL
@@ -433,36 +385,31 @@ const Index = () => {
     setShareLink(shareUrl);
     return shareUrl;
   };
-
   const handleCopyLink = () => {
     const link = generateShareLink();
     navigator.clipboard.writeText(link);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 3000);
   };
-
   const handleShareTwitter = () => {
     const link = generateShareLink();
-    const text = "Check out this website I created with AI! 🚀";
+    const text = "Check out this website I created with AI! ðŸš€";
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
   };
-
   const handleShareLinkedIn = () => {
     const link = generateShareLink();
     const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=600');
     setShowShareMenu(false);
   };
-
   const handleShareFacebook = () => {
     const link = generateShareLink();
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
   };
-
   const handleShareEmail = () => {
     const link = generateShareLink();
     const subject = "Check out my AI-generated website!";
@@ -470,7 +417,6 @@ const Index = () => {
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setShowShareMenu(false);
   };
-
   const handleOpenInCodeSandbox = () => {
     if (!generatedCode) return;
     // Extract CSS and JS from HTML
@@ -530,7 +476,6 @@ const Index = () => {
     form.submit();
     document.body.removeChild(form);
   };
-
   const handleOpenInStackBlitz = () => {
     if (!generatedCode) return;
     // Extract CSS and JS from HTML
@@ -553,17 +498,13 @@ const Index = () => {
         'script.js': scripts,
         'README.md': `# AI Generated Website
 This website was created using an AI Website Generator.
-
 ## Files
 - \`index.html\` - Main HTML structure
 - \`styles.css\` - Styling
 - \`script.js\` - JavaScript functionality
-
 ## Edit
 Feel free to modify any files to customize your website!
-
 Generated on: ${new Date().toLocaleDateString()}
-
 `
       }
     };
@@ -573,15 +514,13 @@ Generated on: ${new Date().toLocaleDateString()}
     // Open StackBlitz
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
-
   const getStatusForProgress = (progress: number): string => {
-    if (progress < 20) return "🤖 AI analyzing your requirements...";
-    if (progress < 40) return "🎨 Designing perfect layout structure...";
-    if (progress < 60) return "✨ Crafting beautiful visual elements...";
-    if (progress < 80) return "📱 Optimizing for all devices...";
-    return "🚀 Finalizing your professional website...";
+    if (progress < 20) return "ðŸ¤– AI analyzing your requirements...";
+    if (progress < 40) return "ðŸŽ¨ Designing perfect layout structure...";
+    if (progress < 60) return "âœ¨ Crafting beautiful visual elements...";
+    if (progress < 80) return "ðŸ“± Optimizing for all devices...";
+    return "ðŸš€ Finalizing your professional website...";
   };
-
   const saveWebsite = async (htmlCode: string) => {
     try {
       if (!userId) {
@@ -589,21 +528,20 @@ Generated on: ${new Date().toLocaleDateString()}
         return;
       }
       // Extract title from description or use default
-      const name = prompt.split('\n')[0].slice(0, 50) || 'Untitled Website';
+      const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
       // Save to Supabase database
       const { data, error } = await supabase
         .from('websites')
         .insert({
           user_id: userId,
           name: name,
-          prompt: prompt,
+          prompt: input,
           html_code: htmlCode,
         })
         .select()
         .single();
-
       if (error) {
-        console.error('❌ FULL SUPABASE ERROR:', {
+        console.error('âŒ FULL SUPABASE ERROR:', {
           message: error.message,
           details: error.details,
           hint: error.hint,
@@ -616,13 +554,12 @@ Generated on: ${new Date().toLocaleDateString()}
         });
         return;
       }
-
       // Also save to localStorage as backup
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       const newWebsite: SavedWebsite = {
         id: data.id,
         name,
-        prompt: prompt,
+        prompt: input,
         htmlCode,
         timestamp: Date.now(),
       };
@@ -632,20 +569,19 @@ Generated on: ${new Date().toLocaleDateString()}
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
       toast({
-        title: "Saved! 💾",
+        title: "Saved! ðŸ’¾",
         description: "Website saved to your account",
       });
     } catch (error) {
       console.error('Error saving website:', error);
     }
   };
-
   const simulateProgress = () => {
     const stages = [
-      { progress: 25, message: "🔍 Analyzing your requirements..." },
-      { progress: 50, message: "🎨 Designing layout and structure..." },
-      { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
-      { progress: 90, message: "✨ Finalizing your website..." }
+      { progress: 25, message: "ðŸ” Analyzing your requirements..." },
+      { progress: 50, message: "ðŸŽ¨ Designing layout and structure..." },
+      { progress: 75, message: "ðŸ’» Writing HTML, CSS, and JavaScript..." },
+      { progress: 90, message: "âœ¨ Finalizing your website..." }
     ];
     let currentStage = 0;
     setProgress(0);
@@ -661,7 +597,6 @@ Generated on: ${new Date().toLocaleDateString()}
     }, 8000); // Change stage every 8 seconds
     return interval;
   };
-
   const saveProjectDetails = () => {
     if (!editingProject) return;
     const updatedHistory = websiteHistory.map(site =>
@@ -675,7 +610,6 @@ Generated on: ${new Date().toLocaleDateString()}
         : site
     );
     setWebsiteHistory(updatedHistory);
-    setProjects(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
     setShowProjectModal(false);
     setEditingProject(null);
@@ -683,26 +617,21 @@ Generated on: ${new Date().toLocaleDateString()}
     setProjectTags([]);
     setProjectNotes("");
   };
-
   const toggleFavorite = (id: string) => {
     const updatedHistory = websiteHistory.map(site =>
       site.id === id ? { ...site, isFavorite: !site.isFavorite } : site
     );
     setWebsiteHistory(updatedHistory);
-    setProjects(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
   };
-
   const addTag = (tag: string) => {
     if (tag.trim() && !projectTags.includes(tag.trim())) {
       setProjectTags([...projectTags, tag.trim()]);
     }
   };
-
   const removeTag = (tag: string) => {
     setProjectTags(projectTags.filter(t => t !== tag));
   };
-
   const openEditProject = (site: typeof websiteHistory[0]) => {
     setEditingProject(site.id);
     setProjectName(site.name);
@@ -710,7 +639,6 @@ Generated on: ${new Date().toLocaleDateString()}
     setProjectNotes(site.notes);
     setShowProjectModal(true);
   };
-
   const getFilteredProjects = () => {
     let filtered = [...websiteHistory];
     // Search filter
@@ -732,7 +660,6 @@ Generated on: ${new Date().toLocaleDateString()}
     }
     return filtered;
   };
-
   const getAllTags = () => {
     const tagSet = new Set<string>();
     websiteHistory.forEach(site => {
@@ -740,28 +667,25 @@ Generated on: ${new Date().toLocaleDateString()}
     });
     return Array.from(tagSet);
   };
-
   const handleGenerate = async () => {
     // Check usage limit FIRST
     if (!usage.canGenerate) {
       toast({
         title: "Generation Limit Reached",
-        description: `You've reached your ${usage.generationsLimit} free generations for this month. Upgrade to Pro for unlimited website generation! 🚀`,
+        description: `You've reached your ${usage.generationsLimit} free generations for this month. Upgrade to Pro for unlimited website generation! ðŸš€`,
         variant: "destructive",
       });
       return;
     }
-
-    if (prompt.trim().length === 0 || prompt.length > 3000) {
+    if (input.trim().length === 0 || input.length > 3000) {
       toast({
         title: "Invalid Prompt Length",
-        description: prompt.length > 3000 ? "Maximum 3000 characters allowed. Please shorten your description." : "Please enter a description.",
+        description: input.length > 3000 ? "Maximum 3000 characters allowed. Please shorten your description." : "Please enter a description.",
         variant: "destructive",
       });
       return;
     }
-
-    if (prompt.length < 50) {
+    if (input.length < 50) {
       toast({
         title: "Description too short",
         description: "Please describe your website with at least 50 characters",
@@ -769,7 +693,6 @@ Generated on: ${new Date().toLocaleDateString()}
       });
       return;
     }
-
     setIsGenerating(true);
     setProgress(0);
     setGeneratedCode(null);
@@ -785,16 +708,13 @@ Generated on: ${new Date().toLocaleDateString()}
         return newProgress;
       });
     }, 150);
-
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
-      const fullPrompt = `Generate a complete, production-ready, single-file HTML website based on this description:
-${prompt}
-
+      const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
+${input}
 DESIGN STYLE: ${selectedStyle.toUpperCase()}
 ${styleInstruction}
 Apply this design style consistently throughout the website.
-
 REQUIREMENTS:
 - Complete HTML5 document starting with <!DOCTYPE html>
 - Use Tailwind CSS CDN: <script src="https://cdn.tailwindcss.com"></script>
@@ -813,35 +733,29 @@ REQUIREMENTS:
 - Professional color scheme matching the description
 - Proper semantic HTML5 tags
 - Accessibility features (alt tags, ARIA labels)
-
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
-
-      setLastPrompt(fullPrompt);
+      setLastPrompt(prompt);
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ prompt: fullPrompt }),
+        body: JSON.stringify({ prompt }),
         signal: abortControllerRef.current?.signal
       });
-
       // Clear intervals after fetch
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
       }
-
       let htmlCode = data.htmlCode;
-
       // Save to history
       const newWebsite = {
         id: Date.now().toString(),
         name: `Website ${websiteHistory.length + 1}`,
-        prompt: fullPrompt,
+        prompt: prompt,
         html: htmlCode,
         timestamp: Date.now(),
         tags: [],
@@ -849,20 +763,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         notes: "",
         thumbnail: ""
       };
-
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
-      setProjects(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-
       // DON'T auto-show project modal - let user view the website first
       // Modal can be opened manually if user wants to edit project details
       setProgress(100);
-      setProgressStage("✅ Complete! Your website is ready.");
-
+      setProgressStage("âœ… Complete! Your website is ready.");
       // Increment usage counter
       await incrementUsage();
-
       // Show success state for 2 seconds
       setShowSuccess(true);
       setTimeout(async () => {
@@ -873,37 +782,36 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setProgress(0);
         setProgressStage("");
         toast({
-          title: "Success! 🎉",
-          description: "🎉 Your professional website is ready! Preview it below or download the files.",
+          title: "Success! ðŸŽ‰",
+          description: "ðŸŽ‰ Your professional website is ready! Preview it below or download the files.",
         });
       }, 2000);
-
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
-          title: "❌ Generation Cancelled",
+          title: "âŒ Generation Cancelled",
           description: "You stopped the website generation process.",
         });
       } else if (error instanceof TypeError && error.message.includes('fetch')) {
         // Network error
         toast({
-          title: "🌐 Network Error",
+          title: "ðŸŒ Network Error",
           description: "Unable to connect to the server. Please check your internet connection and try again.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('timeout')) {
         // Timeout error
         toast({
-          title: "⏱️ Request Timeout",
+          title: "â±ï¸ Request Timeout",
           description: "The generation took too long. Please try again with a shorter description.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('429')) {
         // Rate limit error
         toast({
-          title: "🚦 Too Many Requests",
+          title: "ðŸš¦ Too Many Requests",
           description: "You're generating too fast! Please wait a moment and try again.",
           variant: "destructive",
         });
@@ -911,7 +819,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         // Generic error
         console.error('Generation error:', error);
         toast({
-          title: "❌ Generation Failed",
+          title: "âŒ Generation Failed",
           description: error instanceof Error ? `Error: ${error.message}` : "Something went wrong. Please try again or contact support.",
           variant: "destructive",
         });
@@ -922,7 +830,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setShowSuccess(false);
     }
   };
-
   const handleRegenerate = async () => {
     if (!lastPrompt) {
       toast({
@@ -932,7 +839,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       });
       return;
     }
-
     setIsGenerating(true);
     setProgress(0);
     setGeneratedCode(null);
@@ -948,7 +854,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         return newProgress;
       });
     }, 150);
-
     try {
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
@@ -958,18 +863,14 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         body: JSON.stringify({ prompt: lastPrompt }),
         signal: abortControllerRef.current?.signal
       });
-
       // Clear intervals after fetch
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
-
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
       }
-
       let htmlCode = data.htmlCode;
-
       // Save to history
       const newWebsite = {
         id: Date.now().toString(),
@@ -982,17 +883,13 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         notes: "",
         thumbnail: ""
       };
-
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
-      setProjects(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-
       // DON'T auto-show project modal - let user view the website first
       // Modal can be opened manually if user wants to edit project details
       setProgress(100);
-      setProgressStage("✅ Complete! Your website is ready.");
-
+      setProgressStage("âœ… Complete! Your website is ready.");
       // Show success state for 2 seconds
       setShowSuccess(true);
       setTimeout(async () => {
@@ -1003,41 +900,40 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setProgress(0);
         setProgressStage("");
         toast({
-          title: "Regenerated! 🎉",
-          description: "✨ Fresh version generated! Your website has been regenerated with a new design.",
+          title: "Regenerated! ðŸŽ‰",
+          description: "âœ¨ Fresh version generated! Your website has been regenerated with a new design.",
         });
       }, 2000);
-
     } catch (error) {
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
-          title: "❌ Regeneration Cancelled",
+          title: "âŒ Regeneration Cancelled",
           description: "You stopped the website regeneration process.",
         });
       } else if (error instanceof TypeError && error.message.includes('fetch')) {
         toast({
-          title: "🌐 Network Error",
+          title: "ðŸŒ Network Error",
           description: "Unable to connect to the server. Please check your internet connection and try again.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('timeout')) {
         toast({
-          title: "⏱️ Request Timeout",
+          title: "â±ï¸ Request Timeout",
           description: "The regeneration took too long. Please try again with a shorter description.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('429')) {
         toast({
-          title: "🚦 Too Many Requests",
+          title: "ðŸš¦ Too Many Requests",
           description: "You're generating too fast! Please wait a moment and try again.",
           variant: "destructive",
         });
       } else {
         console.error('Regeneration error:', error);
         toast({
-          title: "❌ Regeneration Failed",
+          title: "âŒ Regeneration Failed",
           description: error instanceof Error ? `Error: ${error.message}` : "Something went wrong. Please try again or contact support.",
           variant: "destructive",
         });
@@ -1048,28 +944,22 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setShowSuccess(false);
     }
   };
-
   const handleDelete = (id: string) => {
     const updatedHistory = websiteHistory.filter(site => site.id !== id);
     setWebsiteHistory(updatedHistory);
-    setProjects(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
   };
-
   const handleLoadWebsite = (html: string) => {
     setGeneratedCode(html);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
   const handleCancelGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
   };
-
   const handleDownload = async () => {
     if (!generatedCode) return;
-
     const zip = new JSZip();
     // Extract CSS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
@@ -1081,32 +971,27 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-
     // Add files to ZIP
     zip.file("index.html", cleanHtml);
     zip.file("styles.css", styles);
     zip.file("script.js", scripts);
     zip.file("README.md", `# Your AI-Generated Website
-## 📁 Files Included:
+## ðŸ“ Files Included:
 - index.html - Main HTML file
 - styles.css - All styling
 - script.js - JavaScript functionality
-
-## 🚀 How to Use:
+## ðŸš€ How to Use:
 1. Extract this ZIP file
 2. Open index.html in your browser
 3. Edit files as needed
 4. Host on any web server
-
-## 📝 Notes:
+## ðŸ“ Notes:
 - All files are linked and ready to use
 - Modify styles.css to change design
 - Edit script.js for functionality changes
-
 Generated with AI Website Builder
 ${new Date().toLocaleDateString()}
 `);
-
     // Generate and download ZIP
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
@@ -1115,13 +1000,11 @@ ${new Date().toLocaleDateString()}
     a.download = `website-${Date.now()}.zip`;
     a.click();
     URL.revokeObjectURL(url);
-
     toast({
       title: "Downloaded!",
       description: "Your website ZIP has been saved",
     });
   };
-
   const handleCopy = async () => {
     if (!generatedCode) return;
     await navigator.clipboard.writeText(generatedCode);
@@ -1130,15 +1013,13 @@ ${new Date().toLocaleDateString()}
       description: "Code copied to clipboard! Paste it into any code editor or StackBlitz.",
     });
   };
-
   const handleNewWebsite = () => {
     setGeneratedCode(null);
-    setPrompt("");
+    setInput("");
     setProgress(0);
     setStatus("");
-    setSelectedIndustry("custom");
+    setIndustry("custom");
   };
-
   const handleShare = async () => {
     const link = generateShareLink();
     if (link) {
@@ -1149,21 +1030,18 @@ ${new Date().toLocaleDateString()}
       });
     }
   };
-
   const handleExampleClick = (exampleText: string, exampleIndustry: string) => {
-    setPrompt(exampleText);
-    setSelectedIndustry(exampleIndustry);
+    setInput(exampleText);
+    setIndustry(exampleIndustry);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const handleTemplateClick = (templatePrompt: string) => {
+  const handleTemplateClick = (prompt: string) => {
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
     // Auto-generate with template prompt
-    setPrompt(templatePrompt);
+    setInput(prompt);
     handleGenerate();
   };
-
   const getAspectRatio = () => {
     switch (viewMode) {
       case "tablet":
@@ -1174,7 +1052,6 @@ ${new Date().toLocaleDateString()}
         return "aspect-video";
     }
   };
-
   const handleOpenFullScreen = () => {
     if (!generatedCode) return;
     const newWindow = window.open('', '_blank');
@@ -1183,10 +1060,8 @@ ${new Date().toLocaleDateString()}
       newWindow.document.close();
     }
   };
-
   const characterLimit = 3000;
-  const characterCount = prompt.length;
-
+  const characterCount = input.length;
   const examples = [
     {
       title: "Restaurant Website",
@@ -1224,7 +1099,6 @@ ${new Date().toLocaleDateString()}
       industry: "agency"
     }
   ];
-
   const dynamicTextClass = `transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`;
   const dynamicMutedClass = `transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`;
   const dynamicSubtleClass = `transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`;
@@ -1234,12 +1108,10 @@ ${new Date().toLocaleDateString()}
   const dynamicGlassClass = isDarkMode
     ? 'bg-white/5 backdrop-blur-sm border border-white/10'
     : 'bg-white border border-gray-200 shadow-xl';
-
   // Show loading screen on initial page load
   if (isPageLoading) {
     return <LoadingScreen />;
   }
-
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Analytics Dashboard Modal */}
@@ -1249,7 +1121,6 @@ ${new Date().toLocaleDateString()}
           onOpenChange={setShowAnalytics}
         />
       </Suspense>
-
       {/* AI Chat Assistant Panel */}
       <Suspense fallback={<div />}>
         <ChatModal
@@ -1259,7 +1130,6 @@ ${new Date().toLocaleDateString()}
           onCodeUpdate={(newCode) => setGeneratedCode(newCode)}
         />
       </Suspense>
-
       {/* Project Save/Edit Modal */}
       <Suspense fallback={<div />}>
         <ProjectModal
@@ -1278,13 +1148,11 @@ ${new Date().toLocaleDateString()}
           onProjectDelete={handleDelete}
         />
       </Suspense>
-
       {/* Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
       </div>
-
-      {/* 1. NAVIGATION/HEADER */}
+      {/* Navigation */}
       <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Logo */}
@@ -1303,7 +1171,6 @@ ${new Date().toLocaleDateString()}
               <span className={dynamicSubtleClass}>My Websites</span>
             </Button>
           </div>
-
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-3">
             <button
@@ -1315,7 +1182,7 @@ ${new Date().toLocaleDateString()}
               }`}
               title="AI Chat Assistant"
             >
-              <span className="text-xl mr-2">💬</span>
+              <span className="text-xl mr-2">ðŸ’¬</span>
               AI Help
             </button>
             <button
@@ -1327,7 +1194,7 @@ ${new Date().toLocaleDateString()}
               }`}
               title="View Analytics Dashboard"
             >
-              <span className="text-xl mr-2">📊</span>
+              <span className="text-xl mr-2">ðŸ“Š</span>
               Analytics
             </button>
             <button
@@ -1335,7 +1202,7 @@ ${new Date().toLocaleDateString()}
               className={`p-3 rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/10 hover:bg-white/20 text-yellow-300' : 'bg-gray-800/10 hover:bg-gray-800/20 text-gray-800'}`}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              <span className="text-2xl">{isDarkMode ? '☀️' : '🌙'}</span>
+              <span className="text-2xl">{isDarkMode ? 'â˜€ï¸' : 'ðŸŒ™'}</span>
             </button>
             <div className={`glass-card px-4 py-2 flex items-center gap-3 transition-colors duration-300 ${isDarkMode ? 'bg-white/10 border-white/20' : 'bg-gray-50 border-gray-200'}`}>
               <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
@@ -1361,14 +1228,13 @@ ${new Date().toLocaleDateString()}
               Sign Out
             </Button>
           </div>
-
           {/* Mobile: Theme Toggle + Hamburger Menu Button */}
           <div className="flex items-center gap-2 lg:hidden">
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-lg ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-900 hover:bg-gray-100'}`}
             >
-              <span className="text-xl">{isDarkMode ? '☀️' : '🌙'}</span>
+              <span className="text-xl">{isDarkMode ? 'â˜€ï¸' : 'ðŸŒ™'}</span>
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -1384,7 +1250,6 @@ ${new Date().toLocaleDateString()}
             </button>
           </div>
         </div>
-
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
           <div className={`lg:hidden border-t ${isDarkMode ? 'border-white/10 bg-black/90' : 'border-gray-200 bg-white/95'} backdrop-blur-md`}>
@@ -1409,7 +1274,7 @@ ${new Date().toLocaleDateString()}
                   isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                <span className="text-xl mr-2">💬</span>
+                <span className="text-xl mr-2">ðŸ’¬</span>
                 AI Chat Assistant
               </button>
               <button
@@ -1421,7 +1286,7 @@ ${new Date().toLocaleDateString()}
                   isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                <span className="text-xl mr-2">📊</span>
+                <span className="text-xl mr-2">ðŸ“Š</span>
                 Analytics
               </button>
               <div className={`px-4 py-3 rounded-lg ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
@@ -1455,305 +1320,238 @@ ${new Date().toLocaleDateString()}
           </div>
         )}
       </nav>
-
       {/* Main Content */}
       <main className="relative pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
-          
-          {/* 3. HERO SECTION WITH INPUT BOX (shown when no generated code and not generating) */}
           {!generatedCode && !isGenerating && (
-            <div className="hero-section" style={{
-              minHeight: '85vh',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              textAlign: 'center',
-              padding: '2rem',
-              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-              position: 'relative'
-            }}>
-              <h1 style={{
-                fontSize: 'clamp(2rem, 5vw, 3.5rem)',
-                marginBottom: '1rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontWeight: 'bold'
-              }}>
-                Create Stunning Websites with AI
-              </h1>
-              
-              <p style={{
-                fontSize: '1.2rem',
-                opacity: 0.8,
-                maxWidth: '600px',
-                marginBottom: '3rem',
-                color: '#666'
-              }}>
-                Describe your vision, and watch it come to life instantly
-              </p>
-
-              {/* Input box with buttons */}
-              <div style={{
-                width: '100%',
-                maxWidth: '800px',
-                margin: '0 auto'
-              }}>
-                <div style={{
-                  width: '100%',
-                  maxWidth: '800px',
-                  margin: '0 auto',
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '20px',
-                  padding: '2rem',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)'
-                }}>
-                  {/* Character Counter */}
-                  <div className="flex justify-between items-center text-sm mb-4">
+            <>
+              {/* Hero Section */}
+              <div className="text-center mb-12 sm:mb-16 space-y-6 sm:space-y-8">
+                <div className="space-y-6">
+                  <div className="relative">
+                    {/* Animated Gradient Background */}
+                    <div className="absolute inset-0 -z-10">
+                      <div className="absolute top-20 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
+                      <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+                      <div className="absolute top-60 left-1/3 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
+                    </div>
+                    
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight animate-fade-in-up">
+                      <span className={dynamicTextClass}>Create Stunning Websites</span>
+                      <br />
+                      <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent animate-gradient-shift" style={{ backgroundSize: '200% 200%' }}>
+                        with AI
+                      </span>
+                    </h1>
+                  </div>
+                  <p className={`text-lg sm:text-2xl md:text-3xl max-w-3xl mx-auto font-light ${dynamicMutedClass}`}>
+                    Describe your vision. Watch AI build it in seconds.
+                  </p>
+                </div>
+                {/* Demo Video Placeholder */}
+                <div className="max-w-4xl mx-auto mt-12">
+                  <div className={`glass-card rounded-2xl p-2 shadow-glow transition-colors duration-300 ${dynamicGlassClass}`}>
+                    <div className={`relative aspect-video rounded-xl flex items-center justify-center overflow-hidden ${isDarkMode ? 'bg-gradient-to-br from-purple-900/40 to-indigo-900/40' : 'bg-gradient-to-br from-blue-900/20 to-purple-900/20'}`}>
+                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1547658719-da2b51169166?w=1200&h=675&fit=crop')] bg-cover bg-center opacity-30"></div>
+                      <div className="relative z-10 text-center space-y-4">
+                        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-primary flex items-center justify-center shadow-glow hover-scale cursor-pointer">
+                          <Play className="w-8 h-8 text-white ml-1" />
+                        </div>
+                        <p className={`text-lg font-medium ${dynamicTextClass}`}>Watch How It Works</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass}`}>
+                  <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
+                  <span className={dynamicMutedClass}>
+                    Powered by Groq & Llama 3.3
+                  </span>
+                </div>
+              </div>
+              {/* Input Card */}
+              <div className={`glass-card-enhanced rounded-2xl p-8 shadow-card animate-fade-in-up space-y-6 transition-colors duration-300 ${dynamicGlassClass}`} style={{ animationDelay: '0.2s' }}>
+                {/* Floating gradient border effect */}
+                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
+                {/* Template Gallery */}
+                <div className="mb-12">
+                  <div className="text-center mb-8">
+                    <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>âœ¨ Start with a Template</h2>
+                    <p className={dynamicMutedClass}>Click any template to instantly generate a professional website</p>
+                  </div>
+                  {isPageLoading ? (
+    // Skeleton Loading State for Templates
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
+      ))}
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {TEMPLATES.map((template, index) => (
+                    <button
+                      key={template.id}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                      onClick={() => handleTemplateClick(template.prompt)}
+                      disabled={isGenerating}
+                      className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
+                    >
+                      {/* Shimmer effect on hover */}
+                      <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      {/* Template Icon */}
+                      <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                        {template.icon}
+                      </div>
+                      {/* Template Title */}
+                      <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
+                        {template.title}
+                      </h3>
+                      <p className={`text-sm ${dynamicMutedClass}`}>
+                        {template.description}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                )}
+                </div>
+                {/* Industry Select */}
+                <div className="flex items-center gap-4">
+                  <Select value={industry} onValueChange={handleIndustryChange}>
+                    <SelectTrigger className={`flex-1 ${isDarkMode ? 'bg-white/10 border-white/20 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+                      <SelectValue placeholder="Select industry template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="custom">Custom Description</SelectItem>
+                      <SelectItem value="restaurant">Restaurant</SelectItem>
+                      <SelectItem value="gym">Gym/Fitness</SelectItem>
+                      <SelectItem value="portfolio">Portfolio</SelectItem>
+                      <SelectItem value="ecommerce">E-commerce</SelectItem>
+                      <SelectItem value="agency">Agency</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Style Selector */}
+                <div className="space-y-3">
+                  <label className={`text-sm font-semibold ${dynamicTextClass}`}>
+                    ðŸŽ¨ Design Style
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      { id: 'modern', label: 'Modern', icon: 'âœ¨', color: 'from-blue-500 to-purple-500' },
+                      { id: 'minimal', label: 'Minimal', icon: 'âšª', color: 'from-gray-400 to-gray-600' },
+                      { id: 'bold', label: 'Bold', icon: 'ðŸ”¥', color: 'from-red-500 to-orange-500' },
+                      { id: 'elegant', label: 'Elegant', icon: 'ðŸ‘‘', color: 'from-purple-500 to-pink-500' },
+                      { id: 'playful', label: 'Playful', icon: 'ðŸŽˆ', color: 'from-green-400 to-blue-400' },
+                      { id: 'professional', label: 'Professional', icon: 'ðŸ’¼', color: 'from-blue-600 to-indigo-600' }
+                    ].map((style) => (
+                      <button
+                        key={style.id}
+                        onClick={() => setSelectedStyle(style.id)}
+                        className={`relative p-4 rounded-xl border-2 transition-all ${
+                          selectedStyle === style.id
+                            ? `border-transparent bg-gradient-to-r ${style.color} text-white shadow-lg scale-105`
+                            : isDarkMode
+                            ? 'border-white/20 bg-white/5 text-gray-300 hover:bg-white/10'
+                            : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="text-2xl mb-1">{style.icon}</div>
+                        <div className="font-semibold text-sm">{style.label}</div>
+                        {selectedStyle === style.id && (
+                          <div className="absolute top-2 right-2 text-white">âœ“</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedStyle && (
+                    <p className={`text-xs ${dynamicSubtleClass}`}>
+                      {STYLE_DESCRIPTIONS[selectedStyle]}
+                    </p>
+                  )}
+                </div>
+                {/* Smart Textarea with Glow */}
+                <div className="relative">
+                  <Textarea
+                    placeholder="âœ¨ Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className={`min-h-[140px] input-glow transition-all duration-300 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
+                    rows={5}
+                  />
+                  {/* Live Character Counter with Colors */}
+                  <div className="flex justify-between items-center text-sm mt-2">
                     <span className={
                       characterCount < 50 ? 'char-counter-red font-semibold' :
                       characterCount < 100 ? 'char-counter-yellow font-semibold' :
                       'char-counter-green font-semibold'
                     }>
-                      {characterCount < 50 && '⚠️ '}
-                      {characterCount >= 50 && characterCount < 100 && '⚡ '}
-                      {characterCount >= 100 && '✅ '}
+                      {characterCount < 50 && 'âš ï¸ '}
+                      {characterCount >= 50 && characterCount < 100 && 'âš¡ '}
+                      {characterCount >= 100 && 'âœ… '}
                       {characterCount}/{characterLimit} characters
                     </span>
                     <span className={dynamicSubtleClass}>
-                      {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! 🎉'}
+                      {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! ðŸŽ‰'}
                     </span>
                   </div>
+                </div>
 
-                  {/* Textarea */}
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe the website you want to create..."
-                    style={{
-                      width: '100%',
-                      minHeight: '120px',
-                      padding: '1.5rem',
-                      fontSize: '1.1rem',
-                      border: '2px solid #e0e0e0',
-                      borderRadius: '12px',
-                      resize: 'vertical',
-                      fontFamily: 'inherit',
-                      marginBottom: '1.5rem',
-                      transition: 'border 0.3s',
-                      outline: 'none'
-                    }}
-                    onFocus={(e) => e.target.style.border = '2px solid #667eea'}
-                    onBlur={(e) => e.target.style.border = '2px solid #e0e0e0'}
-                  />
-
-                  {/* ACTION BUTTONS ROW */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '1rem',
-                    alignItems: 'center',
-                    flexWrap: 'wrap'
-                  }}>
-                    {/* 📎 Attach Files Button */}
-                    <button style={{
-                      padding: '0.75rem 1.5rem',
-                      background: 'transparent',
-                      border: '2px solid #e0e0e0',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '1rem',
-                      transition: 'all 0.3s'
-                    }}>
-                      📎 Attach Files
-                    </button>
-
-                    {/* 🏭 Industry Selector */}
-                    <select 
-                      value={selectedIndustry}
-                      onChange={(e) => handleIndustryChange(e.target.value)}
-                      style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'transparent',
-                        border: '2px solid #e0e0e0',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        fontSize: '1rem',
-                        minWidth: '150px'
-                      }}
-                    >
-                      <option value="">🏭 Industry</option>
-                      <option value="custom">Custom Description</option>
-                      <option value="restaurant">Restaurant</option>
-                      <option value="gym">Gym/Fitness</option>
-                      <option value="portfolio">Portfolio</option>
-                      <option value="ecommerce">E-commerce</option>
-                      <option value="agency">Agency</option>
-                    </select>
-
-                    {/* 🎨 Style Selector */}
-                    <select 
-                      value={selectedStyle}
-                      onChange={(e) => setSelectedStyle(e.target.value)}
-                      style={{
-                        padding: '0.75rem 1.5rem',
-                        background: 'transparent',
-                        border: '2px solid #e0e0e0',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        fontSize: '1rem',
-                        minWidth: '150px'
-                      }}
-                    >
-                      <option value="">🎨 Style</option>
-                      <option value="modern">Modern</option>
-                      <option value="minimal">Minimal</option>
-                      <option value="bold">Bold</option>
-                      <option value="elegant">Elegant</option>
-                      <option value="playful">Playful</option>
-                      <option value="professional">Professional</option>
-                    </select>
-
-                    {/* Spacer to push Generate button right */}
-                    <div style={{ flex: 1 }}></div>
-
-                    {/* 🚀 Generate Button (Enhanced) */}
-                    <button
-                      onClick={handleGenerate}
-                      disabled={!prompt.trim() || isGenerating || prompt.length < 50}
-                      style={{
-                        padding: '0.75rem 2.5rem',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '10px',
-                        cursor: prompt.trim() && prompt.length >= 50 ? 'pointer' : 'not-allowed',
-                        fontSize: '1.1rem',
-                        fontWeight: '600',
-                        opacity: prompt.trim() && prompt.length >= 50 ? 1 : 0.5,
-                        transition: 'all 0.3s',
-                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (prompt.trim() && prompt.length >= 50) {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
-                      }}
-                    >
-                      {isGenerating ? '⏳ Generating...' : '🚀 Generate'}
-                    </button>
+                {/* Live Suggestions (show when user starts typing) */}
+                {input.length > 10 && input.length < 50 && (
+                  <div className="flex flex-wrap gap-2 animate-fade-in-up">
+                    <div className={`text-sm ${dynamicMutedClass} mb-2`}>ðŸ’¡ Quick suggestions:</div>
+                    {['Add "with dark theme"', 'Add "mobile responsive"', 'Add "modern design"'].map((suggestion, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setInput(input + ' ' + suggestion.replace('Add ', ''))}
+                        className="suggestion-chip"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
                   </div>
+                )}
+                {/* Generate Button */}
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={isGenerating || input.length < 50 || input.length > 3000}
+                    className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 hover:shadow-2xl animate-gradient-shift overflow-hidden"
+                    style={{ backgroundSize: '200% 200%' }}
+                    title="Ctrl+Enter to generate"
+                  >
+                    {/* Shimmer effect */}
+                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Generating... {elapsedTime}s
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
+                          Generate Website
+                        </>
+                      )}
+                    </span>
+                  </Button>
+                </div>
+                <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
+                  <span className="text-lg">âŒ¨ï¸</span>
+                  <span className={`text-sm ${dynamicMutedClass}`}>
+                    <kbd className={`px-2 py-1 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Enter</kbd> to generate â€¢
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>Ctrl</kbd> +
+                    <kbd className={`px-2 py-1 rounded mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}>/</kbd> to toggle theme
+                  </span>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* 4. COLLAPSIBLE TEMPLATES SECTION (shown when no generated code and not generating) */}
-          {!generatedCode && !isGenerating && (
-            <div style={{
-              maxWidth: '1400px',
-              margin: '4rem auto',
-              padding: '0 2rem'
-            }}>
-              {/* Collapsible Template Section */}
-              <details style={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '1.5rem',
-                marginBottom: '2rem',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                cursor: 'pointer'
-              }}>
-                <summary style={{
-                  fontSize: '1.3rem',
-                  fontWeight: '600',
-                  color: '#333',
-                  listStyle: 'none',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span>📐 Browse Templates ({templates.length})</span>
-                  <span style={{ fontSize: '1.5rem' }}>⌄</span>
-                </summary>
-                
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                  gap: '1.5rem',
-                  marginTop: '1.5rem'
-                }}>
-                  {isPageLoading ? (
-                    // Skeleton Loading State for Templates
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <SkeletonTemplate key={i} isDarkMode={isDarkMode} />
-                      ))}
-                    </div>
-                  ) : (
-                    templates.map((template, index) => (
-                      <button
-                        key={template.id}
-                        style={{ animationDelay: `${index * 0.1}s` }}
-                        onClick={() => handleTemplateClick(template.prompt)}
-                        disabled={isGenerating}
-                        className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
-                      >
-                        {/* Template Icon */}
-                        <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                          {template.icon}
-                        </div>
-                        {/* Template Title */}
-                        <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
-                          {template.title}
-                        </h3>
-                        <p className={`text-sm ${dynamicMutedClass}`}>
-                          {template.description}
-                        </p>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </details>
-
-              {/* 5. COLLAPSIBLE QUICK START EXAMPLES */}
-              <details style={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '1.5rem',
-                marginBottom: '2rem',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                cursor: 'pointer'
-              }}>
-                <summary style={{
-                  fontSize: '1.3rem',
-                  fontWeight: '600',
-                  color: '#333',
-                  listStyle: 'none',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span>⚡ Quick Start Examples</span>
-                  <span style={{ fontSize: '1.5rem' }}>⌄</span>
-                </summary>
-                
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: '1rem',
-                  marginTop: '1.5rem'
-                }}>
+              {/* Examples Gallery */}
+              <div className="mt-16">
+                <h2 className={`text-3xl font-bold mb-8 text-center ${dynamicTextClass}`}>Quick Start Examples</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {examples.map((example, index) => (
                     <div key={index} className={`group relative overflow-hidden rounded-2xl ${dynamicGlassClass} shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer`} onClick={() => handleExampleClick(example.prompt, example.industry)}>
                       <div className="relative h-48 w-full overflow-hidden rounded-t-2xl">
@@ -1777,29 +1575,28 @@ ${new Date().toLocaleDateString()}
                     </div>
                   ))}
                 </div>
-              </details>
-            </div>
+              </div>
+            </>
           )}
-
-          {/* 7. LOADING/ERROR MODALS - Generating State */}
+          {/* Generating State */}
           {isGenerating && (
             <div className="text-center space-y-8 animate-fade-in-up">
               {/* Step-by-step Progress Visualization */}
               <div className="flex justify-center items-center gap-6 mb-8">
                 <div className={`step-circle ${progress >= 25 ? 'active' : ''} ${progress >= 50 ? 'complete' : ''}`}>
-                  🧠
+                  ðŸ§ 
                 </div>
                 <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 50 ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'bg-white/20'}`}></div>
                 <div className={`step-circle ${progress >= 50 ? 'active' : ''} ${progress >= 75 ? 'complete' : ''}`}>
-                  🎨
+                  ðŸŽ¨
                 </div>
                 <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 75 ? 'bg-gradient-to-r from-pink-500 to-blue-500' : 'bg-white/20'}`}></div>
                 <div className={`step-circle ${progress >= 75 ? 'active' : ''} ${progress >= 95 ? 'complete' : ''}`}>
-                  ⚡
+                  âš¡
                 </div>
                 <div className={`h-1 w-16 rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-gradient-to-r from-blue-500 to-green-500' : 'bg-white/20'}`}></div>
                 <div className={`step-circle ${progress >= 95 ? 'active' : ''} ${progress === 100 ? 'complete' : ''}`}>
-                  ✅
+                  âœ…
                 </div>
               </div>
               
@@ -1833,8 +1630,7 @@ ${new Date().toLocaleDateString()}
               </div>
             </div>
           )}
-
-          {/* Generated Preview (shown when generatedCode exists) */}
+          {/* Generated Preview */}
           {generatedCode && (
             <div className="space-y-8">
               {/* Preview Header */}
@@ -1853,7 +1649,7 @@ ${new Date().toLocaleDateString()}
                       onClick={() => setIsEditMode(false)}
                       className={`px-4 py-2 rounded-full transition-all font-semibold ${!isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
                     >
-                      👁️ Preview
+                      ðŸ‘ï¸ Preview
                     </button>
                     <button
                       onClick={() => {
@@ -1862,7 +1658,7 @@ ${new Date().toLocaleDateString()}
                       }}
                       className={`px-4 py-2 rounded-full transition-all font-semibold ${isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
                     >
-                      ✏️ Edit Code
+                      âœï¸ Edit Code
                     </button>
                   </div>
                   {/* View Mode Toggle (only in preview mode) */}
@@ -1902,14 +1698,13 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-
               {/* Preview/Edit Container */}
               {isEditMode ? (
                 <div className="space-y-4">
                   {/* Code Editor */}
                   <div className={`relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? 'border-white/20 bg-gray-900' : 'border-gray-300 bg-white'}`}>
                     <div className={`flex items-center justify-between px-4 py-2 border-b ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                      <span className={`text-sm font-semibold ${dynamicTextClass}`}>📝 HTML Editor</span>
+                      <span className={`text-sm font-semibold ${dynamicTextClass}`}>ðŸ“ HTML Editor</span>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -1920,7 +1715,7 @@ ${new Date().toLocaleDateString()}
                           }}
                           className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                         >
-                          💾 Save & Preview
+                          ðŸ’¾ Save & Preview
                         </Button>
                         <Button
                           size="sm"
@@ -1931,7 +1726,7 @@ ${new Date().toLocaleDateString()}
                           }}
                           className={`${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                         >
-                          ❌ Cancel
+                          âŒ Cancel
                         </Button>
                       </div>
                     </div>
@@ -1984,7 +1779,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 justify-center">
                 <Button
@@ -2030,7 +1824,6 @@ ${new Date().toLocaleDateString()}
                   Open in StackBlitz
                 </Button>
               </div>
-
               {/* Share Menu */}
               {showShareMenu && (
                 <div className="relative">
@@ -2073,7 +1866,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
-
               {/* Success Animation */}
               {showSuccess && (
                 <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 animate-fadeIn">
@@ -2086,187 +1878,196 @@ ${new Date().toLocaleDateString()}
               )}
             </div>
           )}
-
-          {/* 6. MY PROJECTS SECTION (always shown when there are projects) */}
-          {projects.length > 0 && (
-            <div style={{
-              maxWidth: '1400px',
-              margin: '4rem auto 6rem',
-              padding: '0 2rem'
-            }}>
-              {/* Tab Header */}
-              <div style={{
-                display: 'flex',
-                gap: '2rem',
-                borderBottom: '2px solid #e0e0e0',
-                marginBottom: '2rem'
-              }}>
-                <button style={{
-                  padding: '1rem 0',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: '3px solid #667eea',
-                  color: '#667eea',
-                  fontWeight: '600',
-                  fontSize: '1.1rem',
-                  cursor: 'pointer'
-                }}>
-                  My Projects ({projects.length})
-                </button>
-                <button style={{
-                  padding: '1rem 0',
-                  background: 'none',
-                  border: 'none',
-                  color: '#666',
-                  fontWeight: '500',
-                  fontSize: '1.1rem',
-                  cursor: 'pointer',
-                  opacity: 0.6
-                }}>
-                  Recently Viewed
-                </button>
-              </div>
-
-              {/* Projects Grid - Lovable Style */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: '1.5rem'
-              }}>
-                {getFilteredProjects().map((project) => (
-                  <div
-                    key={project.id}
-                    style={{
-                      background: 'white',
-                      borderRadius: '16px',
-                      overflow: 'hidden',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                      transition: 'all 0.3s',
-                      cursor: 'pointer',
-                      border: '1px solid #f0f0f0'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                    }}
-                    onClick={() => handleLoadWebsite(project.html || "")}
+          {/* My Projects Section */}
+          {websiteHistory.length > 0 && (
+            <div className="mt-12">
+              {/* Section Header with Filters */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <h2 className={`text-2xl font-bold transition-colors ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  ðŸ“‚ My Projects ({getFilteredProjects().length})
+                </h2>
+                {/* Search and Filters */}
+                <div className="flex flex-wrap gap-3">
+                  {/* Search */}
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="ðŸ” Search projects..."
+                    className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode
+                        ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
+                        : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
+                    }`}
+                  />
+                  {/* Tag Filter */}
+                  <select
+                    value={filterTag}
+                    onChange={(e) => setFilterTag(e.target.value)}
+                    className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode
+                        ? 'bg-gray-800 text-white border border-gray-700'
+                        : 'bg-white text-gray-900 border border-gray-300'
+                    }`}
                   >
-                    {/* Project Thumbnail */}
-                    <div style={{
-                      height: '200px',
-                      background: project.thumbnail || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '3rem'
-                    }}>
-                      {project.thumbnail ? (
-                        <img src={project.thumbnail} alt={project.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : '🌐'}
-                    </div>
-
+                    <option value="all">All Tags</option>
+                    {getAllTags().map(tag => (
+                      <option key={tag} value={tag}>{tag}</option>
+                    ))}
+                  </select>
+                  {/* Favorites Toggle */}
+                  <button
+                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      showFavoritesOnly
+                        ? 'bg-yellow-500 text-white'
+                        : isDarkMode
+                        ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    â­ Favorites
+                  </button>
+                </div>
+              </div>
+              {/* Project Grid */}
+              {getFilteredProjects().length === 0 ? (
+                <div className={`text-center py-12 rounded-xl border ${
+                  isDarkMode
+                    ? 'bg-white/5 border-white/10 text-gray-400'
+                    : 'bg-gray-50 border-gray-200 text-gray-600'
+                }`}>
+                  <div className="text-6xl mb-4">ðŸ”</div>
+                  <p className="text-lg">No projects found matching your filters</p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setFilterTag("all");
+                      setShowFavoritesOnly(false);
+                    }}
+                    className={`mt-4 px-6 py-2 rounded-lg ${
+                      isDarkMode
+                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    }`}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              ) : usageLoading ? (
+  // Skeleton Loading State for Projects
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <SkeletonCard key={i} isDarkMode={isDarkMode} />
+    ))}
+  </div>
+) : (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {getFilteredProjects().map((site) => (
+                  <div
+                    key={site.id}
+                    className={`backdrop-blur-sm rounded-xl p-6 transition-all relative card-hover ${
+                      isDarkMode
+                        ? 'bg-white/5 border border-white/10 hover:bg-white/10'
+                        : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
+                    }`}
+                  >
+                    {/* Favorite Star */}
+                    <button
+                      onClick={() => toggleFavorite(site.id)}
+                      className="absolute top-4 right-4 text-2xl transition-transform hover:scale-125"
+                    >
+                      {site.isFavorite ? 'â­' : 'â˜†'}
+                    </button>
                     {/* Project Info */}
-                    <div style={{ padding: '1.5rem' }}>
-                      <h3 style={{
-                        fontSize: '1.2rem',
-                        fontWeight: '600',
-                        marginBottom: '0.5rem',
-                        color: '#333'
-                      }}>
-                        {project.name || 'Untitled Project'}
+                    <div className="mb-4">
+                      <h3 className={`text-xl font-bold mb-2 pr-8 ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {site.name}
                       </h3>
-                      
-                      <p style={{
-                        fontSize: '0.9rem',
-                        color: '#666',
-                        marginBottom: '1rem',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {project.prompt || 'No description'}
-                      </p>
-
-                      {/* Metadata */}
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: '0.85rem',
-                        color: '#999'
-                      }}>
-                        <span>
-                          {new Date(project.timestamp).toLocaleDateString()}
-                        </span>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleLoadWebsite(project.html || "");
-                            }}
-                            style={{
-                              padding: '0.4rem 0.8rem',
-                              background: '#f0f0f0',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '0.85rem',
-                              transition: 'background 0.3s'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#e0e0e0'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#f0f0f0'}
-                          >
-                            👁️ View
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditProject(project);
-                            }}
-                            style={{
-                              padding: '0.4rem 0.8rem',
-                              background: '#f0f0f0',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '0.85rem',
-                              transition: 'background 0.3s'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#e0e0e0'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#f0f0f0'}
-                          >
-                            ✏️ Edit
-                          </button>
+                      {/* Tags */}
+                      {site.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {site.tags.map((tag, index) => (
+                            <span
+                              key={index}
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                isDarkMode
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                  : 'bg-blue-100 text-blue-700 border border-blue-200'
+                              }`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
                         </div>
-                      </div>
+                      )}
+                      <p className={`text-sm mb-2 line-clamp-2 ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                        {site.prompt}
+                      </p>
+                      {site.notes && (
+                        <p className={`text-xs italic mb-2 line-clamp-2 ${
+                          isDarkMode ? 'text-gray-500' : 'text-gray-500'
+                        }`}>
+                          ðŸ“ {site.notes}
+                        </p>
+                      )}
+                      <p className={`text-xs ${
+                        isDarkMode ? 'text-gray-500' : 'text-gray-500'
+                      }`}>
+                        Created: {new Date(site.timestamp).toLocaleDateString()} at{' '}
+                        {new Date(site.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          setGeneratedCode(site.html || "");
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          isDarkMode
+                            ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
+                      >
+                        ðŸ‘ï¸ View
+                      </button>
+                      <button
+                        onClick={() => openEditProject(site)}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          isDarkMode
+                            ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        }`}
+                      >
+                        âœï¸ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(site.id)}
+                        className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          isDarkMode
+                            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                        }`}
+                      >
+                        ðŸ—‘ï¸
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
-
-              {/* Empty State */}
-              {getFilteredProjects().length === 0 && (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '4rem 2rem',
-                  color: '#999'
-                }}>
-                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📭</div>
-                  <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#666' }}>No projects found</h3>
-                  <p style={{ fontSize: '1.1rem' }}>Try changing your search or filters</p>
-                </div>
-              )}
+            )}
             </div>
           )}
         </div>
       </main>
-
       {/* Scroll to Top Button */}
       {showScrollTop && (
         <button
@@ -2283,194 +2084,192 @@ ${new Date().toLocaleDateString()}
           </svg>
         </button>
       )}
-
       <style>{`
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        /* NEW: Enhanced Button Animations */
-        .hover-scale {
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .hover-scale:hover {
-          transform: scale(1.05);
-          box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
-        }
-        .hover-scale:active {
-          transform: scale(0.98);
-        }
-        /* NEW: Smooth Card Hover */
-        .card-hover {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .card-hover:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-        }
-        /* NEW: Gradient Animation */
-        @keyframes gradient-shift {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient-shift 3s ease infinite;
-        }
-        /* NEW: Pulse Glow */
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
-          50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
-        }
-        .animate-pulse-glow {
-          animation: pulse-glow 2s ease-in-out infinite;
-        }
-        /* NEW: Shimmer Effect */
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in-up {
-          animation: fadeInUp 0.6s ease-out;
-        }
-        .input-glow {
-          box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
-        }
-        .char-counter-red {
-          color: #ef4444;
-        }
-        .char-counter-yellow {
-          color: #eab308;
-        }
-        .char-counter-green {
-          color: #22c55e;
-        }
-        .suggestion-chip {
-          padding: 4px 8px;
-          background: rgba(168, 85, 247, 0.2);
-          border: 1px solid rgba(168, 85, 247, 0.3);
-          border-radius: 12px;
-          color: #a855f7;
-          font-size: 12px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .suggestion-chip:hover {
-          background: rgba(168, 85, 247, 0.3);
-          transform: scale(1.05);
-        }
-        .step-circle {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 24px;
-          border: 3px solid rgba(255, 255, 255, 0.2);
-          background: rgba(255, 255, 255, 0.1);
-          transition: all 0.3s ease;
-        }
-        .step-circle.active {
-          border-color: #a855f7;
-          background: rgba(168, 85, 247, 0.2);
-          transform: scale(1.1);
-        }
-        .step-circle.complete {
-          border-color: #22c55e;
-          background: rgba(34, 197, 94, 0.2);
-          animation: pulse 1s infinite;
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        .device-frame-desktop {
-          border-radius: 20px;
-          border: 20px solid #000;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        .device-frame-desktop iframe {
-          border-radius: 0;
-        }
-        .device-frame-tablet {
-          border-radius: 30px;
-          border: 15px solid #000;
-          max-width: 768px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        .device-frame-tablet iframe {
-          border-radius: 0;
-        }
-        .device-frame-mobile {
-          border-radius: 40px;
-          border: 10px solid #000;
-          max-width: 375px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        .device-frame-mobile iframe {
-          border-radius: 0;
-        }
-        .zoom-control {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          background: rgba(255, 255, 255, 0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          transition: all 0.2s;
-          cursor: pointer;
-        }
-        .zoom-control:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: scale(1.1);
-        }
-      `}</style>
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  /* NEW: Enhanced Button Animations */
+  .hover-scale {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-scale:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 40px rgba(168, 85, 247, 0.4);
+  }
+  .hover-scale:active {
+    transform: scale(0.98);
+  }
+  /* NEW: Smooth Card Hover */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-hover:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  }
+  /* NEW: Gradient Animation */
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+  }
+  /* NEW: Pulse Glow */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
+    50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8); }
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  /* NEW: Shimmer Effect */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+  .animate-slideUp {
+    animation: slideUp 0.3s ease-out;
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+  }
+  .input-glow {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+  }
+  .char-counter-red {
+    color: #ef4444;
+  }
+  .char-counter-yellow {
+    color: #eab308;
+  }
+  .char-counter-green {
+    color: #22c55e;
+  }
+  .suggestion-chip {
+    padding: 4px 8px;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 12px;
+    color: #a855f7;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .suggestion-chip:hover {
+    background: rgba(168, 85, 247, 0.3);
+    transform: scale(1.05);
+  }
+  .step-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+  .step-circle.active {
+    border-color: #a855f7;
+    background: rgba(168, 85, 247, 0.2);
+    transform: scale(1.1);
+  }
+  .step-circle.complete {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.2);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  .device-frame-desktop {
+    border-radius: 20px;
+    border: 20px solid #000;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .device-frame-desktop iframe {
+    border-radius: 0;
+  }
+  .device-frame-tablet {
+    border-radius: 30px;
+    border: 15px solid #000;
+    max-width: 768px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .device-frame-tablet iframe {
+    border-radius: 0;
+  }
+  .device-frame-mobile {
+    border-radius: 40px;
+    border: 10px solid #000;
+    max-width: 375px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .device-frame-mobile iframe {
+    border-radius: 0;
+  }
+  .zoom-control {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .zoom-control:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+  }
+`}</style>
     </div>
   );
 };
-
 export default Index;
