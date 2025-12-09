@@ -1619,10 +1619,10 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className={`flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
+                  <div className={`flex bg-white/10 rounded-full p-1 backdrop-blur-md border ${isDarkMode ? 'bg-white/10 border-white/20' : 'bg-gray-100 border-gray-200'}`}>
                     <button
                       onClick={() => setIsEditMode(false)}
-                      className={`px-4 py-2 rounded-full transition-all font-semibold ${!isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
+                      className={`px-4 py-2 rounded-full transition-all font-semibold ${!isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}`}
                     >
                       👁️ Preview
                     </button>
@@ -1631,20 +1631,26 @@ ${new Date().toLocaleDateString()}
                         setIsEditMode(true);
                         setEditedCode(generatedCode);
                       }}
-                      className={`px-4 py-2 rounded-full transition-all font-semibold ${isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}`}
+                      className={`px-4 py-2 rounded-full transition-all font-semibold ${isEditMode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}`}
                     >
                       ✏️ Edit Code
                     </button>
                   </div>
                   {!isEditMode && (
-                    <div className={`flex bg-white/10 rounded-full p-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
-                      {[{ icon: Monitor, mode: 'desktop' as const }, { icon: Tablet, mode: 'tablet' as const }, { icon: Smartphone, mode: 'mobile' as const }].map(({ icon: Icon, mode }) => (
+                    <div className={`flex bg-white/10 rounded-full p-1 backdrop-blur-md border ${isDarkMode ? 'bg-white/10 border-white/20' : 'bg-gray-100 border-gray-200'}`}>
+                      {[
+                        { icon: Monitor, mode: 'desktop' as const, label: 'Desktop' }, 
+                        { icon: Tablet, mode: 'tablet' as const, label: 'Tablet' }, 
+                        { icon: Smartphone, mode: 'mobile' as const, label: 'Mobile' }
+                      ].map(({ icon: Icon, mode, label }) => (
                         <button
                           key={mode}
                           onClick={() => setViewMode(mode)}
-                          className={`p-2 rounded-full transition-all ${viewMode === mode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} hover:scale-105`}`}
+                          className={`p-3 px-4 rounded-full transition-all duration-300 flex items-center gap-2 ${viewMode === mode ? 'bg-gradient-primary text-white shadow-glow transform scale-105' : `${isDarkMode ? 'text-gray-300 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'} hover:scale-105`}`}
+                          title={label}
                         >
                           <Icon className="w-5 h-5" />
+                          {viewMode === mode && <span className="text-sm font-semibold">{label}</span>}
                         </button>
                       ))}
                     </div>
@@ -1717,10 +1723,10 @@ ${new Date().toLocaleDateString()}
                     ${viewMode === 'desktop' ? 'device-frame-desktop max-w-5xl' : ''}
                     ${viewMode === 'tablet' ? 'device-frame-tablet max-w-2xl' : ''}
                     ${viewMode === 'mobile' ? 'device-frame-mobile max-w-sm' : ''}
-                    mx-auto overflow-hidden bg-black/90 transition-all duration-500 animate-fade-in-up
+                    mx-auto overflow-hidden bg-black/90 transition-all duration-700 animate-fade-in-up transform hover:scale-[1.02] device-frame-3d
                   `}>
                     {viewMode === 'mobile' && (
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10"></div>
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10 animate-fade-in"></div>
                     )}
                     <iframe
                       srcDoc={generatedCode}
@@ -1733,32 +1739,35 @@ ${new Date().toLocaleDateString()}
                     />
                   </div>
                   <div className="flex justify-center gap-3 mt-6">
-                    <button className="zoom-control">
-                      <ZoomOut className="w-5 h-5" />
+                    <button className="zoom-control group" title="Zoom Out">
+                      <ZoomOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </button>
-                    <button className="zoom-control">
-                      <ZoomIn className="w-5 h-5" />
+                    <button className="zoom-control group" title="Reset Zoom">
+                      <span className="text-sm font-bold group-hover:scale-110 transition-transform">100%</span>
                     </button>
-                    <button className="zoom-control">
-                      <Maximize2 className="w-5 h-5" />
+                    <button className="zoom-control group" title="Zoom In">
+                      <ZoomIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    </button>
+                    <button className="zoom-control group" onClick={handleOpenFullScreen} title="Full Screen">
+                      <Maximize2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </button>
                   </div>
                 </div>
               )}
               <div className="flex flex-wrap gap-3 justify-center">
-                <Button onClick={handleCopy} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={handleCopy} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl">
                   <Copy className="w-4 h-4" />
                   Copy Code
                 </Button>
-                <Button onClick={handleOpenFullScreen} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Button onClick={handleOpenFullScreen} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl">
                   <Maximize2 className="w-4 h-4" />
                   Open Full Screen
                 </Button>
-                <Button onClick={handleDownload} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white">
-                  <Download className="w-4 h-4" />
+                <Button onClick={handleDownload} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl animate-pulse-subtle">
+                  <Download className="w-4 h-4 animate-bounce-subtle" />
                   Download ZIP
                 </Button>
-                <Button onClick={() => setShowShareMenu(true)} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white">
+                <Button onClick={() => setShowShareMenu(true)} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl">
                   <Share2 className="w-4 h-4" />
                   Share
                 </Button>
@@ -1770,8 +1779,8 @@ ${new Date().toLocaleDateString()}
                 </Button>
               </div>
               {showShareMenu && (
-                <div className="relative">
-                  <div className={`absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} z-50`}>
+                <div className="relative animate-fade-in">
+                  <div className={`absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border transform origin-top-right animate-scale-in ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} z-50`}>
                     <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                       <h3 className={`font-semibold ${dynamicTextClass}`}>Share Your Website</h3>
                     </div>
@@ -1811,11 +1820,21 @@ ${new Date().toLocaleDateString()}
                 </div>
               )}
               {showSuccess && (
-                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 animate-fadeIn">
-                  <div className={`p-8 rounded-2xl text-center shadow-2xl transform animate-bounce ${isDarkMode ? 'bg-green-900/20 text-green-300 border-green-500/30' : 'bg-green-50 text-green-800 border-green-200'} border-2 animate-pulse-glow`}>
-                    <PartyPopper className="w-16 h-16 mx-auto mb-4 text-green-500 animate-spin" style={{ animationDuration: '0.5s' }} />
-                    <h3 className="text-2xl font-bold mb-2">Website Generated!</h3>
-                    <p className="text-lg">Your site is being prepared for preview...</p>
+                <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 animate-fadeIn backdrop-blur-sm">
+                  <div className={`p-8 rounded-2xl text-center shadow-2xl transform animate-bounce-in ${isDarkMode ? 'bg-gradient-to-br from-green-900/90 to-emerald-900/90 text-green-100 border-green-400/50' : 'bg-gradient-to-br from-green-50 to-emerald-50 text-green-800 border-green-300'} border-2 animate-pulse-glow backdrop-blur-md`}>
+                    <div className="relative">
+                      <PartyPopper className="w-20 h-20 mx-auto mb-4 text-green-400 animate-spin-slow" />
+                      <div className="absolute inset-0 animate-ping opacity-75">
+                        <PartyPopper className="w-20 h-20 mx-auto text-green-300" />
+                      </div>
+                    </div>
+                    <h3 className="text-3xl font-bold mb-2 animate-fade-in-up">Website Generated!</h3>
+                    <p className="text-lg animate-fade-in-up" style={{ animationDelay: '0.2s' }}>Your site is being prepared for preview...</p>
+                    <div className="mt-4 flex justify-center gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }}></div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1828,42 +1847,53 @@ ${new Date().toLocaleDateString()}
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
                 <div className="flex flex-wrap gap-3">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="🔍 Search projects..."
-                    className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      isDarkMode
-                        ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700'
-                        : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300'
-                    }`}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search projects..."
+                      className={`pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 ${
+                        isDarkMode
+                          ? 'bg-gray-800 text-white placeholder-gray-500 border border-gray-700 focus:border-purple-500'
+                          : 'bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-purple-500'
+                      }`}
+                    />
+                    <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
                   <select
                     value={filterTag}
                     onChange={(e) => setFilterTag(e.target.value)}
-                    className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 cursor-pointer ${
                       isDarkMode
-                        ? 'bg-gray-800 text-white border border-gray-700'
-                        : 'bg-white text-gray-900 border border-gray-300'
+                        ? 'bg-gray-800 text-white border border-gray-700 hover:border-purple-500 focus:border-purple-500'
+                        : 'bg-white text-gray-900 border border-gray-300 hover:border-purple-500 focus:border-purple-500'
                     }`}
                   >
-                    <option value="all">All Tags</option>
+                    <option value="all">🏷️ All Tags</option>
                     {getAllTags().map(tag => (
-                      <option key={tag} value={tag}>{tag}</option>
+                      <option key={tag} value={tag}>🏷️ {tag}</option>
                     ))}
                   </select>
                   <button
                     onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center gap-2 ${
                       showFavoritesOnly
-                        ? 'bg-yellow-500 text-white'
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg scale-105'
                         : isDarkMode
-                        ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                     }`}
                   >
-                    ⭐ Favorites
+                    <span className={showFavoritesOnly ? 'animate-pulse' : ''}>⭐</span>
+                    Favorites
+                    {showFavoritesOnly && (
+                      <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+                        {getFilteredProjects().length}
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -1893,17 +1923,20 @@ ${new Date().toLocaleDateString()}
                   {getFilteredProjects().map((site) => (
                     <div
                       key={site.id}
-                      className={`backdrop-blur-sm rounded-xl p-6 transition-all relative card-hover ${
+                      className={`backdrop-blur-sm rounded-xl p-6 transition-all duration-500 relative card-hover-enhanced group ${
                         isDarkMode
-                          ? 'bg-white/5 border border-white/10 hover:bg-white/10'
-                          : 'bg-white border border-gray-200 hover:bg-gray-50 shadow-lg'
+                          ? 'bg-white/5 border border-white/10 hover:bg-white/15 hover:border-white/30'
+                          : 'bg-white border border-gray-200 hover:bg-gray-50 hover:border-purple-300 shadow-lg hover:shadow-2xl'
                       }`}
                     >
                       <button
                         onClick={() => toggleFavorite(site.id)}
-                        className="absolute top-4 right-4 text-2xl transition-transform hover:scale-125"
+                        className="absolute top-4 right-4 text-3xl transition-all duration-300 hover:scale-125 hover:rotate-12 z-10"
+                        title={site.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                       >
-                        {site.isFavorite ? '⭐' : '☆'}
+                        <span className={`${site.isFavorite ? 'animate-pulse-glow' : ''}`}>
+                          {site.isFavorite ? '⭐' : '☆'}
+                        </span>
                       </button>
                       <div className="mb-4">
                         <h3 className={`text-xl font-bold mb-2 pr-8 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1914,7 +1947,7 @@ ${new Date().toLocaleDateString()}
                             {site.tags.map((tag, index) => (
                               <span
                                 key={index}
-                                className={`px-2 py-1 rounded-full text-xs ${
+                                className={`px-2 py-1 rounded-full text-xs tag-badge ${
                                   isDarkMode
                                     ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                                     : 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -1944,30 +1977,30 @@ ${new Date().toLocaleDateString()}
                             setGeneratedCode(site.html || "");
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
                             isDarkMode
-                              ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                              ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 hover:shadow-lg'
+                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:shadow-md'
                           }`}
                         >
                           👁️ View
                         </button>
                         <button
                           onClick={() => openEditProject(site)}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
                             isDarkMode
-                              ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
-                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                              ? 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/40 hover:shadow-lg'
+                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-md'
                           }`}
                         >
                           ✏️ Edit
                         </button>
                         <button
                           onClick={() => handleDelete(site.id)}
-                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-110 hover:rotate-6 ${
                             isDarkMode
-                              ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                              : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              ? 'bg-red-500/20 text-red-300 hover:bg-red-500/40 hover:shadow-lg'
+                              : 'bg-red-100 text-red-700 hover:bg-red-200 hover:shadow-md'
                           }`}
                         >
                           🗑️
@@ -2054,6 +2087,144 @@ ${new Date().toLocaleDateString()}
         }
         .template-card-enhanced:hover {
           box-shadow: 0 20px 60px rgba(168, 85, 247, 0.3);
+        }
+        /* Step 4: Preview Section & Actions Enhancement */
+        .device-frame-3d {
+          box-shadow: 
+            0 30px 90px rgba(0, 0, 0, 0.5),
+            0 0 0 1px rgba(255, 255, 255, 0.1),
+            inset 0 0 40px rgba(255, 255, 255, 0.05);
+          transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .device-frame-3d:hover {
+          box-shadow: 
+            0 40px 120px rgba(0, 0, 0, 0.6),
+            0 0 0 1px rgba(255, 255, 255, 0.2),
+            inset 0 0 60px rgba(255, 255, 255, 0.08);
+        }
+
+        @keyframes scale-in {
+          from { 
+            opacity: 0; 
+            transform: scale(0.9) translateY(-10px); 
+          }
+          to { 
+            opacity: 1; 
+            transform: scale(1) translateY(0); 
+          }
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes bounce-in {
+          0% { 
+            opacity: 0; 
+            transform: scale(0.3); 
+          }
+          50% { 
+            opacity: 1; 
+            transform: scale(1.05); 
+          }
+          70% { transform: scale(0.9); }
+          100% { transform: scale(1); }
+        }
+
+        .animate-bounce-in {
+          animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .animate-spin-slow {
+          animation: spin-slow 1s linear;
+        }
+
+        @keyframes bounce-subtle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+
+        .animate-bounce-subtle {
+          animation: bounce-subtle 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-subtle {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+
+        .animate-pulse-subtle {
+          animation: pulse-subtle 2s ease-in-out infinite;
+        }
+
+        .zoom-control {
+          position: relative;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .zoom-control:hover {
+          background: rgba(255, 255, 255, 0.25);
+          transform: scale(1.15);
+          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .zoom-control:active {
+          transform: scale(0.95);
+        }
+        /* Step 5: Projects Section Polish */
+        .card-hover-enhanced {
+          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .card-hover-enhanced::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+          transition: left 0.5s;
+        }
+
+        .card-hover-enhanced:hover::before {
+          left: 100%;
+        }
+
+        .card-hover-enhanced:hover {
+          transform: translateY(-8px) scale(1.02);
+        }
+
+        @keyframes tag-pop {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        .card-hover-enhanced:hover .tag-badge {
+          animation: tag-pop 0.3s ease-in-out;
+        }
+
+        input:focus, select:focus {
+          transform: scale(1.02);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes favorite-bounce {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          25% { transform: scale(1.2) rotate(-10deg); }
+          75% { transform: scale(1.2) rotate(10deg); }
+        }
+
+        button:active [class*="animate-pulse-glow"] {
+          animation: favorite-bounce 0.5s ease-in-out;
         }
       `}</style>
     </div>
