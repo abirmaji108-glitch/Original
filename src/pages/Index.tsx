@@ -1148,9 +1148,14 @@ ${new Date().toLocaleDateString()}
           onProjectDelete={handleDelete}
         />
       </Suspense>
-      {/* Animated Background Gradient */}
-      <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/20 via-gray-900 to-indigo-900/20' : 'bg-gradient-to-br from-blue-900/10 via-gray-50 to-purple-900/10'}`}>
-        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/10 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/10 via-transparent to-transparent animate-pulse'}`}></div>
+      {/* Enhanced Animated Background Gradient */}
+      <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/30 via-gray-900 to-indigo-900/30' : 'bg-gradient-to-br from-blue-900/20 via-gray-50 to-purple-900/20'}`}>
+        {/* Multiple animated gradient layers */}
+        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/20 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/20 via-transparent to-transparent animate-pulse'}`}></div>
+        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-blue-600/15 via-transparent to-transparent' : 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-400/15 via-transparent to-transparent'}`} style={{ animationDelay: '1s' }}></div>
+        {/* Floating orbs */}
+        <div className={`absolute top-20 left-20 w-72 h-72 ${isDarkMode ? 'bg-purple-500/10' : 'bg-blue-400/10'} rounded-full blur-3xl animate-float-slow`}></div>
+        <div className={`absolute bottom-20 right-20 w-96 h-96 ${isDarkMode ? 'bg-blue-500/10' : 'bg-purple-400/10'} rounded-full blur-3xl animate-float-slower`}></div>
       </div>
       {/* Navigation */}
       <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
@@ -1335,7 +1340,7 @@ ${new Date().toLocaleDateString()}
                       <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
                       <div className="absolute top-60 left-1/3 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
                     </div>
-                   
+                  
                     <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight animate-fade-in-up">
                       <span className={dynamicTextClass}>Create Stunning Websites</span>
                       <br />
@@ -1355,12 +1360,11 @@ ${new Date().toLocaleDateString()}
                     Powered by Groq & Llama 3.3
                   </span>
                 </div>
-
                 {/* INPUT SECTION - MOVED TO HERO */}
                 <div className={`glass-card-enhanced rounded-2xl p-8 shadow-card animate-fade-in-up space-y-6 transition-colors duration-300 max-w-4xl mx-auto mt-12 ${dynamicGlassClass}`} style={{ animationDelay: '0.2s' }}>
                   {/* Floating gradient border effect */}
                   <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
-                  
+                 
                   {/* Style Selector */}
                   <div className="space-y-3">
                     <label className={`text-sm font-semibold ${dynamicTextClass}`}>
@@ -1378,12 +1382,12 @@ ${new Date().toLocaleDateString()}
                         <button
                           key={style.id}
                           onClick={() => setSelectedStyle(style.id)}
-                          className={`relative p-4 rounded-xl border-2 transition-all ${
+                          className={`relative p-4 rounded-xl border-2 transition-all duration-300 transform ${
                             selectedStyle === style.id
-                              ? `border-transparent bg-gradient-to-r ${style.color} text-white shadow-lg scale-105`
+                              ? `border-transparent bg-gradient-to-r ${style.color} text-white shadow-lg scale-105 shadow-glow`
                               : isDarkMode
-                              ? 'border-white/20 bg-white/5 text-gray-300 hover:bg-white/10'
-                              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                              ? 'border-white/20 bg-white/5 text-gray-300 hover:bg-white/10 hover:scale-105 hover:shadow-md'
+                              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:scale-105 hover:shadow-lg'
                           }`}
                         >
                           <div className="text-2xl mb-1">{style.icon}</div>
@@ -1400,14 +1404,13 @@ ${new Date().toLocaleDateString()}
                       </p>
                     )}
                   </div>
-
                   {/* Smart Textarea with Glow */}
                   <div className="relative">
                     <Textarea
                       placeholder="✨ Describe your dream website... e.g., 'A modern portfolio for a graphic designer with dark theme, project gallery, and contact form'"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      className={`min-h-[140px] input-glow transition-all duration-300 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500'}`}
+                      className={`min-h-[140px] input-glow transition-all duration-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:bg-white/15' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-gray-50'}`}
                       rows={5}
                     />
                     {/* Live Character Counter with Colors */}
@@ -1427,7 +1430,6 @@ ${new Date().toLocaleDateString()}
                       </span>
                     </div>
                   </div>
-
                   {/* Live Suggestions */}
                   {input.length > 10 && input.length < 50 && (
                     <div className="flex flex-wrap gap-2 animate-fade-in-up">
@@ -1443,13 +1445,12 @@ ${new Date().toLocaleDateString()}
                       ))}
                     </div>
                   )}
-
                   {/* Generate Button */}
                   <div className="flex gap-4 pt-4">
                     <Button
                       onClick={handleGenerate}
                       disabled={isGenerating || input.length < 50 || input.length > 3000}
-                      className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 hover:shadow-2xl animate-gradient-shift overflow-hidden"
+                      className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 hover:shadow-[0_0_50px_rgba(168,85,247,0.6)] animate-gradient-shift overflow-hidden"
                       style={{ backgroundSize: '200% 200%' }}
                       title="Ctrl+Enter to generate"
                     >
@@ -1469,7 +1470,6 @@ ${new Date().toLocaleDateString()}
                       </span>
                     </Button>
                   </div>
-
                   <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
                     <span className="text-lg">⌨️</span>
                     <span className={`text-sm ${dynamicMutedClass}`}>
@@ -1481,7 +1481,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
-
               {/* Template Gallery - Moved below input */}
               <div className="mt-16">
                 <div className="text-center mb-8">
@@ -1502,7 +1501,7 @@ ${new Date().toLocaleDateString()}
                         style={{ animationDelay: `${index * 0.1}s` }}
                         onClick={() => handleTemplateClick(template.prompt)}
                         disabled={isGenerating}
-                        className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up`}
+                        className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up hover:scale-105 hover:shadow-2xl transform`}
                       >
                         {/* Shimmer effect on hover */}
                         <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -1522,7 +1521,6 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
-
               {/* Examples Gallery */}
               <div className="mt-16">
                 <h2 className={`text-3xl font-bold mb-8 text-center ${dynamicTextClass}`}>Quick Start Examples</h2>
@@ -2029,9 +2027,29 @@ ${new Date().toLocaleDateString()}
         .device-frame-mobile iframe { border-radius: 0; }
         .zoom-control { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; color: white; transition: all 0.2s; cursor: pointer; }
         .zoom-control:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
+        @keyframes float-slow { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, -30px); } }
+        @keyframes float-slower { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, 40px); } }
+        .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+        .animate-float-slower { animation: float-slower 10s ease-in-out infinite; }
+        .glass-card-enhanced { position: relative; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
+        .shadow-glow { box-shadow: 0 0 30px rgba(168, 85, 247, 0.3); }
+        /* Step 3: Input Polish & Micro-interactions */
+        .input-glow:focus { 
+          box-shadow: 0 0 30px rgba(168, 85, 247, 0.5); 
+          transform: scale(1.01);
+        }
+        @keyframes button-pulse {
+          0%, 100% { box-shadow: 0 0 30px rgba(168, 85, 247, 0.4); }
+          50% { box-shadow: 0 0 50px rgba(168, 85, 247, 0.8); }
+        }
+        .shadow-glow:hover { 
+          animation: button-pulse 1.5s ease-in-out infinite; 
+        }
+        .template-card-enhanced:hover {
+          box-shadow: 0 20px 60px rgba(168, 85, 247, 0.3);
+        }
       `}</style>
     </div>
   );
 };
-
 export default Index;
