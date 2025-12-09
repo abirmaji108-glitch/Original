@@ -1340,7 +1340,7 @@ ${new Date().toLocaleDateString()}
                       <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
                       <div className="absolute top-60 left-1/3 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
                     </div>
-                  
+                   
                     <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight animate-fade-in-up">
                       <span className={dynamicTextClass}>Create Stunning Websites</span>
                       <br />
@@ -1360,11 +1360,12 @@ ${new Date().toLocaleDateString()}
                     Powered by Groq & Llama 3.3
                   </span>
                 </div>
+
                 {/* INPUT SECTION - MOVED TO HERO */}
                 <div className={`glass-card-enhanced rounded-2xl p-8 shadow-card animate-fade-in-up space-y-6 transition-colors duration-300 max-w-4xl mx-auto mt-12 ${dynamicGlassClass}`} style={{ animationDelay: '0.2s' }}>
                   {/* Floating gradient border effect */}
                   <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
-                 
+                  
                   {/* Style Selector */}
                   <div className="space-y-3">
                     <label className={`text-sm font-semibold ${dynamicTextClass}`}>
@@ -1404,6 +1405,7 @@ ${new Date().toLocaleDateString()}
                       </p>
                     )}
                   </div>
+
                   {/* Smart Textarea with Glow */}
                   <div className="relative">
                     <Textarea
@@ -1430,6 +1432,7 @@ ${new Date().toLocaleDateString()}
                       </span>
                     </div>
                   </div>
+
                   {/* Live Suggestions */}
                   {input.length > 10 && input.length < 50 && (
                     <div className="flex flex-wrap gap-2 animate-fade-in-up">
@@ -1445,6 +1448,7 @@ ${new Date().toLocaleDateString()}
                       ))}
                     </div>
                   )}
+
                   {/* Generate Button */}
                   <div className="flex gap-4 pt-4">
                     <Button
@@ -1470,6 +1474,7 @@ ${new Date().toLocaleDateString()}
                       </span>
                     </Button>
                   </div>
+
                   <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
                     <span className="text-lg">⌨️</span>
                     <span className={`text-sm ${dynamicMutedClass}`}>
@@ -1481,6 +1486,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
+
               {/* Template Gallery - Moved below input */}
               <div className="mt-16">
                 <div className="text-center mb-8">
@@ -1521,6 +1527,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 )}
               </div>
+
               {/* Examples Gallery */}
               <div className="mt-16">
                 <h2 className={`text-3xl font-bold mb-8 text-center ${dynamicTextClass}`}>Quick Start Examples</h2>
@@ -2052,4 +2059,5 @@ ${new Date().toLocaleDateString()}
     </div>
   );
 };
+
 export default Index;
