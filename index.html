@@ -15,11 +15,12 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
-                   connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://original-lbxv.onrender.com https://js.stripe.com; 
+                   connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://original-lbxv.onrender.com https://js.stripe.com https://api.stripe.com; 
                    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://js.stripe.com; 
                    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
                    font-src 'self' https://fonts.gstatic.com;
-                   img-src 'self' data: https: http:;">
+                   img-src 'self' data: https: http:;
+                   frame-src https://js.stripe.com https://checkout.stripe.com;">
     <script src="https://js.stripe.com/v3/"></script>
   </head>
   <body>
