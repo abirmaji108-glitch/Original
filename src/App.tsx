@@ -9,7 +9,6 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MyWebsites from "./pages/MyWebsites";
-import StripeTestButton from "./components/StripeTestButton";
 
 const queryClient = new QueryClient();
 
@@ -27,11 +26,6 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/my-websites" element={<MyWebsites />} />
           </Routes>
-          
-          {/* Test Button - Remove after testing */}
-          <div className="fixed bottom-4 right-4 z-50">
-            <StripeTestButton />
-          </div>
         </HashRouter>
       </TooltipProvider>
     </AuthProvider>
