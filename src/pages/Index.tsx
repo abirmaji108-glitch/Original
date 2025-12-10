@@ -44,9 +44,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking } from '@/hooks/use-usage-tracking';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingScreen } from '@/components/ui/spinner';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { UpgradeModal } from '@/components/UpgradeModal';
+import { ProBadge } from '@/components/ProBadge';
+
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
 const ProjectModal = lazy(() => import("@/components/ProjectModal").then(m => ({ default: m.ProjectModal })));
+
 const TEMPLATES = [
   {
     id: "portfolio",
@@ -91,6 +96,7 @@ const TEMPLATES = [
     prompt: "Design a gaming community website with an energetic hero section, featured games carousel, leaderboard table showing top 10 players, upcoming tournaments section with dates and prizes, gaming news cards, live stream section, join community form, and Discord integration button. Use dark theme with neon purple and cyan accents."
   }
 ];
+
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
   gym: "Design a modern fitness/gym website for [GymName]. Include: powerful hero with transformation photos and membership CTA, class schedule with timings, trainer profiles with photos and specialties, membership pricing plans, success stories with before/after, facilities gallery, contact form and location map. Use energetic colors (red, black, orange). Mobile-first design.",
@@ -99,6 +105,7 @@ const INDUSTRY_TEMPLATES: Record<string, string> = {
   agency: "Design a creative agency website for [AgencyName]. Include: bold hero with latest work showcase, services section with 4-6 offerings, portfolio grid with case studies, client logos and testimonials, team members with photos, process/methodology section, contact form with office location. Modern design with creative typography and micro-animations.",
   custom: "",
 };
+
 const STYLE_DESCRIPTIONS: Record<string, string> = {
   modern: "Clean, contemporary design with smooth animations, gradients, and glass-morphism effects. Uses bold colors and modern typography.",
   minimal: "Simple, elegant design with lots of white space, subtle colors, and focus on content. Typography-focused with minimal decorative elements.",
@@ -107,7 +114,9 @@ const STYLE_DESCRIPTIONS: Record<string, string> = {
   playful: "Fun, energetic design with bright colors, rounded shapes, playful illustrations, and dynamic animations. Youthful vibe.",
   professional: "Corporate, trustworthy design with structured layouts, conservative colors (blues, grays), and business-focused aesthetic."
 };
+
 type ViewMode = "desktop" | "tablet" | "mobile";
+
 // Skeleton Loading Components
 const SkeletonCard = ({ isDarkMode }: { isDarkMode: boolean }) => (
   <div className={`backdrop-blur-sm rounded-xl p-6 animate-pulse ${
@@ -123,6 +132,7 @@ const SkeletonCard = ({ isDarkMode }: { isDarkMode: boolean }) => (
     </div>
   </div>
 );
+
 const SkeletonTemplate = ({ isDarkMode }: { isDarkMode: boolean }) => (
   <div className={`backdrop-blur-sm rounded-xl p-6 animate-pulse ${
     isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-white border border-gray-200'
@@ -132,6 +142,7 @@ const SkeletonTemplate = ({ isDarkMode }: { isDarkMode: boolean }) => (
     <div className={`h-4 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '60%' }}></div>
   </div>
 );
+
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -189,6 +200,19 @@ const Index = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
+  
+  // Feature gating
+  const { 
+    canGenerate: canGenerateMore, 
+    generationsToday, 
+    tierLimits,
+    incrementGeneration,
+    isPro,
+    isFree
+  } = useFeatureGate();
+
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   // Load history from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('websiteHistory');
@@ -198,9 +222,11 @@ const Index = () => {
       calculateAnalytics();
     }
   }, []);
+
   useEffect(() => {
     calculateAnalytics();
   }, [websiteHistory]);
+
   // Load theme preference
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -208,6 +234,7 @@ const Index = () => {
       setIsDarkMode(savedTheme === 'dark');
     }
   }, []);
+
   // Apply dark mode class to document
   useEffect(() => {
     if (isDarkMode) {
@@ -216,12 +243,14 @@ const Index = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
   // Get authenticated user ID
   useEffect(() => {
     if (user?.id) {
       setUserId(user.id);
     }
   }, [user]);
+
   // Check if there's a shared website in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -239,6 +268,7 @@ const Index = () => {
       }
     }
   }, []);
+
   // Close share menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -250,6 +280,7 @@ const Index = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
+
   // Load from navigation state if regenerating
   useEffect(() => {
     if (location.state?.description) {
@@ -259,6 +290,7 @@ const Index = () => {
       }
     }
   }, [location.state]);
+
   // Initial page load
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -266,6 +298,7 @@ const Index = () => {
     }, 800);
     return () => clearTimeout(timer);
   }, []);
+
   // Scroll to top button visibility
   useEffect(() => {
     const handleScroll = () => {
@@ -274,6 +307,7 @@ const Index = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -305,7 +339,9 @@ const Index = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
   const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
+
   const calculateAnalytics = () => {
     const history = websiteHistory;
     // Total generated
@@ -341,6 +377,7 @@ const Index = () => {
       totalStorageKB
     });
   };
+
   const getGenerationsPerDay = () => {
     const dateCount: Record<string, number> = {};
     websiteHistory.forEach(site => {
@@ -349,8 +386,10 @@ const Index = () => {
     });
     return dateCount;
   };
+
   // Chat is now handled entirely by ChatModal component
   // No duplicate chat logic needed here
+
   // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
     setIndustry(value);
@@ -360,6 +399,7 @@ const Index = () => {
       setInput("");
     }
   };
+
   // Elapsed time counter
   useEffect(() => {
     if (isGenerating) {
@@ -372,11 +412,13 @@ const Index = () => {
       setElapsedTime(0);
     }
   }, [isGenerating]);
+
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     localStorage.setItem('theme', newTheme ? 'dark' : 'light');
   };
+
   const generateShareLink = () => {
     if (!generatedCode) return "";
     // Encode HTML to base64 for URL
@@ -385,12 +427,14 @@ const Index = () => {
     setShareLink(shareUrl);
     return shareUrl;
   };
+
   const handleCopyLink = () => {
     const link = generateShareLink();
     navigator.clipboard.writeText(link);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 3000);
   };
+
   const handleShareTwitter = () => {
     const link = generateShareLink();
     const text = "Check out this website I created with AI! 🚀";
@@ -398,18 +442,21 @@ const Index = () => {
     window.open(url, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
   };
+
   const handleShareLinkedIn = () => {
     const link = generateShareLink();
     const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=600');
     setShowShareMenu(false);
   };
+
   const handleShareFacebook = () => {
     const link = generateShareLink();
     const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
     window.open(url, '_blank', 'width=600,height=400');
     setShowShareMenu(false);
   };
+
   const handleShareEmail = () => {
     const link = generateShareLink();
     const subject = "Check out my AI-generated website!";
@@ -417,6 +464,7 @@ const Index = () => {
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setShowShareMenu(false);
   };
+
   const handleOpenInCodeSandbox = () => {
     if (!generatedCode) return;
     // Extract CSS and JS from HTML
@@ -476,6 +524,7 @@ const Index = () => {
     form.submit();
     document.body.removeChild(form);
   };
+
   const handleOpenInStackBlitz = () => {
     if (!generatedCode) return;
     // Extract CSS and JS from HTML
@@ -514,6 +563,7 @@ Generated on: ${new Date().toLocaleDateString()}
     // Open StackBlitz
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
+
   const getStatusForProgress = (progress: number): string => {
     if (progress < 20) return "🤔 AI analyzing your requirements...";
     if (progress < 40) return "🎨 Designing perfect layout structure...";
@@ -521,6 +571,7 @@ Generated on: ${new Date().toLocaleDateString()}
     if (progress < 80) return "📱 Optimizing for all devices...";
     return "🚀 Finalizing your professional website...";
   };
+
   const saveWebsite = async (htmlCode: string) => {
     try {
       if (!userId) {
@@ -576,6 +627,7 @@ Generated on: ${new Date().toLocaleDateString()}
       console.error('Error saving website:', error);
     }
   };
+
   const simulateProgress = () => {
     const stages = [
       { progress: 25, message: "🔍 Analyzing your requirements..." },
@@ -597,6 +649,7 @@ Generated on: ${new Date().toLocaleDateString()}
     }, 8000); // Change stage every 8 seconds
     return interval;
   };
+
   const saveProjectDetails = () => {
     if (!editingProject) return;
     const updatedHistory = websiteHistory.map(site =>
@@ -617,6 +670,7 @@ Generated on: ${new Date().toLocaleDateString()}
     setProjectTags([]);
     setProjectNotes("");
   };
+
   const toggleFavorite = (id: string) => {
     const updatedHistory = websiteHistory.map(site =>
       site.id === id ? { ...site, isFavorite: !site.isFavorite } : site
@@ -624,14 +678,17 @@ Generated on: ${new Date().toLocaleDateString()}
     setWebsiteHistory(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
   };
+
   const addTag = (tag: string) => {
     if (tag.trim() && !projectTags.includes(tag.trim())) {
       setProjectTags([...projectTags, tag.trim()]);
     }
   };
+
   const removeTag = (tag: string) => {
     setProjectTags(projectTags.filter(t => t !== tag));
   };
+
   const openEditProject = (site: typeof websiteHistory[0]) => {
     setEditingProject(site.id);
     setProjectName(site.name);
@@ -639,6 +696,7 @@ Generated on: ${new Date().toLocaleDateString()}
     setProjectNotes(site.notes);
     setShowProjectModal(true);
   };
+
   const getFilteredProjects = () => {
     let filtered = [...websiteHistory];
     // Search filter
@@ -660,6 +718,7 @@ Generated on: ${new Date().toLocaleDateString()}
     }
     return filtered;
   };
+
   const getAllTags = () => {
     const tagSet = new Set<string>();
     websiteHistory.forEach(site => {
@@ -667,16 +726,14 @@ Generated on: ${new Date().toLocaleDateString()}
     });
     return Array.from(tagSet);
   };
+
   const handleGenerate = async () => {
-    // Check usage limit FIRST
-    if (!usage.canGenerate) {
-      toast({
-        title: "Generation Limit Reached",
-        description: `You've reached your ${usage.generationsLimit} free generations for this month. Upgrade to Pro for unlimited website generation! 🚀`,
-        variant: "destructive",
-      });
+    // ⚡ FEATURE GATE CHECK - HIGHEST PRIORITY
+    if (!canGenerateMore) {
+      setShowUpgradeModal(true);
       return;
     }
+
     if (input.trim().length === 0 || input.length > 3000) {
       toast({
         title: "Invalid Prompt Length",
@@ -685,6 +742,7 @@ Generated on: ${new Date().toLocaleDateString()}
       });
       return;
     }
+    
     if (input.length < 50) {
       toast({
         title: "Description too short",
@@ -693,14 +751,18 @@ Generated on: ${new Date().toLocaleDateString()}
       });
       return;
     }
+
     setIsGenerating(true);
     setProgress(0);
     setGeneratedCode(null);
     setShowSuccess(false);
+    
     // Create abort controller
     abortControllerRef.current = new AbortController();
+    
     // Start progress simulation
     const progressInterval = simulateProgress();
+    
     // Smooth progress animation
     const progressInterval2 = setInterval(() => {
       setProgress((p) => {
@@ -708,6 +770,7 @@ Generated on: ${new Date().toLocaleDateString()}
         return newProgress;
       });
     }, 150);
+
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
       const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
@@ -734,6 +797,7 @@ REQUIREMENTS:
 - Proper semantic HTML5 tags
 - Accessibility features (alt tags, ARIA labels)
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
+
       setLastPrompt(prompt);
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
@@ -743,14 +807,18 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         body: JSON.stringify({ prompt }),
         signal: abortControllerRef.current?.signal
       });
+
       // Clear intervals after fetch
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
+
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
       }
+
       let htmlCode = data.htmlCode;
+      
       // Save to history
       const newWebsite = {
         id: Date.now().toString(),
@@ -766,12 +834,16 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+
       // DON'T auto-show project modal - let user view the website first
       // Modal can be opened manually if user wants to edit project details
+
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
-      // Increment usage counter
-      await incrementUsage();
+
+      // Increment generation counter for tier limits
+      await incrementGeneration();
+
       // Show success state for 2 seconds
       setShowSuccess(true);
       setTimeout(async () => {
@@ -830,6 +902,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setShowSuccess(false);
     }
   };
+
   const handleRegenerate = async () => {
     if (!lastPrompt) {
       toast({
@@ -839,14 +912,18 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       });
       return;
     }
+
     setIsGenerating(true);
     setProgress(0);
     setGeneratedCode(null);
     setShowSuccess(false);
+    
     // Create abort controller
     abortControllerRef.current = new AbortController();
+    
     // Start progress simulation
     const progressInterval = simulateProgress();
+    
     // Smooth progress animation
     const progressInterval2 = setInterval(() => {
       setProgress((p) => {
@@ -854,6 +931,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         return newProgress;
       });
     }, 150);
+
     try {
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
@@ -863,14 +941,18 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         body: JSON.stringify({ prompt: lastPrompt }),
         signal: abortControllerRef.current?.signal
       });
+
       // Clear intervals after fetch
       clearInterval(progressInterval);
       clearInterval(progressInterval2);
+
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
       }
+
       let htmlCode = data.htmlCode;
+      
       // Save to history
       const newWebsite = {
         id: Date.now().toString(),
@@ -886,10 +968,13 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+
       // DON'T auto-show project modal - let user view the website first
       // Modal can be opened manually if user wants to edit project details
+
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
+
       // Show success state for 2 seconds
       setShowSuccess(true);
       setTimeout(async () => {
@@ -944,20 +1029,24 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setShowSuccess(false);
     }
   };
+
   const handleDelete = (id: string) => {
     const updatedHistory = websiteHistory.filter(site => site.id !== id);
     setWebsiteHistory(updatedHistory);
     localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
   };
+
   const handleLoadWebsite = (html: string) => {
     setGeneratedCode(html);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
   const handleCancelGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
   };
+
   const handleDownload = async () => {
     if (!generatedCode) return;
     const zip = new JSZip();
@@ -1005,6 +1094,7 @@ ${new Date().toLocaleDateString()}
       description: "Your website ZIP has been saved",
     });
   };
+
   const handleCopy = async () => {
     if (!generatedCode) return;
     await navigator.clipboard.writeText(generatedCode);
@@ -1013,6 +1103,7 @@ ${new Date().toLocaleDateString()}
       description: "Code copied to clipboard! Paste it into any code editor or StackBlitz.",
     });
   };
+
   const handleNewWebsite = () => {
     setGeneratedCode(null);
     setInput("");
@@ -1020,6 +1111,7 @@ ${new Date().toLocaleDateString()}
     setStatus("");
     setIndustry("custom");
   };
+
   const handleShare = async () => {
     const link = generateShareLink();
     if (link) {
@@ -1030,11 +1122,13 @@ ${new Date().toLocaleDateString()}
       });
     }
   };
+
   const handleExampleClick = (exampleText: string, exampleIndustry: string) => {
     setInput(exampleText);
     setIndustry(exampleIndustry);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
   const handleTemplateClick = (prompt: string) => {
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1042,6 +1136,7 @@ ${new Date().toLocaleDateString()}
     setInput(prompt);
     handleGenerate();
   };
+
   const getAspectRatio = () => {
     switch (viewMode) {
       case "tablet":
@@ -1052,6 +1147,7 @@ ${new Date().toLocaleDateString()}
         return "aspect-video";
     }
   };
+
   const handleOpenFullScreen = () => {
     if (!generatedCode) return;
     const newWindow = window.open('', '_blank');
@@ -1060,8 +1156,10 @@ ${new Date().toLocaleDateString()}
       newWindow.document.close();
     }
   };
+
   const characterLimit = 3000;
   const characterCount = input.length;
+
   const examples = [
     {
       title: "Restaurant Website",
@@ -1099,6 +1197,7 @@ ${new Date().toLocaleDateString()}
       industry: "agency"
     }
   ];
+
   const dynamicTextClass = `transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`;
   const dynamicMutedClass = `transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`;
   const dynamicSubtleClass = `transition-colors ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`;
@@ -1108,10 +1207,12 @@ ${new Date().toLocaleDateString()}
   const dynamicGlassClass = isDarkMode
     ? 'bg-white/5 backdrop-blur-sm border border-white/10'
     : 'bg-white border border-gray-200 shadow-xl';
+
   // Show loading screen on initial page load
   if (isPageLoading) {
     return <LoadingScreen />;
   }
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Analytics Dashboard Modal */}
@@ -1121,6 +1222,7 @@ ${new Date().toLocaleDateString()}
           onOpenChange={setShowAnalytics}
         />
       </Suspense>
+
       {/* AI Chat Assistant Panel */}
       <Suspense fallback={<div />}>
         <ChatModal
@@ -1130,6 +1232,7 @@ ${new Date().toLocaleDateString()}
           onCodeUpdate={(newCode) => setGeneratedCode(newCode)}
         />
       </Suspense>
+
       {/* Project Save/Edit Modal */}
       <Suspense fallback={<div />}>
         <ProjectModal
@@ -1148,6 +1251,15 @@ ${new Date().toLocaleDateString()}
           onProjectDelete={handleDelete}
         />
       </Suspense>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        title="Generation Limit Reached"
+        description={`You've used ${generationsToday}/${tierLimits.generationsPerDay} free generations today. Upgrade to Pro for unlimited website generation!`}
+      />
+
       {/* Enhanced Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/30 via-gray-900 to-indigo-900/30' : 'bg-gradient-to-br from-blue-900/20 via-gray-50 to-purple-900/20'}`}>
         {/* Multiple animated gradient layers */}
@@ -1157,6 +1269,7 @@ ${new Date().toLocaleDateString()}
         <div className={`absolute top-20 left-20 w-72 h-72 ${isDarkMode ? 'bg-purple-500/10' : 'bg-blue-400/10'} rounded-full blur-3xl animate-float-slow`}></div>
         <div className={`absolute bottom-20 right-20 w-96 h-96 ${isDarkMode ? 'bg-blue-500/10' : 'bg-purple-400/10'} rounded-full blur-3xl animate-float-slower`}></div>
       </div>
+
       {/* Navigation */}
       <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -1176,6 +1289,7 @@ ${new Date().toLocaleDateString()}
               <span className={dynamicSubtleClass}>My Websites</span>
             </Button>
           </div>
+
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-3">
             <button
@@ -1216,7 +1330,16 @@ ${new Date().toLocaleDateString()}
               <div className="text-sm">
                 <div className={dynamicTextClass}>Free Plan</div>
                 <div className={`text-xs ${dynamicSubtleClass}`}>
-                  Credits: {usage.generationsUsed}/{usage.generationsLimit}{" "}
+                  {isPro ? (
+                    <>
+                      <ProBadge className="inline-flex mr-1" />
+                      Unlimited Generations
+                    </>
+                  ) : (
+                    <>
+                      {generationsToday}/{tierLimits.generationsPerDay} today{" "}
+                    </>
+                  )}
                   <a href="#" className={`hover:underline ${isDarkMode ? 'text-primary' : 'text-purple-600'}`}>
                     Upgrade
                   </a>
@@ -1233,6 +1356,7 @@ ${new Date().toLocaleDateString()}
               Sign Out
             </Button>
           </div>
+
           {/* Mobile: Theme Toggle + Hamburger Menu Button */}
           <div className="flex items-center gap-2 lg:hidden">
             <button
@@ -1255,6 +1379,7 @@ ${new Date().toLocaleDateString()}
             </button>
           </div>
         </div>
+
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
           <div className={`lg:hidden border-t ${isDarkMode ? 'border-white/10 bg-black/90' : 'border-gray-200 bg-white/95'} backdrop-blur-md`}>
@@ -1302,7 +1427,7 @@ ${new Date().toLocaleDateString()}
                   <div className="text-sm">
                     <div className={dynamicTextClass}>Free Plan</div>
                     <div className={`text-xs ${dynamicSubtleClass}`}>
-                      {usage.generationsUsed}/{usage.generationsLimit} credits
+                      {isPro ? "Unlimited Generations" : `${generationsToday}/${tierLimits.generationsPerDay} today`}
                     </div>
                   </div>
                 </div>
@@ -1325,6 +1450,7 @@ ${new Date().toLocaleDateString()}
           </div>
         )}
       </nav>
+
       {/* Main Content */}
       <main className="relative pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
@@ -1558,6 +1684,7 @@ ${new Date().toLocaleDateString()}
               </div>
             </>
           )}
+
           {/* Generating State */}
           {isGenerating && (
             <div className="text-center space-y-8 animate-fade-in-up">
@@ -1607,6 +1734,7 @@ ${new Date().toLocaleDateString()}
               </div>
             </div>
           )}
+
           {/* Generated Preview */}
           {generatedCode && (
             <div className="space-y-8">
@@ -1677,6 +1805,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               </div>
+
               {isEditMode ? (
                 <div className="space-y-4">
                   <div className={`relative rounded-2xl overflow-hidden border-2 ${isDarkMode ? 'border-white/20 bg-gray-900' : 'border-gray-300 bg-white'}`}>
@@ -1754,6 +1883,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
+
               <div className="flex flex-wrap gap-3 justify-center">
                 <Button onClick={handleCopy} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl">
                   <Copy className="w-4 h-4" />
@@ -1778,6 +1908,7 @@ ${new Date().toLocaleDateString()}
                   Open in StackBlitz
                 </Button>
               </div>
+
               {showShareMenu && (
                 <div className="relative animate-fade-in">
                   <div className={`absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border transform origin-top-right animate-scale-in ${isDarkMode ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'} z-50`}>
@@ -1819,6 +1950,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 </div>
               )}
+
               {showSuccess && (
                 <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-40 animate-fadeIn backdrop-blur-sm">
                   <div className={`p-8 rounded-2xl text-center shadow-2xl transform animate-bounce-in ${isDarkMode ? 'bg-gradient-to-br from-green-900/90 to-emerald-900/90 text-green-100 border-green-400/50' : 'bg-gradient-to-br from-green-50 to-emerald-50 text-green-800 border-green-300'} border-2 animate-pulse-glow backdrop-blur-md`}>
@@ -1840,6 +1972,7 @@ ${new Date().toLocaleDateString()}
               )}
             </div>
           )}
+
           {websiteHistory.length > 0 && (
             <div className="mt-12">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -2014,6 +2147,7 @@ ${new Date().toLocaleDateString()}
           )}
         </div>
       </main>
+
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -2029,6 +2163,7 @@ ${new Date().toLocaleDateString()}
           </svg>
         </button>
       )}
+
       <style>{`
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
