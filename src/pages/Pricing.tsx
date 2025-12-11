@@ -1,446 +1,322 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Check, Sparkles, Crown, Zap, ArrowLeft, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from 'react';
+import { Check, Sparkles, Zap, Building2 } from 'lucide-react';
 import { TIER_LIMITS } from '@/config/tiers';
-import { loadStripe } from '@stripe/stripe-js';
-
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const Pricing = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const plans = [
     {
-      id: 'free',
       name: 'Free',
-      price: 0,
-      yearlyPrice: 0,
+      description: 'Perfect for trying out Revenue Rocket',
+      price: { monthly: 0, yearly: 0 },
       icon: Sparkles,
-      color: 'from-gray-400 to-gray-600',
       features: TIER_LIMITS.free.features,
-      cta: 'Current Plan',
-      popular: false,
-      stripePriceId: null,
+      cta: 'Get Started',
+      highlighted: false,
+      color: 'from-gray-400 to-gray-600'
     },
     {
-      id: 'pro',
-      name: 'Pro',
-      price: 29,
-      yearlyPrice: 290, // ~$24/month when billed yearly
-      icon: Crown,
-      color: 'from-yellow-400 to-orange-500',
-      features: TIER_LIMITS.pro.features,
-      cta: 'Upgrade to Pro',
-      popular: true,
-      stripePriceId: import.meta.env.VITE_STRIPE_PRO_PRICE_ID,
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 99,
-      yearlyPrice: 990, // ~$82/month when billed yearly
+      name: 'Basic',
+      description: 'For solo entrepreneurs and small businesses',
+      price: { monthly: 9, yearly: 89 },
       icon: Zap,
-      color: 'from-purple-500 to-pink-500',
-      features: TIER_LIMITS.enterprise.features,
-      cta: 'Contact Sales',
-      popular: false,
-      stripePriceId: import.meta.env.VITE_STRIPE_ENTERPRISE_PRICE_ID,
+      features: [
+        'Download 5 websites per month',
+        'Landing pages (1-3 sections)',
+        '1 custom domain connection',
+        'Remove watermark',
+        'HTML/CSS export',
+        '20+ basic templates',
+        'Save up to 10 projects',
+        'Basic SEO optimization',
+        'Email support (48h)'
+      ],
+      cta: 'Start Basic',
+      highlighted: false,
+      color: 'from-blue-500 to-blue-600',
+      stripeLink: billingCycle === 'monthly' 
+        ? import.meta.env.VITE_STRIPE_BASIC_PRICE_ID
+        : import.meta.env.VITE_STRIPE_BASIC_YEARLY_PRICE_ID
     },
+    {
+      name: 'Pro',
+      description: 'For freelancers and growing agencies',
+      price: { monthly: 22, yearly: 219 },
+      icon: Zap,
+      features: [
+        'Download 12 websites per month',
+        'Multi-page websites (up to 8 pages)',
+        '3 custom domains',
+        'Remove watermark',
+        'HTML/CSS/React export',
+        '50+ premium templates',
+        'Unlimited projects',
+        'Advanced SEO tools',
+        'AI chat support (10 iterations per site)',
+        'Priority support (24h)',
+        'Custom code injection',
+        'Version history (3 versions per site)',
+        'GitHub sync'
+      ],
+      cta: 'Start Pro',
+      highlighted: true,
+      popular: true,
+      color: 'from-purple-500 to-purple-600',
+      stripeLink: billingCycle === 'monthly'
+        ? import.meta.env.VITE_STRIPE_PRO_PRICE_ID
+        : import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID
+    },
+    {
+      name: 'Business',
+      description: 'For agencies and teams',
+      price: { monthly: 49, yearly: 489 },
+      icon: Building2,
+      features: [
+        'Download 40 websites per month',
+        'Complex websites (up to 20 pages)',
+        'Unlimited team members (3 included)',
+        'Unlimited custom domains',
+        'White-label solution',
+        'Custom templates',
+        'API access (100 calls/month)',
+        'Dedicated support',
+        'SLA guarantee',
+        'Custom integrations',
+        'Priority generation queue',
+        'Unlimited AI iterations',
+        'Team collaboration features',
+        'Advanced analytics dashboard'
+      ],
+      cta: 'Contact Sales',
+      highlighted: false,
+      color: 'from-orange-500 to-orange-600',
+      stripeLink: billingCycle === 'monthly'
+        ? import.meta.env.VITE_STRIPE_BUSINESS_PRICE_ID
+        : import.meta.env.VITE_STRIPE_BUSINESS_YEARLY_PRICE_ID
+    }
   ];
 
-  const handleCheckout = async (planId: string, stripePriceId: string | null) => {
-    if (!user) {
-      toast({
-        title: 'Sign in required',
-        description: 'Please sign in to upgrade your plan',
-        variant: 'destructive',
-      });
-      navigate('/login');
-      return;
-    }
-
-    if (planId === 'free') {
-      toast({
-        title: 'Already on Free Plan',
-        description: "You're currently on the free plan",
-      });
-      return;
-    }
-
-    if (planId === 'enterprise') {
-      // Open email for enterprise sales
-      window.location.href = 'mailto:sales@sento.ai?subject=Enterprise Plan Inquiry';
-      return;
-    }
-
-    if (!stripePriceId) {
-      toast({
-        title: 'Configuration Error',
-        description: 'Stripe price ID not configured. Please contact support.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setLoadingPlan(planId);
-
-    try {
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe failed to load');
-
-      // Create checkout session
-      const response = await fetch('https://original-lbxv.onrender.com/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: stripePriceId,
-          userId: user.id,
-          email: user.email,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session');
-      }
-
-      const { sessionId } = await response.json();
-
-      // Redirect to Stripe Checkout
-      const { error } = await stripe.redirectToCheckout({ sessionId });
-
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast({
-        title: 'Checkout Failed',
-        description: error instanceof Error ? error.message : 'Unable to start checkout. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingPlan(null);
+  const handlePlanClick = (plan: typeof plans[0]) => {
+    if (plan.name === 'Free') {
+      window.location.href = '/signup';
+    } else if (plan.name === 'Business') {
+      window.location.href = 'mailto:sales@revenuerocket.ai?subject=Business Plan Inquiry';
+    } else if (plan.stripeLink) {
+      window.location.href = `https://checkout.stripe.com/${plan.stripeLink}`;
     }
   };
 
-  const getPrice = (plan: typeof plans[0]) => {
-    if (billingCycle === 'yearly') {
-      return plan.yearlyPrice;
-    }
-    return plan.price;
-  };
-
-  const getSavings = (plan: typeof plans[0]) => {
-    if (billingCycle === 'yearly' && plan.price > 0) {
-      const monthlyCost = plan.price * 12;
-      const yearlyCost = plan.yearlyPrice;
-      const savings = monthlyCost - yearlyCost;
-      return savings;
-    }
-    return 0;
+  const savings = {
+    basic: ((9 * 12) - 89),
+    pro: ((22 * 12) - 219),
+    business: ((49 * 12) - 489)
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-60 left-1/3 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white">
+      {/* Header */}
+      <div className="container mx-auto px-6 py-20">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Simple, Transparent Pricing
+          </h1>
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+            Choose the perfect plan for your needs. Start free, upgrade anytime.
+          </p>
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/app')}
-              className="text-white hover:bg-white/10"
+          {/* Billing Toggle */}
+          <div className="inline-flex items-center bg-gray-800/50 rounded-full p-1 backdrop-blur-sm">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-6 py-2 rounded-full transition-all ${
+                billingCycle === 'monthly'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to App
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <span className="text-xl font-bold text-white">Sento</span>
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('yearly')}
+              className={`px-6 py-2 rounded-full transition-all ${
+                billingCycle === 'yearly'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Yearly
+              <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                Save up to $99
+              </span>
+            </button>
           </div>
         </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="relative pt-24 pb-12 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12 space-y-4">
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white">
-              Choose Your Plan
-            </h1>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Start free, upgrade when you need more power. Cancel anytime.
-            </p>
-
-            {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4 mt-8">
-              <span className={`text-sm font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-gray-400'}`}>
-                Monthly
-              </span>
-              <button
-                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-                className="relative w-14 h-7 bg-white/20 rounded-full transition-all duration-300 hover:bg-white/30"
+        {/* Pricing Cards */}
+        <div className="grid md:grid-cols-4 gap-8 max-w-7xl mx-auto mb-20">
+          {plans.map((plan, index) => {
+            const Icon = plan.icon;
+            const price = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly;
+            const displayPrice = billingCycle === 'yearly' ? (price / 12).toFixed(0) : price;
+            
+            return (
+              <div
+                key={index}
+                className={`relative rounded-2xl p-8 ${
+                  plan.highlighted
+                    ? 'bg-gradient-to-br from-purple-600/20 to-pink-600/20 border-2 border-purple-500 shadow-2xl shadow-purple-500/20 scale-105'
+                    : 'bg-gray-800/50 border border-gray-700'
+                } backdrop-blur-sm transition-transform hover:scale-105`}
               >
-                <div
-                  className={`absolute top-1 left-1 w-5 h-5 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full transition-transform duration-300 ${
-                    billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-              <span className={`text-sm font-semibold ${billingCycle === 'yearly' ? 'text-white' : 'text-gray-400'}`}>
-                Yearly
-              </span>
-              {billingCycle === 'yearly' && (
-                <span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-semibold animate-pulse">
-                  Save up to 20%
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Pricing Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
-            {plans.map((plan, index) => {
-              const Icon = plan.icon;
-              const price = getPrice(plan);
-              const savings = getSavings(plan);
-
-              return (
-                <div
-                  key={plan.id}
-                  className={`relative rounded-2xl backdrop-blur-sm transition-all duration-500 hover:scale-105 ${
-                    plan.popular
-                      ? 'bg-white/10 border-2 border-yellow-400 shadow-2xl shadow-yellow-400/20'
-                      : 'bg-white/5 border border-white/10'
-                  }`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-sm font-bold rounded-full shadow-lg">
-                      🔥 Most Popular
-                    </div>
-                  )}
-
-                  <div className="p-8">
-                    {/* Icon & Name */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${plan.color} flex items-center justify-center`}>
-                        <Icon className="w-6 h-6 text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
-                    </div>
-
-                    {/* Price */}
-                    <div className="mb-6">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-5xl font-bold text-white">${price}</span>
-                        {plan.price > 0 && (
-                          <span className="text-gray-400">
-                            /{billingCycle === 'monthly' ? 'mo' : 'yr'}
-                          </span>
-                        )}
-                      </div>
-                      {billingCycle === 'yearly' && plan.price > 0 && (
-                        <p className="text-sm text-green-400 mt-1">
-                          💰 Save ${savings}/year
-                        </p>
-                      )}
-                      {billingCycle === 'yearly' && plan.price > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          ${Math.round(price / 12)}/month when billed annually
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Features */}
-                    <ul className="space-y-3 mb-8">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-gray-300 text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* CTA Button */}
-                    <Button
-                      onClick={() => handleCheckout(plan.id, plan.stripePriceId)}
-                      disabled={loadingPlan === plan.id}
-                      className={`w-full h-12 font-bold transition-all duration-300 ${
-                        plan.popular
-                          ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-105'
-                          : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                      }`}
-                    >
-                      {loadingPlan === plan.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        plan.cta
-                      )}
-                    </Button>
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                      Most Popular
+                    </span>
                   </div>
+                )}
+
+                <div className="text-center mb-6">
+                  <div className={`inline-block p-3 rounded-xl bg-gradient-to-r ${plan.color} mb-4`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                  <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
+                  
+                  <div className="mb-4">
+                    <span className="text-5xl font-bold">${displayPrice}</span>
+                    <span className="text-gray-400 ml-2">
+                      {billingCycle === 'yearly' ? '/mo' : '/month'}
+                    </span>
+                  </div>
+
+                  {billingCycle === 'yearly' && plan.name !== 'Free' && (
+                    <p className="text-sm text-green-400">
+                      Save ${savings[plan.name.toLowerCase() as keyof typeof savings]}/year
+                    </p>
+                  )}
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Feature Comparison Table */}
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-3xl font-bold text-white text-center mb-8">
-              Compare All Features
-            </h2>
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-white/10">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-white font-semibold">Feature</th>
-                    <th className="px-6 py-4 text-center text-white font-semibold">Free</th>
-                    <th className="px-6 py-4 text-center text-white font-semibold bg-yellow-400/10">Pro</th>
-                    <th className="px-6 py-4 text-center text-white font-semibold">Enterprise</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
-                  <tr>
-                    <td className="px-6 py-4 text-gray-300">Generations per day</td>
-                    <td className="px-6 py-4 text-center text-gray-400">5</td>
-                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Unlimited</td>
-                    <td className="px-6 py-4 text-center text-green-400">Unlimited</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-300">Projects</td>
-                    <td className="px-6 py-4 text-center text-gray-400">3</td>
-                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Unlimited</td>
-                    <td className="px-6 py-4 text-center text-green-400">Unlimited</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-300">Templates</td>
-                    <td className="px-6 py-4 text-center text-gray-400">Basic</td>
-                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Premium</td>
-                    <td className="px-6 py-4 text-center text-green-400">Custom</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-300">Priority Support</td>
-                    <td className="px-6 py-4 text-center text-red-400">✗</td>
-                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">✓</td>
-                    <td className="px-6 py-4 text-center text-green-400">✓</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-300">Export Options</td>
-                    <td className="px-6 py-4 text-center text-gray-400">Basic</td>
-                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Advanced</td>
-                    <td className="px-6 py-4 text-center text-green-400">Full</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-300">White Label</td>
-                    <td className="px-6 py-4 text-center text-red-400">✗</td>
-                    <td className="px-6 py-4 text-center text-red-400 bg-yellow-400/5">✗</td>
-                    <td className="px-6 py-4 text-center text-green-400">✓</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-300">API Access</td>
-                    <td className="px-6 py-4 text-center text-red-400">✗</td>
-                    <td className="px-6 py-4 text-center text-red-400 bg-yellow-400/5">✗</td>
-                    <td className="px-6 py-4 text-center text-green-400">✓</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* FAQ Section */}
-          <div className="max-w-3xl mx-auto mt-16">
-            <h2 className="text-3xl font-bold text-white text-center mb-8">
-              Frequently Asked Questions
-            </h2>
-            <div className="space-y-4">
-              {[
-                {
-                  q: 'Can I change my plan later?',
-                  a: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.',
-                },
-                {
-                  q: 'What payment methods do you accept?',
-                  a: 'We accept all major credit cards, debit cards, and digital wallets through Stripe.',
-                },
-                {
-                  q: 'Is there a free trial?',
-                  a: 'The Free plan is available forever with 5 generations per day. No credit card required.',
-                },
-                {
-                  q: 'Can I cancel anytime?',
-                  a: 'Absolutely! Cancel anytime from your account settings. No questions asked.',
-                },
-              ].map((faq, i) => (
-                <div
-                  key={i}
-                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all duration-300"
+                <button
+                  onClick={() => handlePlanClick(plan)}
+                  className={`w-full py-3 rounded-lg font-semibold transition-all mb-6 ${
+                    plan.highlighted
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+                      : 'bg-gray-700 hover:bg-gray-600 text-white'
+                  }`}
                 >
-                  <h3 className="text-lg font-semibold text-white mb-2">{faq.q}</h3>
-                  <p className="text-gray-400">{faq.a}</p>
+                  {plan.cta}
+                </button>
+
+                <div className="space-y-3">
+                  {plan.features.map((feature, featureIndex) => (
+                    <div key={featureIndex} className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-300">{feature}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* CTA Section */}
-          <div className="text-center mt-16">
-            <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-3xl mx-auto">
-              <h2 className="text-3xl font-bold text-white mb-4">
-                Still have questions?
-              </h2>
-              <p className="text-gray-300 mb-6">
-                Our team is here to help you choose the right plan for your needs.
-              </p>
-              <div className="flex gap-4 justify-center">
-                <Button
-                  onClick={() => window.location.href = 'mailto:support@sento.ai'}
-                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                >
-                  Contact Support
-                </Button>
-                <Button
-                  onClick={() => navigate('/app')}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white"
-                >
-                  Start Building Free
-                </Button>
               </div>
+            );
+          })}
+        </div>
+
+        {/* Comparison Table */}
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-8">Compare Plans</h2>
+          <div className="bg-gray-800/50 rounded-2xl p-8 backdrop-blur-sm border border-gray-700 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-4 px-4 text-gray-400">Feature</th>
+                  <th className="text-center py-4 px-4">Free</th>
+                  <th className="text-center py-4 px-4">Basic</th>
+                  <th className="text-center py-4 px-4 bg-purple-600/10">Pro</th>
+                  <th className="text-center py-4 px-4">Business</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-4 px-4 text-gray-300">Downloads per month</td>
+                  <td className="text-center py-4 px-4 text-gray-500">Preview only</td>
+                  <td className="text-center py-4 px-4">5</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10">12</td>
+                  <td className="text-center py-4 px-4">40</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-4 px-4 text-gray-300">Pages per website</td>
+                  <td className="text-center py-4 px-4 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4">1-3 sections</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10">Up to 8 pages</td>
+                  <td className="text-center py-4 px-4">Up to 20 pages</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-4 px-4 text-gray-300">Custom domains</td>
+                  <td className="text-center py-4 px-4 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4">1</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10">3</td>
+                  <td className="text-center py-4 px-4">Unlimited</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-4 px-4 text-gray-300">Export formats</td>
+                  <td className="text-center py-4 px-4 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4">HTML/CSS</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10">HTML/CSS/React</td>
+                  <td className="text-center py-4 px-4">All formats</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-4 px-4 text-gray-300">AI iterations</td>
+                  <td className="text-center py-4 px-4 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10">10 per site</td>
+                  <td className="text-center py-4 px-4">Unlimited</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-4 px-4 text-gray-300">Team members</td>
+                  <td className="text-center py-4 px-4">1</td>
+                  <td className="text-center py-4 px-4">1</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10">1</td>
+                  <td className="text-center py-4 px-4">3 included</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-4 px-4 text-gray-300">API access</td>
+                  <td className="text-center py-4 px-4 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10 text-gray-500">-</td>
+                  <td className="text-center py-4 px-4">100 calls/month</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-4 text-gray-300">Support</td>
+                  <td className="text-center py-4 px-4">Community</td>
+                  <td className="text-center py-4 px-4">Email (48h)</td>
+                  <td className="text-center py-4 px-4 bg-purple-600/10">Priority (24h)</td>
+                  <td className="text-center py-4 px-4">Dedicated</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="max-w-3xl mx-auto mt-20">
+          <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+          <div className="space-y-6">
+            <div className="bg-gray-800/50 rounded-lg p-6 backdrop-blur-sm border border-gray-700">
+              <h3 className="font-semibold mb-2">Can I switch plans anytime?</h3>
+              <p className="text-gray-400">Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-6 backdrop-blur-sm border border-gray-700">
+              <h3 className="font-semibold mb-2">What happens if I exceed my download limit?</h3>
+              <p className="text-gray-400">You'll be prompted to upgrade to the next tier or wait until your monthly limit resets.</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-6 backdrop-blur-sm border border-gray-700">
+              <h3 className="font-semibold mb-2">Do you offer refunds?</h3>
+              <p className="text-gray-400">Yes, we offer a 14-day money-back guarantee on all paid plans.</p>
             </div>
           </div>
         </div>
-      </main>
-
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-      `}</style>
+      </div>
     </div>
   );
 };
