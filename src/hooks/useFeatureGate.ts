@@ -94,7 +94,7 @@ export function useFeatureGate() {
     canCreateProject: canCreateProject(userTier, projectCount),
     incrementGeneration,
     tierLimits: TIER_LIMITS[userTier],
-    isPro: userTier === 'pro' || userTier === 'enterprise',
+    isPro: userTier === 'pro' || userTier === 'business',
     isFree: userTier === 'free'
   };
 }
