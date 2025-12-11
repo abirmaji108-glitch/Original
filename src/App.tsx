@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MyWebsites from "./pages/MyWebsites";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/my-websites" element={<MyWebsites />} />
+            <Route path="/pricing" element={<Pricing />} />
           </Routes>
         </HashRouter>
       </TooltipProvider>
