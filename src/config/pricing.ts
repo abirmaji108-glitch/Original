@@ -1,378 +1,437 @@
-// src/config/pricing.ts
-// COMPLETE PRICING CONFIGURATION - Based on Your Detailed Plan
-
-export const PRICING_TIERS = {
-  FREE: {
-    id: 'free',
-    name: 'Free',
-    tagline: 'The Perfect Hook',
-    price: 0,
-    yearlyPrice: 0,
-    priceId: null,
-    description: 'Try it out - Experience everything',
-    features: [
-      { text: '2 website previews per month', included: true },
-      { text: 'Generate landing pages (3-5 sections max)', included: true },
-      { text: 'All basic templates (preview mode)', included: true },
-      { text: 'Manual editing (text, colors, themes)', included: true },
-      { text: 'Drag & drop section rearrange', included: true },
-      { text: 'Mobile/Desktop/Tablet preview', included: true },
-      { text: 'Save 2 projects', included: true },
-      { text: 'Download/Export code', included: false, locked: true },
-      { text: 'Deploy/Publish website', included: false, locked: true },
-      { text: 'Remove watermark', included: false, locked: true },
-      { text: 'Custom domain', included: false, locked: true },
-      { text: 'AI chat iterations', included: false, locked: true },
-      { text: 'Multi-page websites', included: false, locked: true },
-    ],
-    limits: {
-      previewsPerMonth: 2,
-      websitesDownloadPerMonth: 0,
-      maxSections: 5,
-      maxPages: 1,
-      savedProjects: 2,
-      customDomains: 0,
-      aiIterations: 0,
-      canDownload: false,
-      canDeploy: false,
-      canRemoveWatermark: false,
-      exportFormats: [],
-      advancedTemplates: false,
-      priorityQueue: false,
-      githubSync: false,
-      versionHistory: 0,
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Check, Sparkles, Crown, Zap, ArrowLeft, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { TIER_LIMITS } from '@/config/tiers';
+import { loadStripe } from '@stripe/stripe-js';
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const Pricing = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const plans = [
+    {
+      id: 'free',
+      name: 'Free',
+      price: 0,
+      yearlyPrice: 0,
+      icon: Sparkles,
+      color: 'from-gray-400 to-gray-600',
+      features: TIER_LIMITS.free.features,
+      cta: 'Current Plan',
+      popular: false,
+      stripePriceId: null,
     },
-    cta: 'Current Plan',
-    popular: false,
-  },
-
-  BASIC: {
-    id: 'basic',
-    name: 'Basic',
-    tagline: 'The Money Maker',
-    price: 9,
-    yearlyPrice: 89,
-    savings: 19,
-    priceId: process.env.VITE_STRIPE_BASIC_PRICE_ID,
-    description: 'Perfect for solo entrepreneurs & small businesses',
-    features: [
-      { text: 'Download 5 websites per month', included: true, highlight: true },
-      { text: 'Landing pages (1-3 sections, single page)', included: true },
-      { text: '1 custom domain connection', included: true },
-      { text: 'Remove "Made with Revenue Rocket" watermark', included: true, highlight: true },
-      { text: 'HTML/CSS export (production-ready)', included: true },
-      { text: '20+ basic templates', included: true },
-      { text: 'Manual editing (text, images, themes, colors)', included: true },
-      { text: 'Mobile responsive (auto-generated)', included: true },
-      { text: 'Save up to 10 projects', included: true },
-      { text: 'Basic SEO optimization (meta tags)', included: true },
-      { text: 'Email support (48-hour response)', included: true },
-      { text: 'Multi-page websites', included: false, locked: true },
-      { text: 'React/Vue/Next.js export', included: false, locked: true },
-      { text: 'AI chat iterations', included: false, locked: true },
-      { text: 'GitHub sync', included: false, locked: true },
-      { text: 'Advanced templates', included: false, locked: true },
-    ],
-    limits: {
-      websitesDownloadPerMonth: 5,
-      maxSections: 3,
-      maxPages: 1,
-      savedProjects: 10,
-      customDomains: 1,
-      aiIterations: 0,
-      canDownload: true,
-      canDeploy: true,
-      canRemoveWatermark: true,
-      exportFormats: ['html', 'css'],
-      advancedTemplates: false,
-      priorityQueue: false,
-      githubSync: false,
-      versionHistory: 0,
+    {
+      id: 'basic',
+      name: 'Basic',
+      price: 9,
+      yearlyPrice: 89,
+      icon: Zap,
+      color: 'from-green-400 to-emerald-500',
+      features: TIER_LIMITS.basic.features,
+      cta: 'Get Basic',
+      popular: false,
+      stripePriceId: import.meta.env.VITE_STRIPE_BASIC_PRICE_ID,
     },
-    cta: 'Get Basic',
-    popular: false,
-    costToYou: 1.25,
-    profit: 7.75,
-    margin: 86,
-  },
-
-  PRO: {
-    id: 'pro',
-    name: 'Pro',
-    tagline: 'The Sweet Spot',
-    price: 22,
-    yearlyPrice: 219,
-    savings: 45,
-    priceId: process.env.VITE_STRIPE_PRO_PRICE_ID,
-    description: 'Most popular for freelancers & small agencies',
-    features: [
-      { text: 'Download 12 websites per month', included: true, highlight: true },
-      { text: 'Multi-page websites (up to 8 pages)', included: true, highlight: true },
-      { text: '3 custom domain connections', included: true },
-      { text: 'React/Vue/Next.js export', included: true, highlight: true },
-      { text: 'GitHub sync (auto-deploy)', included: true },
-      { text: 'AI chat support (10 iterations per website)', included: true, highlight: true },
-      { text: '50+ advanced templates', included: true },
-      { text: 'Priority generation (2x faster)', included: true },
-      { text: 'Version history (3 versions per site)', included: true },
-      { text: 'All export formats (HTML/CSS/React/Vue/Next/Tailwind)', included: true },
-      { text: 'Save up to 30 projects', included: true },
-      { text: 'Advanced SEO tools (structured data, OG tags)', included: true },
-      { text: 'Analytics integration (Google Analytics, Plausible)', included: true },
-      { text: 'Form builder (contact forms, newsletter)', included: true },
-      { text: 'Email support (24-hour response)', included: true },
-      { text: 'White label', included: false, locked: true },
-      { text: 'API access', included: false, locked: true },
-      { text: 'Team collaboration', included: false, locked: true },
-      { text: 'Unlimited AI iterations', included: false, locked: true },
-    ],
-    limits: {
-      websitesDownloadPerMonth: 12,
-      maxPages: 8,
-      savedProjects: 30,
-      customDomains: 3,
-      aiIterations: 10,
-      canDownload: true,
-      canDeploy: true,
-      canRemoveWatermark: true,
-      exportFormats: ['html', 'css', 'react', 'vue', 'nextjs', 'tailwind'],
-      advancedTemplates: true,
-      priorityQueue: true,
-      githubSync: true,
-      versionHistory: 3,
-      formBuilder: true,
-      seoTools: 'advanced',
-      analyticsIntegration: true,
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: 22,
+      yearlyPrice: 219, // ~$18/month when billed yearly
+      icon: Crown,
+      color: 'from-yellow-400 to-orange-500',
+      features: TIER_LIMITS.pro.features,
+      cta: 'Upgrade to Pro',
+      popular: true,
+      stripePriceId: import.meta.env.VITE_STRIPE_PRO_PRICE_ID,
     },
-    cta: 'Get Pro',
-    popular: true,
-    costToYou: 9,
-    profit: 13,
-    margin: 59,
-  },
-
-  BUSINESS: {
-    id: 'business',
-    name: 'Business',
-    tagline: 'High Margin',
-    price: 49,
-    yearlyPrice: 489,
-    savings: 99,
-    priceId: process.env.VITE_STRIPE_BUSINESS_PRICE_ID,
-    description: 'For agencies & businesses with high volume needs',
-    features: [
-      { text: 'Download 40 websites per month', included: true, highlight: true },
-      { text: 'Complex websites (up to 20 pages)', included: true, highlight: true },
-      { text: '10 custom domain connections', included: true },
-      { text: 'Full white label (remove ALL branding)', included: true, highlight: true },
-      { text: 'API access (100 API calls/month)', included: true, highlight: true },
-      { text: 'Team collaboration (3 users)', included: true, highlight: true },
-      { text: 'Unlimited AI iterations', included: true, highlight: true },
-      { text: 'Priority support (12-hour response)', included: true },
-      { text: 'Custom integrations (Zapier, Make, Webhooks)', included: true },
-      { text: 'Advanced analytics dashboard', included: true },
-      { text: 'Save unlimited projects', included: true },
-      { text: 'Custom CSS/JS injection', included: true },
-      { text: 'Database schema export', included: true },
-      { text: 'Payment gateway templates', included: true },
-      { text: 'Export to Figma/Webflow/WordPress', included: true },
-      { text: 'Role-based permissions', included: true },
-      { text: 'Activity log & comments', included: true },
-    ],
-    limits: {
-      websitesDownloadPerMonth: 40,
-      maxPages: 20,
-      savedProjects: -1, // unlimited
-      customDomains: 10,
-      aiIterations: -1, // unlimited
-      apiCalls: 100,
-      teamMembers: 3,
-      canDownload: true,
-      canDeploy: true,
-      canRemoveWatermark: true,
-      exportFormats: ['html', 'css', 'react', 'vue', 'nextjs', 'tailwind', 'angular', 'svelte', 'figma', 'webflow', 'wordpress'],
-      advancedTemplates: true,
-      priorityQueue: true,
-      githubSync: true,
-      versionHistory: -1, // unlimited
-      formBuilder: true,
-      seoTools: 'advanced',
-      analyticsIntegration: true,
-      whiteLabel: true,
-      apiAccess: true,
-      teamCollaboration: true,
-      customIntegrations: true,
-      customCssJs: true,
+    {
+      id: 'business',
+      name: 'Business',
+      price: 49,
+      yearlyPrice: 489, // ~$41/month when billed yearly
+      icon: Zap,
+      color: 'from-purple-500 to-pink-500',
+      features: TIER_LIMITS.business.features,
+      cta: 'Contact Sales',
+      popular: false,
+      stripePriceId: import.meta.env.VITE_STRIPE_BUSINESS_PRICE_ID,
     },
-    cta: 'Get Business',
-    popular: false,
-    costToYou: 30,
-    profit: 19,
-    margin: 39,
-  },
+  ];
+  const handleCheckout = async (planId: string, stripePriceId: string | null) => {
+    if (!user) {
+      toast({
+        title: 'Sign in required',
+        description: 'Please sign in to upgrade your plan',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+    if (planId === 'free') {
+      toast({
+        title: 'Already on Free Plan',
+        description: "You're currently on the free plan",
+      });
+      return;
+    }
+    if (planId === 'business') {
+      // Open email for business sales
+      window.location.href = 'mailto:sales@sento.ai?subject=Business Plan Inquiry';
+      return;
+    }
+    if (!stripePriceId) {
+      toast({
+        title: 'Configuration Error',
+        description: 'Stripe price ID not configured. Please contact support.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setLoadingPlan(planId);
+    try {
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe failed to load');
+      // Create checkout session
+      const response = await fetch('https://original-lbxv.onrender.com/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: stripePriceId,
+          userId: user.id,
+          email: user.email,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+      const { sessionId } = await response.json();
+      // Redirect to Stripe Checkout
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: 'Checkout Failed',
+        description: error instanceof Error ? error.message : 'Unable to start checkout. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+  const getPrice = (plan: typeof plans[0]) => {
+    if (billingCycle === 'yearly') {
+      return plan.yearlyPrice;
+    }
+    return plan.price;
+  };
+  const getSavings = (plan: typeof plans[0]) => {
+    if (billingCycle === 'yearly' && plan.price > 0) {
+      const monthlyCost = plan.price * 12;
+      const yearlyCost = plan.yearlyPrice;
+      const savings = monthlyCost - yearlyCost;
+      return savings;
+    }
+    return 0;
+  };
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-60 left-1/3 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '4s' }}></div>
+      </div>
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/app')}
+              className="text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to App
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary" />
+            <span className="text-xl font-bold text-white">Sento</span>
+          </div>
+        </div>
+      </nav>
+      {/* Main Content */}
+      <main className="relative pt-24 pb-12 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-12 space-y-4">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white">
+              Choose Your Plan
+            </h1>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Start free, upgrade when you need more power. Cancel anytime.
+            </p>
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <span className={`text-sm font-semibold ${billingCycle === 'monthly' ? 'text-white' : 'text-gray-400'}`}>
+                Monthly
+              </span>
+              <button
+                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                className="relative w-14 h-7 bg-white/20 rounded-full transition-all duration-300 hover:bg-white/30"
+              >
+                <div
+                  className={`absolute top-1 left-1 w-5 h-5 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full transition-transform duration-300 ${
+                    billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className={`text-sm font-semibold ${billingCycle === 'yearly' ? 'text-white' : 'text-gray-400'}`}>
+                Yearly
+              </span>
+              {billingCycle === 'yearly' && (
+                <span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-xs font-semibold animate-pulse">
+                  Save up to 20%
+                </span>
+              )}
+            </div>
+          </div>
+          {/* Pricing Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 max-w-6xl mx-auto mb-16">
+            {plans.map((plan, index) => {
+              const Icon = plan.icon;
+              const price = getPrice(plan);
+              const savings = getSavings(plan);
+              return (
+                <div
+                  key={plan.id}
+                  className={`relative rounded-2xl backdrop-blur-sm transition-all duration-500 hover:scale-105 ${
+                    plan.popular
+                      ? 'bg-white/10 border-2 border-yellow-400 shadow-2xl shadow-yellow-400/20'
+                      : 'bg-white/5 border border-white/10'
+                  }`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  {plan.popular && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-sm font-bold rounded-full shadow-lg">
+                      🔥 Most Popular
+                    </div>
+                  )}
+                  <div className="p-8">
+                    {/* Icon & Name */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${plan.color} flex items-center justify-center`}>
+                        <Icon className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
+                    </div>
+                    {/* Price */}
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-bold text-white">${price}</span>
+                        {plan.price > 0 && (
+                          <span className="text-gray-400">
+                            /{billingCycle === 'monthly' ? 'mo' : 'yr'}
+                          </span>
+                        )}
+                      </div>
+                      {billingCycle === 'yearly' && plan.price > 0 && (
+                        <p className="text-sm text-green-400 mt-1">
+                          💰 Save ${savings}/year
+                        </p>
+                      )}
+                      {billingCycle === 'yearly' && plan.price > 0 && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          ${Math.round(price / 12)}/month when billed annually
+                        </p>
+                      )}
+                    </div>
+                    {/* Features */}
+                    <ul className="space-y-3 mb-8">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                          <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-gray-300 text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {/* CTA Button */}
+                    <Button
+                      onClick={() => handleCheckout(plan.id, plan.stripePriceId)}
+                      disabled={loadingPlan === plan.id}
+                      className={`w-full h-12 font-bold transition-all duration-300 ${
+                        plan.popular
+                          ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white shadow-lg hover:shadow-xl hover:scale-105'
+                          : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                      }`}
+                    >
+                      {loadingPlan === plan.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        plan.cta
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Feature Comparison Table */}
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl font-bold text-white text-center mb-8">
+              Compare All Features
+            </h2>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-white/10">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-white font-semibold">Feature</th>
+                    <th className="px-6 py-4 text-center text-white font-semibold">Free</th>
+                    <th className="px-6 py-4 text-center text-white font-semibold">Basic</th>
+                    <th className="px-6 py-4 text-center text-white font-semibold bg-yellow-400/10">Pro</th>
+                    <th className="px-6 py-4 text-center text-white font-semibold">Business</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  <tr>
+                    <td className="px-6 py-4 text-gray-300">Downloads per month</td>
+                    <td className="px-6 py-4 text-center text-gray-400">0</td>
+                    <td className="px-6 py-4 text-center text-gray-400">5</td>
+                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Unlimited</td>
+                    <td className="px-6 py-4 text-center text-green-400">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-gray-300">Projects</td>
+                    <td className="px-6 py-4 text-center text-gray-400">3</td>
+                    <td className="px-6 py-4 text-center text-gray-400">10</td>
+                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Unlimited</td>
+                    <td className="px-6 py-4 text-center text-green-400">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-gray-300">Templates</td>
+                    <td className="px-6 py-4 text-center text-gray-400">Basic</td>
+                    <td className="px-6 py-4 text-center text-gray-400">Standard</td>
+                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Premium</td>
+                    <td className="px-6 py-4 text-center text-green-400">Custom</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-gray-300">Priority Support</td>
+                    <td className="px-6 py-4 text-center text-red-400">✗</td>
+                    <td className="px-6 py-4 text-center text-red-400">✗</td>
+                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">✓</td>
+                    <td className="px-6 py-4 text-center text-green-400">✓</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-gray-300">Export Options</td>
+                    <td className="px-6 py-4 text-center text-gray-400">Basic</td>
+                    <td className="px-6 py-4 text-center text-gray-400">HTML/CSS</td>
+                    <td className="px-6 py-4 text-center text-green-400 bg-yellow-400/5">Advanced</td>
+                    <td className="px-6 py-4 text-center text-green-400">Full</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-gray-300">White Label</td>
+                    <td className="px-6 py-4 text-center text-red-400">✗</td>
+                    <td className="px-6 py-4 text-center text-red-400">✗</td>
+                    <td className="px-6 py-4 text-center text-red-400 bg-yellow-400/5">✗</td>
+                    <td className="px-6 py-4 text-center text-green-400">✓</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-gray-300">API Access</td>
+                    <td className="px-6 py-4 text-center text-red-400">✗</td>
+                    <td className="px-6 py-4 text-center text-red-400">✗</td>
+                    <td className="px-6 py-4 text-center text-red-400 bg-yellow-400/5">✗</td>
+                    <td className="px-6 py-4 text-center text-green-400">✓</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {/* FAQ Section */}
+          <div className="max-w-3xl mx-auto mt-16">
+            <h2 className="text-3xl font-bold text-white text-center mb-8">
+              Frequently Asked Questions
+            </h2>
+            <div className="space-y-4">
+              {[
+                {
+                  q: 'Can I change my plan later?',
+                  a: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.',
+                },
+                {
+                  q: 'What payment methods do you accept?',
+                  a: 'We accept all major credit cards, debit cards, and digital wallets through Stripe.',
+                },
+                {
+                  q: 'Is there a free trial?',
+                  a: 'The Free plan is available forever with 5 generations per day. No credit card required.',
+                },
+                {
+                  q: 'Can I cancel anytime?',
+                  a: 'Absolutely! Cancel anytime from your account settings. No questions asked.',
+                },
+              ].map((faq, i) => (
+                <div
+                  key={i}
+                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all duration-300"
+                >
+                  <h3 className="text-lg font-semibold text-white mb-2">{faq.q}</h3>
+                  <p className="text-gray-400">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* CTA Section */}
+          <div className="text-center mt-16">
+            <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-white/10 rounded-2xl p-8 max-w-3xl mx-auto">
+              <h2 className="text-3xl font-bold text-white mb-4">
+                Still have questions?
+              </h2>
+              <p className="text-gray-300 mb-6">
+                Our team is here to help you choose the right plan for your needs.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button
+                  onClick={() => window.location.href = 'mailto:support@sento.ai'}
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                >
+                  Contact Support
+                </Button>
+                <Button
+                  onClick={() => navigate('/app')}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white"
+                >
+                  Start Building Free
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  );
 };
-
-// Helper: Get tier by ID
-export function getTier(tierId: string) {
-  return PRICING_TIERS[tierId.toUpperCase()] || PRICING_TIERS.FREE;
-}
-
-// Helper: Get tier limits
-export function getTierLimits(tier: string) {
-  return getTier(tier).limits;
-}
-
-// Helper: Check if user can download website
-export function canDownloadWebsite(tier: string, websitesDownloaded: number): {
-  canDownload: boolean;
-  reason?: string;
-  upgradeToTier?: string;
-} {
-  const tierData = getTier(tier);
-  const limits = tierData.limits;
-
-  // Check if tier allows downloads at all
-  if (!limits.canDownload) {
-    return {
-      canDownload: false,
-      reason: 'Download feature is not available in Free plan',
-      upgradeToTier: 'basic',
-    };
-  }
-
-  // Check if monthly limit reached
-  if (limits.websitesDownloadPerMonth !== -1 && 
-      websitesDownloaded >= limits.websitesDownloadPerMonth) {
-    return {
-      canDownload: false,
-      reason: `You've reached your monthly limit of ${limits.websitesDownloadPerMonth} downloads`,
-      upgradeToTier: tier === 'basic' ? 'pro' : 'business',
-    };
-  }
-
-  return { canDownload: true };
-}
-
-// Helper: Check if user can create multi-page website
-export function canCreateMultiPageWebsite(tier: string, pageCount: number): {
-  canCreate: boolean;
-  reason?: string;
-  maxPages: number;
-} {
-  const limits = getTierLimits(tier);
-
-  if (limits.maxPages === -1) {
-    return { canCreate: true, maxPages: -1 };
-  }
-
-  if (pageCount > limits.maxPages) {
-    return {
-      canCreate: false,
-      reason: `Your ${tier} plan supports up to ${limits.maxPages} pages. Upgrade to create multi-page websites.`,
-      maxPages: limits.maxPages,
-    };
-  }
-
-  return { canCreate: true, maxPages: limits.maxPages };
-}
-
-// Helper: Check if user can use AI chat
-export function canUseAIChat(tier: string, iterationsUsed: number): {
-  canUse: boolean;
-  remaining: number;
-  reason?: string;
-} {
-  const limits = getTierLimits(tier);
-
-  if (limits.aiIterations === 0) {
-    return {
-      canUse: false,
-      remaining: 0,
-      reason: 'AI chat is not available in Free plan. Upgrade to Pro to unlock AI iterations.',
-    };
-  }
-
-  if (limits.aiIterations === -1) {
-    return { canUse: true, remaining: -1 }; // unlimited
-  }
-
-  const remaining = limits.aiIterations - iterationsUsed;
-
-  if (remaining <= 0) {
-    return {
-      canUse: false,
-      remaining: 0,
-      reason: `You've used all ${limits.aiIterations} AI iterations for this website. Upgrade to Business for unlimited iterations.`,
-    };
-  }
-
-  return { canUse: true, remaining };
-}
-
-// Helper: Check export format access
-export function canExportFormat(tier: string, format: string): {
-  canExport: boolean;
-  reason?: string;
-} {
-  const limits = getTierLimits(tier);
-
-  if (!limits.exportFormats.includes(format.toLowerCase())) {
-    const availableFormats = limits.exportFormats.join(', ');
-    return {
-      canExport: false,
-      reason: availableFormats 
-        ? `Your ${tier} plan only supports: ${availableFormats}. Upgrade for more export formats.`
-        : 'Export is not available in Free plan. Upgrade to download code.',
-    };
-  }
-
-  return { canExport: true };
-}
-
-// Helper: Check if user can remove watermark
-export function canRemoveWatermark(tier: string): boolean {
-  return getTierLimits(tier).canRemoveWatermark;
-}
-
-// Helper: Check if user has GitHub sync
-export function hasGitHubSync(tier: string): boolean {
-  return getTierLimits(tier).githubSync;
-}
-
-// Helper: Check if user has API access
-export function hasAPIAccess(tier: string): boolean {
-  return getTierLimits(tier).apiAccess || false;
-}
-
-// Helper: Check if user has white label
-export function hasWhiteLabel(tier: string): boolean {
-  return getTierLimits(tier).whiteLabel || false;
-}
-
-// Helper: Get priority queue status
-export function hasPriorityQueue(tier: string): boolean {
-  return getTierLimits(tier).priorityQueue;
-}
-
-// Helper: Check saved projects limit
-export function canSaveProject(tier: string, currentProjects: number): {
-  canSave: boolean;
-  reason?: string;
-  limit: number;
-} {
-  const limits = getTierLimits(tier);
-
-  if (limits.savedProjects === -1) {
-    return { canSave: true, limit: -1 }; // unlimited
-  }
-
-  if (currentProjects >= limits.savedProjects) {
-    return {
-      canSave: false,
-      reason: `You've reached your limit of ${limits.savedProjects} saved projects. Delete old projects or upgrade.`,
-      limit: limits.savedProjects,
-    };
-  }
-
-  return { canSave: true, limit: limits.savedProjects };
-}
+export default Pricing;
