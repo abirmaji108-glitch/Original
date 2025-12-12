@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Sparkles, Zap, Building2 } from 'lucide-react';
+import { Check, Sparkles, Zap, Building2, X } from 'lucide-react';
 import { TIER_LIMITS } from '@/config/tiers';
 
 const Pricing = () => {
@@ -11,7 +11,13 @@ const Pricing = () => {
       description: 'Perfect for trying out Revenue Rocket',
       price: { monthly: 0, yearly: 0 },
       icon: Sparkles,
-      features: TIER_LIMITS.free.features,
+      features: [
+        '2 website previews per month',
+        'Landing pages (3-5 sections max)',
+        'Basic templates only',
+        'Watermarked exports',
+        'Community support'
+      ],
       cta: 'Get Started',
       highlighted: false,
       color: 'from-gray-400 to-gray-600'
@@ -53,10 +59,10 @@ const Pricing = () => {
         '50+ premium templates',
         'Unlimited projects',
         'Advanced SEO tools',
-        'AI chat support (10 iterations per site)',
+        'AI chat support (10 iterations)',
         'Priority support (24h)',
         'Custom code injection',
-        'Version history (3 versions per site)',
+        'Version history (3 versions)',
         'GitHub sync'
       ],
       cta: 'Start Pro',
@@ -75,7 +81,7 @@ const Pricing = () => {
       features: [
         'Download 40 websites per month',
         'Complex websites (up to 20 pages)',
-        'Unlimited team members (3 included)',
+        '3 team members included',
         'Unlimited custom domains',
         'White-label solution',
         'Custom templates',
@@ -85,15 +91,12 @@ const Pricing = () => {
         'Custom integrations',
         'Priority generation queue',
         'Unlimited AI iterations',
-        'Team collaboration features',
-        'Advanced analytics dashboard'
+        'Team collaboration',
+        'Advanced analytics'
       ],
       cta: 'Contact Sales',
       highlighted: false,
-      color: 'from-orange-500 to-orange-600',
-      stripeLink: billingCycle === 'monthly'
-        ? import.meta.env.VITE_STRIPE_BUSINESS_PRICE_ID
-        : import.meta.env.VITE_STRIPE_BUSINESS_YEARLY_PRICE_ID
+      color: 'from-orange-500 to-orange-600'
     }
   ];
 
@@ -103,7 +106,9 @@ const Pricing = () => {
     } else if (plan.name === 'Business') {
       window.location.href = 'mailto:sales@sento.ai?subject=Business Plan Inquiry';
     } else if (plan.stripeLink) {
-      window.open(`https://buy.stripe.com/test_${plan.stripeLink}`, '_blank');
+      // TEMPORARY: Show alert until Stripe is fully configured
+      alert('Payment system coming soon! For now, please sign up and we\'ll contact you.');
+      window.location.href = '/#/signup';
     }
   };
 
@@ -112,6 +117,30 @@ const Pricing = () => {
     pro: ((22 * 12) - 219),
     business: ((49 * 12) - 489)
   };
+
+  const comparisonFeatures = [
+    { name: 'Monthly Downloads', free: '2 previews', basic: '5 sites', pro: '12 sites', business: '40 sites' },
+    { name: 'Website Complexity', free: '3-5 sections', basic: '1-3 sections', pro: 'Up to 8 pages', business: 'Up to 20 pages' },
+    { name: 'Custom Domains', free: '0', basic: '1', pro: '3', business: 'Unlimited' },
+    { name: 'Templates', free: 'Basic only', basic: '20+', pro: '50+ premium', business: 'Custom' },
+    { name: 'AI Support', free: 'None', basic: 'None', pro: '10 iterations', business: 'Unlimited' },
+    { name: 'Support', free: 'Community', basic: '48h email', pro: '24h priority', business: 'Dedicated' }
+  ];
+
+  const faqs = [
+    {
+      question: 'Can I change plans anytime?',
+      answer: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we\'ll prorate any differences.'
+    },
+    {
+      question: 'What happens if I exceed my download limit?',
+      answer: 'You can still generate and preview websites, but downloads will be disabled until next month or you can upgrade to a higher tier for immediate access.'
+    },
+    {
+      question: 'Do you offer refunds?',
+      answer: 'Yes, we offer a 14-day money-back guarantee on all paid plans. If you\'re not satisfied, contact us for a full refund.'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white">
@@ -150,7 +179,8 @@ const Pricing = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-8 max-w-7xl mx-auto mb-20">
+        {/* Pricing Cards */}
+        <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto mb-20">
           {plans.map((plan, index) => {
             const Icon = plan.icon;
             const price = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly;
@@ -160,33 +190,33 @@ const Pricing = () => {
               <div
                 key={index}
                 style={{ animationDelay: `${index * 0.1}s` }}
-                className={`pricing-card glass-card relative rounded-2xl p-8 animate-slide-up ${
+                className={`pricing-card relative rounded-2xl p-6 animate-slide-up ${
                   plan.highlighted
-                    ? 'bg-gradient-to-br from-purple-600/20 to-pink-600/20 border-2 border-purple-500 shadow-2xl shadow-purple-500/20 scale-105 animate-pulse-glow'
-                    : 'bg-gray-800/50 border border-gray-700'
-                } backdrop-blur-sm transition-all duration-500 hover:scale-110 hover:-translate-y-4 hover:shadow-2xl`}
+                    ? 'bg-gradient-to-br from-purple-600/10 to-pink-600/10 border-2 border-purple-500/50'
+                    : 'bg-gray-800/40 border border-gray-700/50'
+                } backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:-translate-y-2 hover:border-purple-500/30`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
                       Most Popular
                     </span>
                   </div>
                 )}
                 <div className="text-center mb-6">
-                  <div className={`inline-block p-3 rounded-xl bg-gradient-to-r ${plan.color} mb-4`}>
-                    <Icon className="w-6 h-6" />
+                  <div className={`inline-block p-2 rounded-xl bg-gradient-to-r ${plan.color} mb-3`}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                  <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
-                  <div className="mb-4">
-                    <span className="text-5xl font-bold">${displayPrice}</span>
-                    <span className="text-gray-400 ml-2">
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                  <p className="text-gray-400 text-xs mb-4">{plan.description}</p>
+                  <div className="mb-3">
+                    <span className="text-4xl font-bold">${displayPrice}</span>
+                    <span className="text-gray-400 text-sm ml-1">
                       {billingCycle === 'yearly' ? '/mo' : '/month'}
                     </span>
                   </div>
                   {billingCycle === 'yearly' && plan.name !== 'Free' && (
-                    <p className="text-sm text-green-400">
+                    <p className="text-xs text-green-400">
                       Save ${savings[plan.name.toLowerCase() as keyof typeof savings]}/year
                     </p>
                   )}
@@ -194,7 +224,7 @@ const Pricing = () => {
 
                 <button
                   onClick={() => handlePlanClick(plan)}
-                  className={`w-full py-3 rounded-lg font-semibold transition-all mb-6 ${
+                  className={`w-full py-2.5 rounded-lg font-semibold transition-all mb-6 text-sm ${
                     plan.highlighted
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
                       : 'bg-gray-700 hover:bg-gray-600 text-white'
@@ -203,11 +233,11 @@ const Pricing = () => {
                   {plan.cta}
                 </button>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {plan.features.map((feature, featureIndex) => (
-                    <div key={featureIndex} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-300">{feature}</span>
+                    <div key={featureIndex} className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-gray-300">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -216,30 +246,54 @@ const Pricing = () => {
           })}
         </div>
 
-        {/* Comparison Table & FAQ remain unchanged */}
-        <div className="max-w-7xl mx-auto">
+        {/* Comparison Table */}
+        <div className="max-w-7xl mx-auto mb-20">
           <h2 className="text-3xl font-bold text-center mb-8">Compare Plans</h2>
-          <div className="bg-gray-800/50 rounded-2xl p-8 backdrop-blur-sm border border-gray-700 overflow-x-auto">
-            <table className="w-full">
-              {/* ... table content unchanged ... */}
+          <div className="bg-gray-800/30 rounded-2xl p-6 backdrop-blur-sm border border-gray-700/50 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-4 px-4 text-gray-400 font-medium">Feature</th>
+                  <th className="text-center py-4 px-4 text-gray-400 font-medium">Free</th>
+                  <th className="text-center py-4 px-4 text-gray-400 font-medium">Basic</th>
+                  <th className="text-center py-4 px-4 text-purple-400 font-medium">Pro</th>
+                  <th className="text-center py-4 px-4 text-gray-400 font-medium">Business</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparisonFeatures.map((feature, index) => (
+                  <tr key={index} className="border-b border-gray-800/50">
+                    <td className="py-4 px-4 text-gray-300 font-medium">{feature.name}</td>
+                    <td className="text-center py-4 px-4 text-gray-400">{feature.free}</td>
+                    <td className="text-center py-4 px-4 text-gray-300">{feature.basic}</td>
+                    <td className="text-center py-4 px-4 text-purple-300 font-medium">{feature.pro}</td>
+                    <td className="text-center py-4 px-4 text-gray-300">{feature.business}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto mt-20">
+        {/* FAQ Section */}
+        <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-          <div className="space-y-6">
-            {/* ... FAQ items unchanged ... */}
+          <div className="space-y-4">
+            {faqs.map((faq, index) => (
+              <div key={index} className="bg-gray-800/30 rounded-xl p-6 backdrop-blur-sm border border-gray-700/50">
+                <h3 className="text-lg font-semibold mb-3 text-purple-300">{faq.question}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{faq.answer}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* NEW STYLE BLOCK — REPLACED AS REQUESTED */}
       <style>{`
         @keyframes slideUp {
           from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(20px);
           }
           to {
             opacity: 1;
@@ -247,33 +301,8 @@ const Pricing = () => {
           }
         }
         
-        @keyframes pulse-glow {
-          0%, 100% {
-            box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
-          }
-          50% {
-            box-shadow: 0 0 40px rgba(168, 85, 247, 0.6);
-          }
-        }
-        
-        @keyframes gradient-border {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
-        }
-        
         .animate-slide-up {
-          animation: slideUp 0.6s ease-out forwards;
-        }
-        
-        .animate-pulse-glow {
-          animation: pulse-glow 2s ease-in-out infinite;
+          animation: slideUp 0.5s ease-out forwards;
         }
         
         .pricing-card {
@@ -284,25 +313,17 @@ const Pricing = () => {
         .pricing-card::before {
           content: '';
           position: absolute;
-          inset: -2px;
+          inset: -1px;
           border-radius: 1rem;
-          background: linear-gradient(45deg, #a855f7, #06b6d4, #ec4899, #a855f7);
-          background-size: 300% 300%;
+          background: linear-gradient(45deg, rgba(168, 85, 247, 0.3), rgba(6, 182, 212, 0.3), rgba(236, 72, 153, 0.3));
           opacity: 0;
           z-index: -1;
           transition: opacity 0.3s ease;
-          filter: blur(10px);
+          filter: blur(8px);
         }
         
         .pricing-card:hover::before {
-          opacity: 0.6;
-          animation: gradient-border 3s ease infinite;
-        }
-        
-        .glass-card {
-          backdrop-filter: blur(16px) saturate(180%);
-          background-color: rgba(17, 24, 39, 0.75);
-          border: 1px solid rgba(255, 255, 255, 0.125);
+          opacity: 0.4;
         }
       `}</style>
     </div>
