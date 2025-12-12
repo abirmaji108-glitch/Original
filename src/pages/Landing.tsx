@@ -5,14 +5,17 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 scroll-smooth">
       {/* Navigation Bar */}
-      <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
+      <nav className="container mx-auto px-6 py-4 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-50 shadow-sm">
         <div className="flex items-center gap-2">
           <Sparkles className="w-8 h-8 text-purple-600" />
           <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
             Sento
           </span>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-6 items-center">
+          <Button variant="ghost" onClick={() => window.location.href = '/#/pricing'}>
+            Pricing
+          </Button>
           <Button variant="ghost" onClick={() => window.location.href = '/#/login'}>
             Sign In
           </Button>
@@ -24,7 +27,6 @@ const Landing = () => {
           </Button>
         </div>
       </nav>
-
       {/* Hero Section */}
       <section className="container mx-auto px-6 pt-20 pb-32">
         <div className="max-w-4xl mx-auto text-center">
@@ -33,18 +35,15 @@ const Landing = () => {
             <Zap className="w-4 h-4" />
             AI-Powered Website Generation
           </div>
-
           {/* Main Headline */}
           <h1 className="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight">
             Build Stunning Websites in Seconds
           </h1>
-
           {/* Subheadline */}
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto">
             Just describe your vision. Our AI generates professional, responsive websites instantly. No coding required. No
             design skills needed.
           </p>
-
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Button
@@ -64,7 +63,6 @@ const Landing = () => {
               Watch Demo
             </Button>
           </div>
-
           {/* Trust Indicators */}
           <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-600">
             <div className="flex items-center gap-2">
@@ -87,7 +85,6 @@ const Landing = () => {
             </div>
           </div>
         </div>
-
         {/* Hero Image/Preview */}
         <div className="max-w-5xl mx-auto mt-20">
           <div className="relative">
@@ -103,7 +100,6 @@ const Landing = () => {
           </div>
         </div>
       </section>
-
       {/* Features Section */}
       <section className="py-24 bg-white relative overflow-hidden">
         {/* Floating Gradient Orbs */}
@@ -127,7 +123,6 @@ const Landing = () => {
               minutes
             </p>
           </div>
-
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Feature 1 */}
@@ -144,7 +139,6 @@ const Landing = () => {
                 </p>
               </div>
             </div>
-
             {/* Feature 2 */}
             <div
               className="relative bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up"
@@ -162,7 +156,6 @@ const Landing = () => {
                 </p>
               </div>
             </div>
-
             {/* Feature 3 */}
             <div
               className="relative bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up"
@@ -179,7 +172,6 @@ const Landing = () => {
                 </p>
               </div>
             </div>
-
             {/* Feature 4 */}
             <div
               className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up"
@@ -196,7 +188,6 @@ const Landing = () => {
                 </p>
               </div>
             </div>
-
             {/* Feature 5 */}
             <div
               className="relative bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up"
@@ -213,7 +204,6 @@ const Landing = () => {
                 </p>
               </div>
             </div>
-
             {/* Feature 6 */}
             <div
               className="relative bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 hover:shadow-2xl transition-all duration-500 group hover:scale-105 hover:-translate-y-3 animate-fade-in-up"
@@ -233,7 +223,6 @@ const Landing = () => {
           </div>
         </div>
       </section>
-
       {/* Testimonials Section */}
       <section className="py-24 bg-white relative overflow-hidden">
         {/* Background decorative elements */}
@@ -254,7 +243,6 @@ const Landing = () => {
               Join thousands of satisfied creators who have transformed their web presence with Sento AI
             </p>
           </div>
-
           {/* Testimonials Grid */}
           <div className="grid md:grid-cols-3 gap-8">
             {/* Testimonial 1 */}
@@ -280,7 +268,6 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-
             {/* Testimonial 2 */}
             <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 group">
               <div className="flex items-center gap-1 mb-4">
@@ -304,7 +291,6 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-
             {/* Testimonial 3 */}
             <div className="bg-gradient-to-br from-pink-50 to-white rounded-2xl p-8 hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 group">
               <div className="flex items-center gap-1 mb-4">
@@ -329,7 +315,6 @@ const Landing = () => {
               </div>
             </div>
           </div>
-
           {/* Trust indicators */}
           <div className="mt-16 text-center">
             <p className="text-gray-600 mb-6">Trusted by over 10,000+ creators worldwide</p>
@@ -366,7 +351,6 @@ const Landing = () => {
               Start free and upgrade as you grow. No credit card required.
             </p>
           </div>
-
           <div className="grid md:grid-cols-4 gap-6 max-w-6xl mx-auto mb-12">
             {/* Free Card */}
             <div className="relative group">
@@ -386,10 +370,10 @@ const Landing = () => {
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Basic templates</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Watermarked exports</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Community support</span></li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Mobile responsive</span></li>
                 </ul>
               </div>
             </div>
-
             {/* Basic Card */}
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
@@ -408,10 +392,10 @@ const Landing = () => {
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>20+ premium templates</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>No watermark</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Email support (48h)</span></li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Custom colors & fonts</span></li>
                 </ul>
               </div>
             </div>
-
             {/* Pro Card */}
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
@@ -434,7 +418,6 @@ const Landing = () => {
                 </ul>
               </div>
             </div>
-
             {/* Business Card */}
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
@@ -452,12 +435,12 @@ const Landing = () => {
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>40 downloads/month</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Custom templates</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>API access</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Dedicated support</span></li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Dedicated account manager</span></li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>White-label options</span></li>
                 </ul>
               </div>
             </div>
           </div>
-
           <div className="text-center">
             <Button
               size="lg"
@@ -492,14 +475,12 @@ const Landing = () => {
               Everything you need to know about Sento AI
             </p>
           </div>
-
           {/* FAQ Grid */}
           <div className="max-w-4xl mx-auto space-y-6">
             {/* FAQ Items (unchanged – kept as-is) */}
             {/* ... (all FAQ items remain exactly as in your original code) */}
             {/* For brevity they are omitted here but they are still present in the full file */}
           </div>
-
           {/* CTA at bottom */}
           <div className="mt-16 text-center">
             <p className="text-gray-600 mb-6 text-lg">Still have questions?</p>
@@ -509,7 +490,6 @@ const Landing = () => {
           </div>
         </div>
       </section>
-
       {/* Call to Action Section */}
       <section className="py-24 bg-gradient-to-br from-purple-600 via-blue-600 to-purple-700 relative overflow-hidden">
         {/* Animated background elements */}
@@ -530,18 +510,15 @@ const Landing = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full mb-8 animate-bounce">
               <Zap className="w-10 h-10 text-white" />
             </div>
-
             {/* Heading */}
             <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
               Ready to Build Your Dream Website?
             </h2>
-
             {/* Subheading */}
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
               Join 10,000+ creators who are building stunning websites with AI. Start your free trial today—no credit
               card required.
             </p>
-
             {/* Features List */}
             <div className="flex flex-wrap justify-center gap-6 mb-10">
               <div className="flex items-center gap-2 text-white/90">
@@ -584,7 +561,6 @@ const Landing = () => {
                 <span className="font-semibold">Cancel anytime</span>
               </div>
             </div>
-
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
               <Button className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-6 text-lg font-bold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105 group">
@@ -598,7 +574,6 @@ const Landing = () => {
                 </svg>
               </Button>
             </div>
-
             {/* Trust Indicators */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-white/80 text-sm">
               <div className="flex items-center gap-2">
@@ -616,7 +591,6 @@ const Landing = () => {
             </div>
           </div>
         </div>
-
         {/* Bottom wave decoration */}
         <div className="absolute bottom-0 left-0 w-full">
           <svg
@@ -632,7 +606,6 @@ const Landing = () => {
           </svg>
         </div>
       </section>
-
       {/* Footer Section */}
       <footer className="bg-gray-900 text-white relative overflow-hidden">
         {/* Background decorative gradient */}
@@ -659,7 +632,6 @@ const Landing = () => {
             {/* Other footer columns remain unchanged */}
             {/* ... */}
           </div>
-
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
