@@ -403,10 +403,10 @@ const Landing = () => {
               </div>
             </div>
             {/* Pro Card */}
-            <div className="relative group flex h-full">
+            <div className="relative group h-full">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500 pointer-events-none"></div>
               <div className="relative bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-6 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 border-2 border-purple-500 flex flex-col h-full">
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2"><span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-xs font-bold">MOST POPULAR</span></div>
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 whitespace-nowrap"><span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-xs font-bold">MOST POPULAR</span></div>
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold text-white mb-2">Pro</h3>
                   <div className="mb-4">
