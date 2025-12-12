@@ -5,30 +5,36 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 scroll-smooth">
       {/* Navigation Bar */}
-      <nav className="container mx-auto px-6 py-4 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-50 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-8 h-8 text-purple-600" />
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Sento
-          </span>
-        </div>
-        <div className="flex gap-6 items-center">
-          <Button variant="ghost" onClick={() => window.location.href = '/#/pricing'}>
-            Pricing
-          </Button>
-          <Button variant="ghost" onClick={() => window.location.href = '/#/login'}>
-            Sign In
-          </Button>
-          <Button
-            onClick={() => window.location.href = '/#/signup'}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-          >
-            Get Started Free
-          </Button>
+      <nav className="fixed top-0 left-0 right-0 bg-white shadow-md z-50 border-b border-gray-200">
+        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-8 h-8 text-purple-600" />
+            <span className="text-2xl font-bold text-purple-600">Sento</span>
+          </div>
+          <div className="flex gap-4 items-center">
+            <button
+              onClick={() => window.location.href = '/#/pricing'}
+              className="px-4 py-2 text-gray-900 hover:text-purple-600 font-semibold"
+            >
+              Pricing
+            </button>
+            <button
+              onClick={() => window.location.href = '/#/login'}
+              className="px-4 py-2 text-gray-900 hover:text-purple-600 font-semibold"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => window.location.href = '/#/signup'}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
+            >
+              Get Started Free
+            </button>
+          </div>
         </div>
       </nav>
       {/* Hero Section */}
-      <section className="container mx-auto px-6 pt-20 pb-32">
+      <section className="container mx-auto px-6 pt-32 pb-32">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
@@ -351,9 +357,9 @@ const Landing = () => {
               Start free and upgrade as you grow. No credit card required.
             </p>
           </div>
-          <div className="grid md:grid-cols-4 gap-6 max-w-6xl mx-auto mb-12">
+          <div className="grid md:grid-cols-4 gap-6 max-w-6xl mx-auto mb-12 items-stretch">
             {/* Free Card */}
-            <div className="relative group">
+            <div className="relative group h-full">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
               <div className="relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-200">
                 <div className="text-center mb-6">
@@ -365,17 +371,17 @@ const Landing = () => {
                   <p className="text-sm text-gray-600">Perfect for trying out</p>
                 </div>
                 <Button onClick={() => window.location.href = '/#/signup'} className="w-full bg-gray-800 hover:bg-gray-900 mb-6">Get Started</Button>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>2 website previews/month</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Basic templates</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Watermarked exports</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Community support</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Mobile responsive</span></li>
+                <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>2 website previews/month</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Basic templates</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Watermarked exports</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Community support</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Mobile responsive</span></li>
                 </ul>
               </div>
             </div>
             {/* Basic Card */}
-            <div className="relative group">
+            <div className="relative group h-full">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
               <div className="relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-200">
                 <div className="text-center mb-6">
@@ -387,19 +393,19 @@ const Landing = () => {
                   <p className="text-sm text-gray-600">For solo entrepreneurs</p>
                 </div>
                 <Button onClick={() => window.location.href = '/#/pricing'} className="w-full bg-cyan-600 hover:bg-cyan-700 mb-6">Start Basic</Button>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>5 downloads/month</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>20+ premium templates</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>No watermark</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Email support (48h)</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Custom colors & fonts</span></li>
+                <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>5 downloads/month</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>20+ premium templates</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>No watermark</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Email support (48h)</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Custom colors & fonts</span></li>
                 </ul>
               </div>
             </div>
             {/* Pro Card */}
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
-              <div className="relative bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-6 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 border-2 border-purple-500">
+            <div className="relative group flex h-full">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500 pointer-events-none"></div>
+              <div className="relative bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-6 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 border-2 border-purple-500 flex flex-col h-full">
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2"><span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-xs font-bold">MOST POPULAR</span></div>
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold text-white mb-2">Pro</h3>
@@ -419,7 +425,7 @@ const Landing = () => {
               </div>
             </div>
             {/* Business Card */}
-            <div className="relative group">
+            <div className="relative group h-full">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 rounded-2xl opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
               <div className="relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-200">
                 <div className="text-center mb-6">
@@ -431,12 +437,12 @@ const Landing = () => {
                   <p className="text-sm text-gray-600">For agencies & teams</p>
                 </div>
                 <Button onClick={() => window.location.href = '/#/pricing'} className="w-full bg-orange-600 hover:bg-orange-700 mb-6">Contact Sales</Button>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>40 downloads/month</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Custom templates</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>API access</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>Dedicated account manager</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span>White-label options</span></li>
+                <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>40 downloads/month</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Custom templates</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>API access</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Dedicated account manager</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>White-label options</span></li>
                 </ul>
               </div>
             </div>
