@@ -1,4 +1,4 @@
-// server.js - Complete Express.js server with Smart Compression for Website Generation
+// server.js - Complete Express.js server with Smart Compression, Authentication & Tier-Based Generation Limits
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -33,7 +33,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 console.log('✅ Supabase client initialized (backend service role)');
 
-// Initialize Stripe (optional, won't crash if not configured)
+// Initialize Stripe (optional)
 let stripe = null;
 if (stripeKey) {
   stripe = new Stripe(stripeKey);
@@ -43,17 +43,14 @@ if (stripeKey) {
 }
 
 // ============================================
-// CRITICAL: STRIPE WEBHOOK MUST COME BEFORE express.json()
-// Because it needs the raw body for signature verification
+// STRIPE WEBHOOK (must come before express.json())
 // ============================================
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let event;
-
   try {
-    // Verify webhook signature
     if (!stripe || !webhookSecret) {
       console.error('Stripe or webhook secret not configured');
       return res.status(500).send('Server configuration error');
@@ -64,7 +61,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle the event
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -72,8 +68,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const userId = session.metadata.userId;
         const subscriptionId = session.subscription;
         const customerId = session.customer;
-
-        // Get the actual price ID from the session
         const priceId = session.line_items?.data[0]?.price?.id;
 
         if (!priceId) {
@@ -81,35 +75,25 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           return res.status(400).json({ error: 'No price ID in session' });
         }
 
-        console.log(`💳 Processing payment - Price ID: ${priceId}`);
-
-        // Determine the tier based on the price ID (supports both monthly and yearly)
         let tier = 'free';
-
-        // Monthly plans
-        if (priceId === process.env.STRIPE_BASIC_PRICE_ID) {
+        if ([
+          process.env.STRIPE_BASIC_PRICE_ID,
+          process.env.STRIPE_BASIC_YEARLY_PRICE_ID
+        ].includes(priceId)) {
           tier = 'basic';
-        } else if (priceId === process.env.STRIPE_PRO_PRICE_ID) {
+        } else if ([
+          process.env.STRIPE_PRO_PRICE_ID,
+          process.env.STRIPE_PRO_YEARLY_PRICE_ID
+        ].includes(priceId)) {
           tier = 'pro';
-        } else if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID) {
+        } else if ([
+          process.env.STRIPE_BUSINESS_PRICE_ID,
+          process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
+        ].includes(priceId)) {
           tier = 'business';
         }
-        // Yearly plans
-        else if (priceId === process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
-          tier = 'basic';
-        } else if (priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID) {
-          tier = 'pro';
-        } else if (priceId === process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID) {
-          tier = 'business';
-        }
 
-        if (tier === 'free') {
-          console.error(`⚠️ Unknown price ID: ${priceId} - defaulting to free tier`);
-        }
-
-        console.log(`✅ Determined tier: ${tier} for price ID: ${priceId}`);
-
-        // Update user tier in profiles table
+        // Update profile
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
@@ -118,12 +102,9 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           })
           .eq('id', userId);
 
-        if (profileError) {
-          console.error('Error updating profile:', profileError);
-          throw profileError;
-        }
+        if (profileError) throw profileError;
 
-        // Create or update subscription record
+        // Upsert subscription
         const { error: subError } = await supabase
           .from('subscriptions')
           .upsert({
@@ -134,65 +115,42 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             current_period_end: new Date(session.expires_at * 1000).toISOString(),
           });
 
-        if (subError) {
-          console.error('Error updating subscription:', subError);
-          throw subError;
-        }
+        if (subError) throw subError;
 
-        console.log(`✅ Payment successful for user ${userId} - upgraded to ${tier} tier`);
+        console.log(`✅ Payment successful - User ${userId} upgraded to ${tier}`);
         break;
       }
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         const customerId = subscription.customer;
 
-        // Downgrade user to free tier
-        const { error: profileError } = await supabase
+        await supabase
           .from('profiles')
           .update({ user_tier: 'free' })
           .eq('stripe_customer_id', customerId);
 
-        if (profileError) {
-          console.error('Error downgrading user:', profileError);
-          throw profileError;
-        }
-
-        // Update subscription status
-        const { error: subError } = await supabase
+        await supabase
           .from('subscriptions')
           .update({ status: 'canceled' })
           .eq('stripe_subscription_id', subscription.id);
-
-        if (subError) {
-          console.error('Error updating subscription status:', subError);
-        }
 
         console.log(`❌ Subscription canceled for customer ${customerId}`);
         break;
       }
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-
-        // Update subscription record
-        const { error } = await supabase
+        await supabase
           .from('subscriptions')
           .update({
             status: subscription.status,
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
           })
           .eq('stripe_subscription_id', subscription.id);
-
-        if (error) {
-          console.error('Error updating subscription:', error);
-        }
-
-        console.log(`🔄 Subscription updated: ${subscription.id}`);
         break;
       }
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
-
     res.json({ received: true });
   } catch (error) {
     console.error('Error processing webhook:', error);
@@ -200,23 +158,22 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
   }
 });
 
-// Add CORS middleware - PUT THIS BEFORE ANY ROUTES
+// CORS headers (before routes)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   next();
 });
 
-// Middleware (AFTER webhook route!)
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Handle larger payloads for long prompts
-app.use(express.static(path.join(__dirname, 'public'))); // Serve static files if needed
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Health check endpoint
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -227,26 +184,100 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Website generation endpoint with smart compression
+// ============================================
+// MAIN GENERATION ENDPOINT WITH TIER CHECKING & AUTH
+// ============================================
 app.post('/api/generate', async (req, res) => {
   const { prompt } = req.body;
+
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
-  // Validate API key
-  if (!apiKey) {
-    console.error('❌ API key not configured');
-    return res.status(500).json({
-      error: 'Server configuration error',
-      message: 'Claude API key is not configured'
+
+  // 🔒 STEP 1: Authentication via Supabase JWT
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+  if (authError || !user) {
+    return res.status(401).json({ error: 'Invalid authentication token' });
+  }
+
+  // 🔒 STEP 2: Fetch user profile
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('user_tier, generations_this_month, last_generation_reset')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profile) {
+    console.error('Profile fetch error:', profileError);
+    return res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+
+  // 🔒 STEP 3: Define tier limits
+  const TIER_LIMITS = {
+    free: 2,
+    basic: 5,
+    pro: 12,
+    business: 40
+  };
+
+  const userTier = profile.user_tier || 'free';
+  const limit = TIER_LIMITS[userTier];
+
+  // 🔒 STEP 4: Monthly reset logic
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  let generationsThisMonth = profile.generations_this_month || 0;
+
+  if (profile.last_generation_reset !== currentMonth) {
+    await supabase
+      .from('profiles')
+      .update({
+        generations_this_month: 0,
+        last_generation_reset: currentMonth
+      })
+      .eq('id', user.id);
+    generationsThisMonth = 0;
+  }
+
+  // 🔒 STEP 5: Check limit
+  if (generationsThisMonth >= limit) {
+    return res.status(403).json({
+      error: 'Generation limit reached',
+      message: `You've used ${generationsThisMonth}/${limit} generations this month. Upgrade to generate more!`,
+      tier: userTier,
+      limit,
+      used: generationsThisMonth
     });
   }
+
+  // 🔒 STEP 6: Increment counter BEFORE generation
+  const { error: incrementError } = await supabase
+    .from('profiles')
+    .update({
+      generations_this_month: generationsThisMonth + 1
+    })
+    .eq('id', user.id);
+
+  if (incrementError) {
+    console.error('Failed to increment generation count:', incrementError);
+    return res.status(500).json({ error: 'Failed to update usage count' });
+  }
+
+  // ✅ NOW: Generate website with Claude (smart compression preserved)
   try {
-    console.log(`📝 Received prompt (${prompt.length} chars)`);
+    console.log(`📝 Generating for user ${user.id} (${userTier} tier) - Prompt: ${prompt.length} chars`);
+
     let optimizedPrompt = prompt;
-    // SMART COMPRESSION: If prompt is long (>1000 chars), compress it first
+
+    // Smart compression for long prompts
     if (prompt.length > 1000) {
-      console.log(`🔧 Compressing long prompt (${prompt.length} chars)...`);
+      console.log(`🔧 Compressing long prompt...`);
       const compressionResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -274,17 +305,17 @@ Be comprehensive but concise. Don't lose any important details.`
           }]
         })
       });
-      if (!compressionResponse.ok) {
-        console.error('⚠️ Compression failed, using original prompt');
-        optimizedPrompt = prompt; // Fallback to original
-      } else {
-        const compressionData = await compressionResponse.json();
-        optimizedPrompt = compressionData.content[0].text;
+
+      if (compressionResponse.ok) {
+        const data = await compressionResponse.json();
+        optimizedPrompt = data.content[0].text;
         console.log(`✅ Compressed to ${optimizedPrompt.length} chars`);
+      } else {
+        console.warn('⚠️ Compression failed, using original prompt');
       }
     }
-    // MAIN GENERATION with optimized prompt
-    console.log(`🚀 Generating website...`);
+
+    // Main generation
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -297,116 +328,97 @@ Be comprehensive but concise. Don't lose any important details.`
         max_tokens: 4096,
         system: `You are an elite web developer who creates stunning, production-ready websites. You MUST return ONLY complete HTML code starting with <!DOCTYPE html>.
 CRITICAL RULES:
-- NEVER include markdown code blocks (\`\`\`html)
-- NEVER add explanations or comments outside the HTML
-- Return ONLY raw HTML that can be directly rendered
-- Make every website visually stunning with modern design
-- Use professional color schemes and typography
-- Include smooth animations and hover effects
-- Ensure full mobile responsiveness
-- Use high-quality placeholder images from unsplash.com`,
-        messages: [
-          {
-            role: 'user',
-            content: `Create a complete, professional, fully-functional website based on this brief:
+- NEVER include markdown code blocks
+- NEVER add explanations
+- Return ONLY raw HTML
+- Use modern design, animations, responsiveness, Unsplash placeholders`,
+        messages: [{
+          role: 'user',
+          content: `Create a complete, professional website based on this brief:
 ${optimizedPrompt}
+
 REQUIREMENTS:
-✅ Complete HTML with <!DOCTYPE html>
-✅ All sections mentioned in the brief
-✅ Modern CSS with gradients, animations, hover effects
-✅ Fully responsive (mobile, tablet, desktop)
-✅ Professional typography and spacing
-✅ Placeholder images from unsplash.com where needed
-✅ Smooth scrolling and micro-animations
-✅ Production-ready quality
-✅ NO markdown formatting - ONLY pure HTML
-Return ONLY the HTML code, nothing else.`
-          }
-        ]
+- Full HTML with <!DOCTYPE html>
+- All required sections
+- Modern CSS with animations and responsiveness
+- Professional typography
+- Placeholder images from unsplash.com
+- Production-ready
+
+Return ONLY the HTML code.`
+        }]
       })
     });
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Claude API Error:', response.status, errorText);
-      return res.status(response.status).json({
-        error: `API Error: ${response.status}`,
-        message: 'Failed to generate website',
-        details: errorText
-      });
+      console.error('Claude API Error:', response.status, errorText);
+      throw new Error(`Claude API error: ${response.status}`);
     }
+
     const data = await response.json();
     let htmlCode = data.content[0].text;
-    // Clean up any markdown artifacts
+
+    // Clean markdown artifacts
     htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-    // Validate HTML
+
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
-      console.error('❌ Invalid HTML generated - missing DOCTYPE');
-      return res.status(400).json({
-        error: 'Invalid HTML generated',
-        message: 'Generated content does not include proper HTML structure'
-      });
+      throw new Error('Generated HTML missing DOCTYPE');
     }
-    console.log(`✅ Generated website successfully (${htmlCode.length} bytes)`);
-    // Return response with htmlCode field (required by frontend)
+
+    console.log(`✅ Website generated successfully for user ${user.id}`);
     return res.status(200).json({ htmlCode });
+
   } catch (error) {
-    console.error('❌ Server error:', error);
+    console.error('❌ Generation failed:', error);
+
+    // Refund the generation count on failure
+    await supabase
+      .from('profiles')
+      .update({
+        generations_this_month: generationsThisMonth
+      })
+      .eq('id', user.id);
+
     return res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: 'Generation failed',
+      message: error.message || 'Unknown error during generation'
     });
   }
 });
 
-// 💳 STRIPE CHECKOUT ENDPOINT
+// Stripe Checkout Endpoint
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
     const { priceId, userId, email } = req.body;
-    // Validate inputs
+
     if (!priceId || !userId || !email) {
-      return res.status(400).json({
-        error: 'Missing required fields: priceId, userId, email'
-      });
+      return res.status(400).json({ error: 'Missing required fields' });
     }
-    // Check if Stripe is configured
+
     if (!stripe) {
-      return res.status(500).json({
-        error: 'Stripe is not configured on this server'
-      });
+      return res.status(500).json({ error: 'Stripe not configured' });
     }
-    console.log('🔄 Creating Stripe checkout session for:', email);
-    // Create Stripe checkout session
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/#/payment-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/#/pricing`,
       customer_email: email,
       client_reference_id: userId,
-      metadata: {
-        userId: userId,
-      },
+      metadata: { userId },
     });
-    console.log('✅ Checkout session created:', session.id);
-    return res.status(200).json({
-      sessionId: session.id
-    });
+
+    res.json({ sessionId: session.id });
   } catch (error) {
-    console.error('❌ Stripe checkout error:', error);
-    return res.status(500).json({
-      error: 'Failed to create checkout session',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
+    console.error('Stripe checkout error:', error);
+    res.status(500).json({ error: 'Failed to create checkout session' });
   }
 });
 
-// Catch-all handler for frontend routes (if serving React app)
+// SPA catch-all
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -414,13 +426,7 @@ app.get('*', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔑 CLAUDE_API_KEY configured: ${apiKey ? '✅ Yes' : '❌ No'}`);
-  console.log(`💳 STRIPE_SECRET_KEY configured: ${stripeKey ? '✅ Yes' : '❌ No'}`);
-  console.log(`🗄️ Supabase (service role) configured: ✅ Yes`);
-  console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📍 Generate endpoint: http://localhost:${PORT}/api/generate`);
-  console.log(`📍 Stripe checkout: http://localhost:${PORT}/api/create-checkout-session`);
-  console.log(`📍 Stripe webhook: http://localhost:${PORT}/api/stripe-webhook`);
+  console.log(`🔑 Claude API: ${apiKey ? '✅ Configured' : '❌ Missing'}`);
+  console.log(`💳 Stripe: ${stripeKey ? '✅ Configured' : '⚠️ Disabled'}`);
+  console.log(`🗄️ Supabase: ✅ Configured`);
 });
-
-export default app;
