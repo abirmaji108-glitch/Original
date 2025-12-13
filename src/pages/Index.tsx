@@ -47,6 +47,9 @@ import { LoadingScreen } from '@/components/ui/spinner';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { UpgradeModal } from '@/components/UpgradeModal';
 import { ProBadge } from '@/components/ProBadge';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { UpgradeButton } from '@/components/UpgradeButton';
+import { EnhancedUpgradeModal } from '@/components/EnhancedUpgradeModal';
 
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
@@ -211,6 +214,7 @@ const Index = () => {
     isFree
   } = useFeatureGate();
 
+  const userTier = isPro ? 'pro' : 'free';
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Load history from localStorage on mount
@@ -1313,12 +1317,13 @@ ${new Date().toLocaleDateString()}
         />
       </Suspense>
 
-      {/* Upgrade Modal */}
-      <UpgradeModal 
+      {/* Enhanced Upgrade Modal */}
+      <EnhancedUpgradeModal
         open={showUpgradeModal}
         onOpenChange={setShowUpgradeModal}
-        title="Generation Limit Reached"
-        description={`You've used ${generationsToday}/${tierLimits.generationsPerMonth} free generations this month. Upgrade to Pro for unlimited website generation!`}
+        currentTier={userTier}
+        generationsUsed={generationsToday}
+        generationsLimit={tierLimits.generationsPerMonth}
       />
 
       {/* Enhanced Animated Background Gradient */}
@@ -1388,8 +1393,7 @@ ${new Date().toLocaleDateString()}
               <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
                 <User className="w-4 h-4" />
               </div>
-              <div className="text-sm">
-                <div className={dynamicTextClass}>Free Plan</div>
+              <div className="flex items-center gap-3">
                 <div className={`text-xs ${dynamicSubtleClass}`}>
                   {isPro ? (
                     <>
@@ -1398,13 +1402,11 @@ ${new Date().toLocaleDateString()}
                     </>
                   ) : (
                     <>
-                      {generationsToday}/{tierLimits.generationsPerMonth} this month{" "}
+                      {generationsToday}/{tierLimits.generationsPerMonth} this month
                     </>
                   )}
-                  <a href="#" className={`hover:underline ${isDarkMode ? 'text-primary' : 'text-purple-600'}`}>
-                    Upgrade
-                  </a>
                 </div>
+                <UpgradeButton tier={userTier} size="sm" />
               </div>
             </div>
             <Button
@@ -1492,9 +1494,7 @@ ${new Date().toLocaleDateString()}
                     </div>
                   </div>
                 </div>
-                <a href="#" className={`text-sm hover:underline ${isDarkMode ? 'text-primary' : 'text-purple-600'}`}>
-                  Upgrade to Pro
-                </a>
+                <UpgradeButton tier={userTier} size="sm" />
               </div>
               <Button
                 variant="outline"
@@ -1511,6 +1511,13 @@ ${new Date().toLocaleDateString()}
           </div>
         )}
       </nav>
+
+      {/* Upgrade Banner - Shows when limit reached */}
+      <UpgradeBanner 
+        generationsUsed={generationsToday} 
+        generationsLimit={tierLimits.generationsPerMonth}
+        tier={userTier}
+      />
 
       {/* Main Content */}
       <main className="relative pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
