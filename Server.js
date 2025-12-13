@@ -4,6 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,18 @@ if (!apiKey) {
   process.exit(1);
 }
 
+// Initialize Supabase client (for backend operations)
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ ERROR: Supabase URL or Service Role Key not configured!');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+console.log('✅ Supabase client initialized (backend service role)');
+
 // Initialize Stripe (optional, won't crash if not configured)
 let stripe = null;
 if (stripeKey) {
@@ -28,6 +41,164 @@ if (stripeKey) {
 } else {
   console.warn('⚠️ STRIPE_SECRET_KEY not configured - payment features disabled');
 }
+
+// ============================================
+// CRITICAL: STRIPE WEBHOOK MUST COME BEFORE express.json()
+// Because it needs the raw body for signature verification
+// ============================================
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+
+  try {
+    // Verify webhook signature
+    if (!stripe || !webhookSecret) {
+      console.error('Stripe or webhook secret not configured');
+      return res.status(500).send('Server configuration error');
+    }
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const userId = session.metadata.userId;
+        const subscriptionId = session.subscription;
+        const customerId = session.customer;
+
+        // Get the actual price ID from the session
+        const priceId = session.line_items?.data[0]?.price?.id;
+
+        if (!priceId) {
+          console.error('❌ No price ID found in session');
+          return res.status(400).json({ error: 'No price ID in session' });
+        }
+
+        console.log(`💳 Processing payment - Price ID: ${priceId}`);
+
+        // Determine the tier based on the price ID (supports both monthly and yearly)
+        let tier = 'free';
+
+        // Monthly plans
+        if (priceId === process.env.STRIPE_BASIC_PRICE_ID) {
+          tier = 'basic';
+        } else if (priceId === process.env.STRIPE_PRO_PRICE_ID) {
+          tier = 'pro';
+        } else if (priceId === process.env.STRIPE_BUSINESS_PRICE_ID) {
+          tier = 'business';
+        }
+        // Yearly plans
+        else if (priceId === process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
+          tier = 'basic';
+        } else if (priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID) {
+          tier = 'pro';
+        } else if (priceId === process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID) {
+          tier = 'business';
+        }
+
+        if (tier === 'free') {
+          console.error(`⚠️ Unknown price ID: ${priceId} - defaulting to free tier`);
+        }
+
+        console.log(`✅ Determined tier: ${tier} for price ID: ${priceId}`);
+
+        // Update user tier in profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            user_tier: tier,
+            stripe_customer_id: customerId,
+          })
+          .eq('id', userId);
+
+        if (profileError) {
+          console.error('Error updating profile:', profileError);
+          throw profileError;
+        }
+
+        // Create or update subscription record
+        const { error: subError } = await supabase
+          .from('subscriptions')
+          .upsert({
+            user_id: userId,
+            stripe_subscription_id: subscriptionId,
+            stripe_customer_id: customerId,
+            status: 'active',
+            current_period_end: new Date(session.expires_at * 1000).toISOString(),
+          });
+
+        if (subError) {
+          console.error('Error updating subscription:', subError);
+          throw subError;
+        }
+
+        console.log(`✅ Payment successful for user ${userId} - upgraded to ${tier} tier`);
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        const customerId = subscription.customer;
+
+        // Downgrade user to free tier
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ user_tier: 'free' })
+          .eq('stripe_customer_id', customerId);
+
+        if (profileError) {
+          console.error('Error downgrading user:', profileError);
+          throw profileError;
+        }
+
+        // Update subscription status
+        const { error: subError } = await supabase
+          .from('subscriptions')
+          .update({ status: 'canceled' })
+          .eq('stripe_subscription_id', subscription.id);
+
+        if (subError) {
+          console.error('Error updating subscription status:', subError);
+        }
+
+        console.log(`❌ Subscription canceled for customer ${customerId}`);
+        break;
+      }
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+
+        // Update subscription record
+        const { error } = await supabase
+          .from('subscriptions')
+          .update({
+            status: subscription.status,
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          })
+          .eq('stripe_subscription_id', subscription.id);
+
+        if (error) {
+          console.error('Error updating subscription:', error);
+        }
+
+        console.log(`🔄 Subscription updated: ${subscription.id}`);
+        break;
+      }
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
 
 // Add CORS middleware - PUT THIS BEFORE ANY ROUTES
 app.use((req, res, next) => {
@@ -40,7 +211,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware
+// Middleware (AFTER webhook route!)
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Handle larger payloads for long prompts
 app.use(express.static(path.join(__dirname, 'public'))); // Serve static files if needed
@@ -51,14 +222,14 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     apiKeyConfigured: !!apiKey,
-    stripeConfigured: !!stripeKey
+    stripeConfigured: !!stripeKey,
+    supabaseConfigured: !!supabaseUrl && !!supabaseServiceKey
   });
 });
 
 // Website generation endpoint with smart compression
 app.post('/api/generate', async (req, res) => {
   const { prompt } = req.body;
- 
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
@@ -73,11 +244,9 @@ app.post('/api/generate', async (req, res) => {
   try {
     console.log(`📝 Received prompt (${prompt.length} chars)`);
     let optimizedPrompt = prompt;
- 
     // SMART COMPRESSION: If prompt is long (>1000 chars), compress it first
     if (prompt.length > 1000) {
       console.log(`🔧 Compressing long prompt (${prompt.length} chars)...`);
-   
       const compressionResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -178,7 +347,6 @@ Return ONLY the HTML code, nothing else.`
       });
     }
     console.log(`✅ Generated website successfully (${htmlCode.length} bytes)`);
-   
     // Return response with htmlCode field (required by frontend)
     return res.status(200).json({ htmlCode });
   } catch (error) {
@@ -190,7 +358,7 @@ Return ONLY the HTML code, nothing else.`
   }
 });
 
-// 💳 STRIPE CHECKOUT ENDPOINT - NEW!
+// 💳 STRIPE CHECKOUT ENDPOINT
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
     const { priceId, userId, email } = req.body;
@@ -231,7 +399,6 @@ app.post('/api/create-checkout-session', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Stripe checkout error:', error);
-   
     return res.status(500).json({
       error: 'Failed to create checkout session',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -249,9 +416,11 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔑 CLAUDE_API_KEY configured: ${apiKey ? '✅ Yes' : '❌ No'}`);
   console.log(`💳 STRIPE_SECRET_KEY configured: ${stripeKey ? '✅ Yes' : '❌ No'}`);
+  console.log(`🗄️ Supabase (service role) configured: ✅ Yes`);
   console.log(`📍 Health check: http://localhost:${PORT}/api/health`);
   console.log(`📍 Generate endpoint: http://localhost:${PORT}/api/generate`);
   console.log(`📍 Stripe checkout: http://localhost:${PORT}/api/create-checkout-session`);
+  console.log(`📍 Stripe webhook: http://localhost:${PORT}/api/stripe-webhook`);
 });
 
 export default app;
