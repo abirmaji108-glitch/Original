@@ -7,7 +7,7 @@ import { TIER_LIMITS, UserTier, canGenerate, canCreateProject } from '@/config/t
 export function useFeatureGate() {
   const { user } = useAuth();
   const [userTier, setUserTier] = useState<UserTier>('free');
-  const [generationsToday, setGenerationsToday] = useState(0);
+  const [generationsToday, setGenerationsToday] = useState(0); // Note: variable kept as "generationsToday" for backward compatibility, but now represents monthly count
   const [projectCount, setProjectCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -16,7 +16,6 @@ export function useFeatureGate() {
       setLoading(false);
       return;
     }
-
     fetchUserData();
   }, [user]);
 
@@ -24,28 +23,28 @@ export function useFeatureGate() {
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('user_tier, generations_today, last_generation_date')
+        .select('user_tier, generations_this_month, last_generation_reset')
         .eq('id', user?.id)
         .single();
 
       if (error) throw error;
 
-      // Reset generations if it's a new day
-      const today = new Date().toISOString().split('T')[0];
-      const lastGenDate = profile?.last_generation_date || today;
-      
-      if (lastGenDate !== today) {
+      // Reset generations if it's a new month
+      const currentMonth = new Date().toISOString().slice(0, 7); // "2024-12"
+      const lastResetMonth = profile?.last_generation_reset || currentMonth;
+
+      if (lastResetMonth !== currentMonth) {
         await supabase
           .from('profiles')
           .update({ 
-            generations_today: 0, 
-            last_generation_date: today 
+            generations_this_month: 0, 
+            last_generation_reset: currentMonth 
           })
           .eq('id', user?.id);
         
-        setGenerationsToday(0);
+        setGenerationsToday(0); // Keep variable name for now, but it's actually "this month"
       } else {
-        setGenerationsToday(profile?.generations_today || 0);
+        setGenerationsToday(profile?.generations_this_month || 0);
       }
 
       setUserTier((profile?.user_tier as UserTier) || 'free');
@@ -71,7 +70,7 @@ export function useFeatureGate() {
       const { error } = await supabase
         .from('profiles')
         .update({ 
-          generations_today: generationsToday + 1 
+          generations_this_month: generationsToday + 1 
         })
         .eq('id', user.id);
 
@@ -90,7 +89,7 @@ export function useFeatureGate() {
     generationsToday,
     projectCount,
     loading,
-    canGenerate: canGenerate(userTier, generationsToday),
+    canGenerate: canGenerate(userTier, generationsToday), // generationsToday = this month's count
     canCreateProject: canCreateProject(userTier, projectCount),
     incrementGeneration,
     tierLimits: TIER_LIMITS[userTier],
