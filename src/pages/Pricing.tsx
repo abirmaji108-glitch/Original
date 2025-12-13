@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
-import { Check, Sparkles, Zap, Building2, X } from 'lucide-react';
-import { TIER_LIMITS } from '@/config/tiers';
+import { Check, Sparkles, Zap, Building2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const plans = [
+  const pricingTiers = [
     {
+      id: 'free',
       name: 'Free',
       description: 'Perfect for trying out Revenue Rocket',
       price: { monthly: 0, yearly: 0 },
@@ -23,6 +28,7 @@ const Pricing = () => {
       color: 'from-gray-400 to-gray-600'
     },
     {
+      id: 'basic',
       name: 'Basic',
       description: 'For solo entrepreneurs and small businesses',
       price: { monthly: 9, yearly: 89 },
@@ -41,11 +47,10 @@ const Pricing = () => {
       cta: 'Start Basic',
       highlighted: false,
       color: 'from-cyan-500 to-blue-600',
-      stripeLink: billingCycle === 'monthly'
-        ? import.meta.env.VITE_STRIPE_BASIC_PRICE_ID
-        : import.meta.env.VITE_STRIPE_BASIC_YEARLY_PRICE_ID
+      stripeLink: true
     },
     {
+      id: 'pro',
       name: 'Pro',
       description: 'For freelancers and growing agencies',
       price: { monthly: 22, yearly: 219 },
@@ -69,11 +74,10 @@ const Pricing = () => {
       highlighted: true,
       popular: true,
       color: 'from-purple-500 to-purple-600',
-      stripeLink: billingCycle === 'monthly'
-        ? import.meta.env.VITE_STRIPE_PRO_PRICE_ID
-        : import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID
+      stripeLink: true
     },
     {
+      id: 'business',
       name: 'Business',
       description: 'For agencies and teams',
       price: { monthly: 49, yearly: 489 },
@@ -100,22 +104,106 @@ const Pricing = () => {
     }
   ];
 
-  const handlePlanClick = (plan: typeof plans[0]) => {
-    if (plan.name === 'Free') {
-      window.location.href = '/#/signup';
-    } else if (plan.name === 'Business') {
+  const handleStartPlan = async (plan: typeof pricingTiers[0]) => {
+    // If user not logged in, redirect to signup
+    if (!user) {
+      navigate('/signup');
+      return;
+    }
+
+    // Free plan - just update tier in database
+    if (plan.id === 'free') {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ user_tier: 'free' })
+          .eq('id', user.id);
+        if (error) throw error;
+        alert('Welcome to the Free plan!');
+        navigate('/dashboard');
+      } catch (error) {
+        console.error('Error updating tier:', error);
+        alert('Failed to update plan. Please try again.');
+      }
+      return;
+    }
+
+    // Business plan - contact sales
+    if (plan.id === 'business') {
       window.location.href = 'mailto:sales@sento.ai?subject=Business Plan Inquiry';
-    } else if (plan.stripeLink) {
-      // TEMPORARY: Show alert until Stripe is fully configured
-      alert('Payment system coming soon! For now, please sign up and we\'ll contact you.');
-      window.location.href = '/#/signup';
+      return;
+    }
+
+    // Paid plans (Basic & Pro) - redirect to Stripe checkout
+    if (plan.stripeLink) {
+      try {
+        // Determine correct price ID based on billing cycle and plan
+        let priceId;
+       
+        if (billingCycle === 'monthly') {
+          // Monthly pricing
+          priceId = plan.id === 'basic'
+            ? import.meta.env.VITE_STRIPE_BASIC_PRICE_ID
+            : import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
+        } else {
+          // Yearly pricing
+          priceId = plan.id === 'basic'
+            ? import.meta.env.VITE_STRIPE_BASIC_YEARLY_PRICE_ID
+            : import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID;
+        }
+
+        if (!priceId) {
+          throw new Error(`Stripe price ID not configured for ${plan.id} ${billingCycle}`);
+        }
+
+        console.log(`💳 Starting checkout: ${plan.name} (${billingCycle}) - Price ID: ${priceId}`);
+
+        // Use flexible backend URL with fallback to localhost:3000
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+
+        const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            priceId,
+            userId: user.id,
+            email: user.email,
+            planName: plan.name,
+            billingCycle, // Send billing cycle to backend for logging
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create checkout session');
+        }
+
+        // Load Stripe and redirect
+        const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+        if (!stripe) {
+          throw new Error('Stripe failed to load');
+        }
+
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: data.sessionId,
+        });
+
+        if (error) {
+          throw error;
+        }
+      } catch (error: any) {
+        console.error('Stripe checkout error:', error);
+        alert(`Failed to start checkout: ${error.message}. Please try again or contact support.`);
+      }
     }
   };
 
   const savings = {
-    basic: ((9 * 12) - 89),
-    pro: ((22 * 12) - 219),
-    business: ((49 * 12) - 489)
+    basic: 9 * 12 - 89,
+    pro: 22 * 12 - 219,
+    business: 49 * 12 - 489
   };
 
   const comparisonFeatures = [
@@ -181,10 +269,10 @@ const Pricing = () => {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto mb-20">
-          {plans.map((plan, index) => {
+          {pricingTiers.map((plan, index) => {
             const Icon = plan.icon;
             const price = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly;
-            const displayPrice = billingCycle === 'yearly' ? (price / 12).toFixed(0) : price;
+            const displayPrice = billingCycle === 'yearly' && plan.id !== 'free' ? Math.round(price / 12) : price;
 
             return (
               <div
@@ -212,18 +300,17 @@ const Pricing = () => {
                   <div className="mb-3">
                     <span className="text-4xl font-bold">${displayPrice}</span>
                     <span className="text-gray-400 text-sm ml-1">
-                      {billingCycle === 'yearly' ? '/mo' : '/month'}
+                      {billingCycle === 'yearly' && plan.id !== 'free' ? '/mo' : '/month'}
                     </span>
                   </div>
-                  {billingCycle === 'yearly' && plan.name !== 'Free' && (
+                  {billingCycle === 'yearly' && plan.id !== 'free' && (
                     <p className="text-xs text-green-400">
-                      Save ${savings[plan.name.toLowerCase() as keyof typeof savings]}/year
+                      Save ${savings[plan.id as keyof typeof savings]}/year
                     </p>
                   )}
                 </div>
-
                 <button
-                  onClick={() => handlePlanClick(plan)}
+                  onClick={() => handleStartPlan(plan)}
                   className={`w-full py-2.5 rounded-lg font-semibold transition-all mb-6 text-sm ${
                     plan.highlighted
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
@@ -232,7 +319,6 @@ const Pricing = () => {
                 >
                   {plan.cta}
                 </button>
-
                 <div className="space-y-2">
                   {plan.features.map((feature, featureIndex) => (
                     <div key={featureIndex} className="flex items-start gap-2">
@@ -300,16 +386,16 @@ const Pricing = () => {
             transform: translateY(0);
           }
         }
-        
+       
         .animate-slide-up {
           animation: slideUp 0.5s ease-out forwards;
         }
-        
+       
         .pricing-card {
           position: relative;
           transition: all 0.3s ease;
         }
-        
+       
         .pricing-card::before {
           content: '';
           position: absolute;
@@ -321,7 +407,7 @@ const Pricing = () => {
           transition: opacity 0.3s ease;
           filter: blur(8px);
         }
-        
+       
         .pricing-card:hover::before {
           opacity: 0.4;
         }
