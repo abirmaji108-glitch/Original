@@ -799,10 +799,26 @@ REQUIREMENTS:
 Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
 
       setLastPrompt(prompt);
+      
+      // 🔒 SECURITY: Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to generate websites.",
+          variant: "destructive",
+        });
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // 🔒 ADD THIS LINE!
         },
         body: JSON.stringify({ prompt }),
         signal: abortControllerRef.current?.signal
@@ -813,6 +829,21 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       clearInterval(progressInterval2);
 
       const data = await response.json();
+
+      // 🔒 SECURITY: Handle server-side limit check
+      if (response.status === 403) {
+        setShowUpgradeModal(true);
+        toast({
+          title: "Generation Limit Reached",
+          description: data.message || "You've reached your monthly limit. Please upgrade!",
+          variant: "destructive",
+        });
+        setIsGenerating(false);
+        setProgress(0);
+        setProgressStage("");
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
       }
@@ -933,10 +964,25 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     }, 150);
 
     try {
+      // 🔒 SECURITY: Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to regenerate.",
+          variant: "destructive",
+        });
+        navigate('/login');
+        return;
+      }
+
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // 🔒 ADD THIS LINE!
         },
         body: JSON.stringify({ prompt: lastPrompt }),
         signal: abortControllerRef.current?.signal
@@ -947,6 +993,21 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       clearInterval(progressInterval2);
 
       const data = await response.json();
+
+      // 🔒 SECURITY: Handle server-side limit check
+      if (response.status === 403) {
+        setShowUpgradeModal(true);
+        toast({
+          title: "Generation Limit Reached",
+          description: data.message || "You've reached your monthly limit. Please upgrade!",
+          variant: "destructive",
+        });
+        setIsGenerating(false);
+        setProgress(0);
+        setProgressStage("");
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
       }
@@ -1257,7 +1318,7 @@ ${new Date().toLocaleDateString()}
         open={showUpgradeModal}
         onOpenChange={setShowUpgradeModal}
         title="Generation Limit Reached"
-        description={`You've used ${generationsToday}/${tierLimits.generationsPerDay} free generations today. Upgrade to Pro for unlimited website generation!`}
+        description={`You've used ${generationsToday}/${tierLimits.generationsPerMonth} free generations this month. Upgrade to Pro for unlimited website generation!`}
       />
 
       {/* Enhanced Animated Background Gradient */}
@@ -1337,7 +1398,7 @@ ${new Date().toLocaleDateString()}
                     </>
                   ) : (
                     <>
-                      {generationsToday}/{tierLimits.generationsPerDay} today{" "}
+                      {generationsToday}/{tierLimits.generationsPerMonth} this month{" "}
                     </>
                   )}
                   <a href="#" className={`hover:underline ${isDarkMode ? 'text-primary' : 'text-purple-600'}`}>
@@ -1427,7 +1488,7 @@ ${new Date().toLocaleDateString()}
                   <div className="text-sm">
                     <div className={dynamicTextClass}>Free Plan</div>
                     <div className={`text-xs ${dynamicSubtleClass}`}>
-                      {isPro ? "Unlimited Generations" : `${generationsToday}/${tierLimits.generationsPerDay} today`}
+                      {isPro ? "Unlimited Generations" : `${generationsToday}/${tierLimits.generationsPerMonth} this month`}
                     </div>
                   </div>
                 </div>
