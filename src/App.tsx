@@ -11,7 +11,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MyWebsites from "./pages/MyWebsites";
 import Pricing from "./pages/Pricing";
-import PaymentSuccess from "./pages/PaymentSuccess";  // ← NEW IMPORT
+import PaymentSuccess from "./pages/PaymentSuccess";
+import AdminDashboard from "./pages/AdminDashboard";  // ← NEW IMPORT
 
 const queryClient = new QueryClient();
 
@@ -29,7 +30,8 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/my-websites" element={<MyWebsites />} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/payment-success" element={<PaymentSuccess />} />  {/* ← NEW ROUTE */}
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/admin" element={<AdminDashboard />} />  {/* ← NEW ROUTE */}
           </Routes>
         </HashRouter>
       </TooltipProvider>
