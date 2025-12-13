@@ -1,100 +1,123 @@
 // src/config/tiers.ts
+export type UserTier = 'free' | 'basic' | 'pro' | 'business';
 
-export const TIER_LIMITS = {
+export interface TierLimits {
+  name: string;
+  generationsPerMonth: number;
+  maxProjects: number;
+  maxPagesPerSite: number;
+  canDownload: boolean;
+  canExportReact: boolean;
+  canUseAIChat: boolean;
+  aiChatIterations: number;
+  customDomains: number;
+  teamMembers: number;
+  hasWhiteLabel: boolean;
+  hasGitHubSync: boolean;
+  hasAdvancedTemplates: boolean;
+  hasPrioritySupport: boolean;
+  hasVersionHistory: boolean;
+  versionHistoryCount: number;
+}
+
+export const TIER_LIMITS: Record<UserTier, TierLimits> = {
   free: {
     name: 'Free',
-    generationsPerDay: 5,
-    maxProjects: 3,
-    maxDownloads: 0,
-    features: [
-      'Preview and edit websites',
-      'No downloads allowed',
-      '3 saved projects',
-      '10+ basic templates',
-      'Sento watermark',
-      'Community support'
-    ],
-    price: 0
+    generationsPerMonth: 2, // 2 previews per month
+    maxProjects: 2, // Can only save 2 projects
+    maxPagesPerSite: 1, // Single page only (3-5 sections)
+    canDownload: false, // ❌ Cannot download/export
+    canExportReact: false,
+    canUseAIChat: false, // ❌ No AI chat iterations
+    aiChatIterations: 0,
+    customDomains: 0,
+    teamMembers: 1,
+    hasWhiteLabel: false,
+    hasGitHubSync: false,
+    hasAdvancedTemplates: false,
+    hasPrioritySupport: false,
+    hasVersionHistory: false,
+    versionHistoryCount: 0
   },
   basic: {
     name: 'Basic',
-    generationsPerDay: -1, // unlimited generation
-    maxProjects: 10,
-    maxDownloads: 5, // 5 downloads per month
+    generationsPerMonth: 5, // 5 downloads per month
+    maxProjects: 10, // Can save up to 10 projects
+    maxPagesPerSite: 3, // 1-3 sections
+    canDownload: true, // ✅ HTML/CSS export
+    canExportReact: false, // ❌ Only HTML/CSS
+    canUseAIChat: false, // ❌ Manual editing only
+    aiChatIterations: 0,
     customDomains: 1,
-    features: [
-      'Download 5 websites per month',
-      'Landing pages (1-3 sections)',
-      '1 custom domain connection',
-      'Remove watermark',
-      'HTML/CSS export',
-      '20+ basic templates',
-      'Save up to 10 projects',
-      'Basic SEO optimization',
-      'Email support (48h)'
-    ],
-    price: 9
+    teamMembers: 1,
+    hasWhiteLabel: false,
+    hasGitHubSync: false,
+    hasAdvancedTemplates: false,
+    hasPrioritySupport: false,
+    hasVersionHistory: false,
+    versionHistoryCount: 0
   },
   pro: {
     name: 'Pro',
-    generationsPerDay: -1, // unlimited
-    maxProjects: -1, // unlimited
-    maxDownloads: -1, // unlimited
+    generationsPerMonth: 12, // 12 downloads per month
+    maxProjects: 30, // Can save up to 30 projects
+    maxPagesPerSite: 8, // Up to 8 pages per site
+    canDownload: true, // ✅ React/Vue/Next.js export
+    canExportReact: true, // ✅ Modern frameworks
+    canUseAIChat: true, // ✅ 10 iterations per site
+    aiChatIterations: 10,
     customDomains: 3,
-    features: [
-      'Unlimited downloads',
-      'Multi-section websites',
-      '3 custom domains',
-      'Remove watermark',
-      'HTML/CSS/React export',
-      '50+ premium templates',
-      'Unlimited projects',
-      'Advanced SEO tools',
-      'AI design assistant',
-      'Priority support (24h)',
-      'Custom code injection'
-    ],
-    price: 22
+    teamMembers: 1,
+    hasWhiteLabel: false,
+    hasGitHubSync: true,
+    hasAdvancedTemplates: true,
+    hasPrioritySupport: true,
+    hasVersionHistory: true,
+    versionHistoryCount: 3
   },
   business: {
     name: 'Business',
-    generationsPerDay: -1,
-    maxProjects: -1,
-    maxDownloads: -1,
-    customDomains: -1, // unlimited
-    features: [
-      'Everything in Pro',
-      'Unlimited team members',
-      'Unlimited custom domains',
-      'White-label solution',
-      'Custom templates',
-      'API access',
-      'Dedicated support',
-      'SLA guarantee',
-      'Custom integrations',
-      'Priority generation queue'
-    ],
-    price: 49
+    generationsPerMonth: 40, // 40 downloads per month
+    maxProjects: -1, // Unlimited projects
+    maxPagesPerSite: 20, // Up to 20 pages per site
+    canDownload: true,
+    canExportReact: true,
+    canUseAIChat: true, // ✅ Unlimited AI iterations
+    aiChatIterations: -1, // -1 = unlimited
+    customDomains: 10,
+    teamMembers: 3,
+    hasWhiteLabel: true, // ✅ Full white label
+    hasGitHubSync: true,
+    hasAdvancedTemplates: true,
+    hasPrioritySupport: true,
+    hasVersionHistory: true,
+    versionHistoryCount: -1 // -1 = unlimited
   }
-} as const;
+};
 
-export type UserTier = keyof typeof TIER_LIMITS;
-
-export function canGenerate(tier: UserTier, generationsToday: number): boolean {
-  const limit = TIER_LIMITS[tier].generationsPerDay;
-  if (limit === -1) return true; // unlimited
-  return generationsToday < limit;
+// Helper functions
+export function canGenerate(tier: UserTier, generationsThisMonth: number): boolean {
+  const limit = TIER_LIMITS[tier].generationsPerMonth;
+  return generationsThisMonth < limit;
 }
 
 export function canCreateProject(tier: UserTier, projectCount: number): boolean {
-  const limit = TIER_LIMITS[tier].maxProjects;
-  if (limit === -1) return true; // unlimited
-  return projectCount < limit;
+  const maxProjects = TIER_LIMITS[tier].maxProjects;
+  if (maxProjects === -1) return true; // Unlimited
+  return projectCount < maxProjects;
 }
 
-export function canDownload(tier: UserTier, downloadsThisMonth: number): boolean {
-  const limit = TIER_LIMITS[tier].maxDownloads;
-  if (limit === -1) return true; // unlimited
-  if (limit === 0) return false; // not allowed
-  return downloadsThisMonth < limit;
+export function canDownload(tier: UserTier): boolean {
+  return TIER_LIMITS[tier].canDownload;
+}
+
+export function canExportReact(tier: UserTier): boolean {
+  return TIER_LIMITS[tier].canExportReact;
+}
+
+export function canUseAIChat(tier: UserTier, iterationsUsed: number): boolean {
+  const limit = TIER_LIMITS[tier].aiChatIterations;
+  if (limit === -1) return true; // Unlimited
+  if (limit === 0) return false; // Not allowed
+  return iterationsUsed < limit;
 }
