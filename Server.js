@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -100,6 +101,21 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           });
         if (subError) throw subError;
         console.log(`✅ Payment successful - User ${userId} upgraded to ${tier}`);
+
+        // Send welcome email
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single();
+
+        if (userProfile?.email) {
+          await sendWelcomeEmail(
+            userProfile.email,
+            userProfile.full_name || 'there',
+            tier
+          );
+        }
         break;
       }
       case 'customer.subscription.deleted': {
@@ -167,7 +183,6 @@ app.post('/api/generate', async (req, res) => {
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
-
   // 🔒 STEP 0: Validate prompt length based on tier (BEFORE auth check)
   const PROMPT_LENGTH_LIMITS = {
     free: 1000,
@@ -175,7 +190,6 @@ app.post('/api/generate', async (req, res) => {
     pro: 5000,
     business: 10000
   };
-
   // 🔒 STEP 1: Authentication via Supabase JWT
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -205,7 +219,6 @@ app.post('/api/generate', async (req, res) => {
   };
   const userTier = profile.user_tier || 'free';
   const limit = TIER_LIMITS[userTier];
-
   // 🔒 CHECK: Prompt length limit
   const promptLimit = PROMPT_LENGTH_LIMITS[userTier];
   if (prompt.length > promptLimit) {
@@ -217,7 +230,6 @@ app.post('/api/generate', async (req, res) => {
       current: prompt.length
     });
   }
-
   // 🔒 STEP 4: Monthly reset logic
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   let generationsThisMonth = profile.generations_this_month || 0;
@@ -251,6 +263,34 @@ app.post('/api/generate', async (req, res) => {
   if (incrementError) {
     console.error('Failed to increment generation count:', incrementError);
     return res.status(500).json({ error: 'Failed to update usage count' });
+  }
+
+  // 📧 Send warning email at 80% usage
+  const newUsage = generationsThisMonth + 1;
+  const usagePercent = (newUsage / limit) * 100;
+
+  if (usagePercent >= 80 && usagePercent < 100) {
+    // Only send once when they first hit 80%
+    const previousPercent = (generationsThisMonth / limit) * 100;
+    
+    if (previousPercent < 80) {
+      const { data: userEmail } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', user.id)
+        .single();
+
+      if (userEmail?.email) {
+        await sendLimitWarningEmail(
+          userEmail.email,
+          userEmail.full_name || 'there',
+          userTier,
+          newUsage,
+          limit
+        );
+        console.log('📧 Limit warning email sent to:', userEmail.email);
+      }
+    }
   }
   // 📊 STEP 7: Log analytics to usage_tracking table
   try {
@@ -352,7 +392,6 @@ Return ONLY the HTML code.`
     let htmlCode = data.content[0].text;
     // Clean markdown artifacts
     htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-
     // 🎨 ADD WATERMARK: Free tier only
     if (userTier === 'free') {
       // Inject watermark before closing </body> tag
@@ -364,7 +403,6 @@ Return ONLY the HTML code.`
       `;
       htmlCode = htmlCode.replace('</body>', `${watermark}</body>`);
     }
-
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
       throw new Error('Generated HTML missing DOCTYPE');
     }
