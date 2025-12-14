@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { sendWelcomeEmail, sendLimitWarningEmail } from './lib/email.js';
+import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -268,7 +268,7 @@ app.post('/api/generate', async (req, res) => {
   if (usagePercent >= 80 && usagePercent < 100) {
     // Only send once when they first hit 80%
     const previousPercent = (generationsThisMonth / limit) * 100;
-   
+  
     if (previousPercent < 80) {
       const { data: userEmail } = await supabase
         .from('profiles')
