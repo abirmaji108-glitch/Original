@@ -50,6 +50,10 @@ import { ProBadge } from '@/components/ProBadge';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { UpgradeButton } from '@/components/UpgradeButton';
 import { EnhancedUpgradeModal } from '@/components/EnhancedUpgradeModal';
+import { TemplateSelector } from '@/components/TemplateSelector';
+import { DownloadButton } from '@/components/DownloadButton';
+import { CharacterCounter } from '@/components/CharacterCounter';
+import { PROMPT_LIMITS } from '@/utils/promptLimits';
 
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
@@ -1560,6 +1564,16 @@ ${new Date().toLocaleDateString()}
                   {/* Floating gradient border effect */}
                   <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
                   
+                  {/* Template Selector */}
+                  <TemplateSelector
+                    onSelectTemplate={(prompt) => {
+                      setInput(prompt);
+                      handleGenerate();
+                    }}
+                    userTier={userTier}
+                    isDarkMode={isDarkMode}
+                  />
+
                   {/* Style Selector */}
                   <div className="space-y-3">
                     <label className={`text-sm font-semibold ${dynamicTextClass}`}>
@@ -1609,22 +1623,12 @@ ${new Date().toLocaleDateString()}
                       className={`min-h-[140px] input-glow transition-all duration-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:bg-white/15' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-gray-50'}`}
                       rows={5}
                     />
-                    {/* Live Character Counter with Colors */}
-                    <div className="flex justify-between items-center text-sm mt-2">
-                      <span className={
-                        characterCount < 50 ? 'char-counter-red font-semibold' :
-                        characterCount < 100 ? 'char-counter-yellow font-semibold' :
-                        'char-counter-green font-semibold'
-                      }>
-                        {characterCount < 50 && '⚠️ '}
-                        {characterCount >= 50 && characterCount < 100 && '⚡ '}
-                        {characterCount >= 100 && '✅ '}
-                        {characterCount}/{characterLimit} characters
-                      </span>
-                      <span className={dynamicSubtleClass}>
-                        {characterCount < 50 ? `${50 - characterCount} more needed` : 'Perfect! 🎉'}
-                      </span>
-                    </div>
+                    {/* Character Counter Component */}
+                    <CharacterCounter 
+                      current={input.length} 
+                      limit={PROMPT_LIMITS[userTier].maxPromptLength}
+                      tier={userTier}
+                    />
                   </div>
 
                   {/* Live Suggestions */}
@@ -1961,10 +1965,12 @@ ${new Date().toLocaleDateString()}
                   <Maximize2 className="w-4 h-4" />
                   Open Full Screen
                 </Button>
-                <Button onClick={handleDownload} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl animate-pulse-subtle">
-                  <Download className="w-4 h-4 animate-bounce-subtle" />
-                  Download ZIP
-                </Button>
+                <DownloadButton 
+                  generatedCode={generatedCode}
+                  userTier={userTier}
+                  onUpgrade={() => setShowUpgradeModal(true)}
+                  isDarkMode={isDarkMode}
+                />
                 <Button onClick={() => setShowShareMenu(true)} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl">
                   <Share2 className="w-4 h-4" />
                   Share
