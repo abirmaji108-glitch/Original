@@ -167,6 +167,15 @@ app.post('/api/generate', async (req, res) => {
   if (!prompt) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
+
+  // 🔒 STEP 0: Validate prompt length based on tier (BEFORE auth check)
+  const PROMPT_LENGTH_LIMITS = {
+    free: 1000,
+    basic: 2000,
+    pro: 5000,
+    business: 10000
+  };
+
   // 🔒 STEP 1: Authentication via Supabase JWT
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -196,6 +205,19 @@ app.post('/api/generate', async (req, res) => {
   };
   const userTier = profile.user_tier || 'free';
   const limit = TIER_LIMITS[userTier];
+
+  // 🔒 CHECK: Prompt length limit
+  const promptLimit = PROMPT_LENGTH_LIMITS[userTier];
+  if (prompt.length > promptLimit) {
+    return res.status(400).json({
+      error: 'Prompt too long',
+      message: `${userTier} tier allows maximum ${promptLimit} characters. Your prompt is ${prompt.length} characters. ${userTier === 'free' ? 'Upgrade to Basic for 2000 characters!' : userTier === 'basic' ? 'Upgrade to Pro for 5000 characters!' : 'Upgrade to Business for 10000 characters!'}`,
+      tier: userTier,
+      limit: promptLimit,
+      current: prompt.length
+    });
+  }
+
   // 🔒 STEP 4: Monthly reset logic
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   let generationsThisMonth = profile.generations_this_month || 0;
@@ -247,7 +269,6 @@ app.post('/api/generate', async (req, res) => {
     // Don't fail the request if analytics logging fails
     console.error('Analytics logging failed:', analyticsError);
   }
-
   // ✅ NOW: Generate website with Claude (smart compression preserved)
   try {
     console.log(`📝 Generating for user ${user.id} (${userTier} tier) - Prompt: ${prompt.length} chars`);
@@ -331,6 +352,19 @@ Return ONLY the HTML code.`
     let htmlCode = data.content[0].text;
     // Clean markdown artifacts
     htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+
+    // 🎨 ADD WATERMARK: Free tier only
+    if (userTier === 'free') {
+      // Inject watermark before closing </body> tag
+      const watermark = `
+        <div style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 8px 16px; border-radius: 8px; font-family: Arial, sans-serif; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+          <span style="font-size: 16px;">⚡</span>
+          <span>Made with <strong>Sento AI</strong></span>
+        </div>
+      `;
+      htmlCode = htmlCode.replace('</body>', `${watermark}</body>`);
+    }
+
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
       throw new Error('Generated HTML missing DOCTYPE');
     }
