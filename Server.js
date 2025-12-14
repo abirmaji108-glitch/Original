@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
+import { sendWelcomeEmail, sendLimitWarningEmail } from './lib/email.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -101,14 +101,12 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           });
         if (subError) throw subError;
         console.log(`✅ Payment successful - User ${userId} upgraded to ${tier}`);
-
         // Send welcome email
         const { data: userProfile } = await supabase
           .from('profiles')
           .select('email, full_name')
           .eq('id', userId)
           .single();
-
         if (userProfile?.email) {
           await sendWelcomeEmail(
             userProfile.email,
@@ -264,22 +262,19 @@ app.post('/api/generate', async (req, res) => {
     console.error('Failed to increment generation count:', incrementError);
     return res.status(500).json({ error: 'Failed to update usage count' });
   }
-
   // 📧 Send warning email at 80% usage
   const newUsage = generationsThisMonth + 1;
   const usagePercent = (newUsage / limit) * 100;
-
   if (usagePercent >= 80 && usagePercent < 100) {
     // Only send once when they first hit 80%
     const previousPercent = (generationsThisMonth / limit) * 100;
-    
+   
     if (previousPercent < 80) {
       const { data: userEmail } = await supabase
         .from('profiles')
         .select('email, full_name')
         .eq('id', user.id)
         .single();
-
       if (userEmail?.email) {
         await sendLimitWarningEmail(
           userEmail.email,
