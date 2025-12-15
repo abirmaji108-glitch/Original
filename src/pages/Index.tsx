@@ -54,6 +54,7 @@ import { TemplateSelector } from '@/components/TemplateSelector';
 import { DownloadButton } from '@/components/DownloadButton';
 import { CharacterCounter } from '@/components/CharacterCounter';
 import { PROMPT_LIMITS } from '@/utils/promptLimits';
+import { FeatureLockModal } from '@/components/FeatureLockModal'; // ← CHANGE 1: Added import
 
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
@@ -220,6 +221,15 @@ const Index = () => {
 
   const userTier = isPro ? 'pro' : 'free';
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  // ← CHANGE 2: Added feature lock modal state
+  const [featureLockModal, setFeatureLockModal] = useState<{
+    isOpen: boolean;
+    feature: 'download' | 'template' | 'character-limit' | 'generation-limit';
+  }>({
+    isOpen: false,
+    feature: 'download'
+  });
 
   // Load history from localStorage on mount
   useEffect(() => {
@@ -1330,6 +1340,15 @@ ${new Date().toLocaleDateString()}
         generationsLimit={tierLimits.generationsPerMonth}
       />
 
+      {/* ← CHANGE 3: Added Feature Lock Modal */}
+      {/* Feature Lock Modal */}
+      <FeatureLockModal
+        isOpen={featureLockModal.isOpen}
+        onClose={() => setFeatureLockModal({ ...featureLockModal, isOpen: false })}
+        feature={featureLockModal.feature}
+        currentTier={userTier}
+      />
+
       {/* Enhanced Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/30 via-gray-900 to-indigo-900/30' : 'bg-gradient-to-br from-blue-900/20 via-gray-50 to-purple-900/20'}`}>
         {/* Multiple animated gradient layers */}
@@ -1965,10 +1984,11 @@ ${new Date().toLocaleDateString()}
                   <Maximize2 className="w-4 h-4" />
                   Open Full Screen
                 </Button>
+                {/* ← CHANGE 4: Updated DownloadButton */}
                 <DownloadButton 
                   generatedCode={generatedCode}
                   userTier={userTier}
-                  onUpgrade={() => setShowUpgradeModal(true)}
+                  onUpgrade={() => setFeatureLockModal({ isOpen: true, feature: 'download' })}
                   isDarkMode={isDarkMode}
                 />
                 <Button onClick={() => setShowShareMenu(true)} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl">
