@@ -54,7 +54,8 @@ import { TemplateSelector } from '@/components/TemplateSelector';
 import { DownloadButton } from '@/components/DownloadButton';
 import { CharacterCounter } from '@/components/CharacterCounter';
 import { PROMPT_LIMITS } from '@/utils/promptLimits';
-import { FeatureLockModal } from '@/components/FeatureLockModal'; // ← CHANGE 1: Added import
+import { FeatureLockModal } from '@/components/FeatureLockModal';
+import DOMPurify from 'dompurify';
 
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
@@ -151,12 +152,44 @@ const SkeletonTemplate = ({ isDarkMode }: { isDarkMode: boolean }) => (
   </div>
 );
 
+// Input sanitization function
+const sanitizeInput = (input: string): string => {
+  return input
+    .trim()
+    .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+\s*=/gi, '') // Remove event handlers
+    .slice(0, 10000); // Hard cap at 10k chars
+};
+
+// HTML sanitization function
+const sanitizeHTML = (html: string): string => {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      'html', 'head', 'body', 'title', 'meta', 'link', 'style',
+      'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'ul', 'ol', 'li', 'a', 'img', 'button', 'input', 'form',
+      'section', 'article', 'header', 'footer', 'nav', 'main',
+      'aside', 'figure', 'figcaption', 'table', 'thead', 'tbody',
+      'tr', 'td', 'th', 'br', 'hr', 'strong', 'em', 'script'
+    ],
+    ALLOWED_ATTR: [
+      'href', 'src', 'alt', 'title', 'class', 'id', 'style',
+      'type', 'name', 'value', 'placeholder', 'target', 'rel'
+    ],
+    ALLOW_DATA_ATTR: true,
+    ADD_TAGS: ['script'],
+    ADD_ATTR: ['onclick', 'onload'],
+  });
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [sanitizedCode, setSanitizedCode] = useState<string>("");
   const [progress, setProgress] = useState(0);
   const [progressStage, setProgressStage] = useState("");
   const [status, setStatus] = useState("");
@@ -205,7 +238,14 @@ const Index = () => {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  
+  // Refs for cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressInterval2Ref = useRef<NodeJS.Timeout | null>(null);
+  const generateRequestId = useRef<string | null>(null);
+  
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   
@@ -216,13 +256,13 @@ const Index = () => {
     tierLimits,
     incrementGeneration,
     isPro,
-    isFree
+    isFree,
+    refetchUsage
   } = useFeatureGate();
 
   const userTier = isPro ? 'pro' : 'free';
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
-  // ← CHANGE 2: Added feature lock modal state
   const [featureLockModal, setFeatureLockModal] = useState<{
     isOpen: boolean;
     feature: 'download' | 'template' | 'character-limit' | 'generation-limit';
@@ -245,6 +285,29 @@ const Index = () => {
     calculateAnalytics();
   }, [websiteHistory]);
 
+  // Sync usage across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'usage_tracking' || e.key === 'generations_today') {
+        refetchUsage?.();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Poll database every 30 seconds when tab is active
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible' && refetchUsage) {
+        refetchUsage();
+      }
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [refetchUsage]);
+
   // Load theme preference
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -264,10 +327,29 @@ const Index = () => {
 
   // Get authenticated user ID
   useEffect(() => {
-    if (user?.id) {
-      setUserId(user.id);
-    }
+    const loadUserProfile = async () => {
+      setIsLoadingProfile(true);
+      try {
+        if (user?.id) {
+          setUserId(user.id);
+        }
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+    
+    loadUserProfile();
   }, [user]);
+
+  // Sanitize generated code when it changes
+  useEffect(() => {
+    if (generatedCode) {
+      const sanitized = sanitizeHTML(generatedCode);
+      setSanitizedCode(sanitized);
+    } else {
+      setSanitizedCode("");
+    }
+  }, [generatedCode]);
 
   // Check if there's a shared website in URL
   useEffect(() => {
@@ -277,7 +359,6 @@ const Index = () => {
       try {
         const decodedCode = decodeURIComponent(atob(sharedCode));
         setGeneratedCode(decodedCode);
-        // Scroll to preview
         setTimeout(() => {
           window.scrollTo({ top: 300, behavior: 'smooth' });
         }, 500);
@@ -356,19 +437,32 @@ const Index = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [input, isGenerating, generatedCode]);
+
+  // Cleanup intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      if (progressInterval2Ref.current) {
+        clearInterval(progressInterval2Ref.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
 
   const calculateAnalytics = () => {
     const history = websiteHistory;
-    // Total generated
     const totalGenerated = history.length;
-    // Average generation time (simulate based on complexity)
     const avgTime = history.length > 0
       ? Math.floor((history.reduce((sum, site) => sum + site.prompt.length, 0) / history.length) / 10)
       : 0;
-    // Template usage tracking
+    
     const templateUsage: Record<string, number> = {};
     TEMPLATES.forEach(template => {
       const count = history.filter(site =>
@@ -378,15 +472,16 @@ const Index = () => {
         templateUsage[template.title] = count;
       }
     });
-    // Generation dates for chart
+    
     const generationDates = history.map(site =>
       new Date(site.timestamp).toLocaleDateString()
     );
-    // Calculate storage used
+    
     const totalStorage = history.reduce((sum, site) =>
       sum + (site.prompt.length + (site.html?.length || 0)), 0
     );
     const totalStorageKB = Math.round(totalStorage / 1024);
+    
     setAnalytics({
       totalGenerated,
       averageTime: avgTime,
@@ -405,10 +500,6 @@ const Index = () => {
     return dateCount;
   };
 
-  // Chat is now handled entirely by ChatModal component
-  // No duplicate chat logic needed here
-
-  // Auto-fill textarea when industry changes
   const handleIndustryChange = (value: string) => {
     setIndustry(value);
     if (value !== "custom" && INDUSTRY_TEMPLATES[value]) {
@@ -439,7 +530,6 @@ const Index = () => {
 
   const generateShareLink = () => {
     if (!generatedCode) return "";
-    // Encode HTML to base64 for URL
     const encodedCode = btoa(encodeURIComponent(generatedCode));
     const shareUrl = `${window.location.origin}${window.location.pathname}?shared=${encodedCode}`;
     setShareLink(shareUrl);
@@ -485,16 +575,15 @@ const Index = () => {
 
   const handleOpenInCodeSandbox = () => {
     if (!generatedCode) return;
-    // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-    // Create clean HTML
+    
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="./styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="./script.js"></script>');
-    // Create CodeSandbox parameters
+    
     const parameters = {
       files: {
         "index.html": {
@@ -525,10 +614,10 @@ const Index = () => {
         }
       }
     };
-    // Compress and encode
+    
     const compressed = JSON.stringify(parameters);
     const encoded = btoa(unescape(encodeURIComponent(compressed)));
-    // Open in new tab
+    
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = 'https://codesandbox.io/api/v1/sandboxes/define';
@@ -545,16 +634,15 @@ const Index = () => {
 
   const handleOpenInStackBlitz = () => {
     if (!generatedCode) return;
-    // Extract CSS and JS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-    // Create clean HTML
+    
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-    // Create project structure
+    
     const project = {
       title: 'AI Generated Website',
       description: 'Website created with AI Website Generator',
@@ -575,10 +663,9 @@ Generated on: ${new Date().toLocaleDateString()}
 `
       }
     };
-    // Create StackBlitz URL with encoded project
+    
     const projectString = JSON.stringify(project);
     const encoded = btoa(encodeURIComponent(projectString));
-    // Open StackBlitz
     window.open(`https://stackblitz.com/edit/html-${Date.now()}?project=${encoded}`, '_blank');
   };
 
@@ -596,9 +683,9 @@ Generated on: ${new Date().toLocaleDateString()}
         console.error('No user ID - cannot save to database');
         return;
       }
-      // Extract title from description or use default
+      
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
-      // Save to Supabase database
+      
       const { data, error } = await supabase
         .from('websites')
         .insert({
@@ -609,6 +696,7 @@ Generated on: ${new Date().toLocaleDateString()}
         })
         .select()
         .single();
+        
       if (error) {
         console.error('❌ FULL SUPABASE ERROR:', {
           message: error.message,
@@ -623,7 +711,7 @@ Generated on: ${new Date().toLocaleDateString()}
         });
         return;
       }
-      // Also save to localStorage as backup
+      
       const websites: SavedWebsite[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       const newWebsite: SavedWebsite = {
         id: data.id,
@@ -637,6 +725,7 @@ Generated on: ${new Date().toLocaleDateString()}
         websites.splice(MAX_WEBSITES);
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
+      
       toast({
         title: "Saved! 💾",
         description: "Website saved to your account",
@@ -653,9 +742,15 @@ Generated on: ${new Date().toLocaleDateString()}
       { progress: 75, message: "💻 Writing HTML, CSS, and JavaScript..." },
       { progress: 90, message: "✨ Finalizing your website..." }
     ];
+    
     let currentStage = 0;
     setProgress(0);
     setProgressStage(stages[0].message);
+    
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    
     const interval = setInterval(() => {
       if (currentStage < stages.length) {
         setProgress(stages[currentStage].progress);
@@ -663,8 +758,11 @@ Generated on: ${new Date().toLocaleDateString()}
         currentStage++;
       } else {
         clearInterval(interval);
+        progressIntervalRef.current = null;
       }
-    }, 8000); // Change stage every 8 seconds
+    }, 8000);
+    
+    progressIntervalRef.current = interval;
     return interval;
   };
 
@@ -717,7 +815,6 @@ Generated on: ${new Date().toLocaleDateString()}
 
   const getFilteredProjects = () => {
     let filtered = [...websiteHistory];
-    // Search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(site =>
         site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -726,11 +823,9 @@ Generated on: ${new Date().toLocaleDateString()}
         site.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
-    // Tag filter
     if (filterTag !== "all") {
       filtered = filtered.filter(site => site.tags.includes(filterTag));
     }
-    // Favorites filter
     if (showFavoritesOnly) {
       filtered = filtered.filter(site => site.isFavorite);
     }
@@ -746,22 +841,34 @@ Generated on: ${new Date().toLocaleDateString()}
   };
 
   const handleGenerate = async () => {
-    // ⚡ FEATURE GATE CHECK - HIGHEST PRIORITY
+    // Prevent concurrent requests
+    if (isGenerating) {
+      toast({
+        title: "Already Generating",
+        description: "Please wait for the current generation to complete.",
+      });
+      return;
+    }
+
+    // Frontend UX check only - real check is on backend
     if (!canGenerateMore) {
       setShowUpgradeModal(true);
       return;
     }
 
-    if (input.trim().length === 0 || input.length > 3000) {
+    // Sanitize input
+    const sanitizedPrompt = sanitizeInput(input);
+    
+    if (sanitizedPrompt.length === 0) {
       toast({
-        title: "Invalid Prompt Length",
-        description: input.length > 3000 ? "Maximum 3000 characters allowed. Please shorten your description." : "Please enter a description.",
+        title: "Invalid Input",
+        description: "Please enter a valid website description.",
         variant: "destructive",
       });
       return;
     }
-    
-    if (input.length < 50) {
+
+    if (sanitizedPrompt.length < 50) {
       toast({
         title: "Description too short",
         description: "Please describe your website with at least 50 characters",
@@ -769,6 +876,10 @@ Generated on: ${new Date().toLocaleDateString()}
       });
       return;
     }
+
+    // Create unique request ID
+    const requestId = `gen_${Date.now()}_${Math.random()}`;
+    generateRequestId.current = requestId;
 
     setIsGenerating(true);
     setProgress(0);
@@ -779,10 +890,15 @@ Generated on: ${new Date().toLocaleDateString()}
     abortControllerRef.current = new AbortController();
     
     // Start progress simulation
-    const progressInterval = simulateProgress();
+    simulateProgress();
+    
+    // Clear existing smooth progress interval
+    if (progressInterval2Ref.current) {
+      clearInterval(progressInterval2Ref.current);
+    }
     
     // Smooth progress animation
-    const progressInterval2 = setInterval(() => {
+    progressInterval2Ref.current = setInterval(() => {
       setProgress((p) => {
         const newProgress = Math.min(p + 0.5, 95);
         return newProgress;
@@ -792,7 +908,7 @@ Generated on: ${new Date().toLocaleDateString()}
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
       const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
-${input}
+${sanitizedPrompt}
 DESIGN STYLE: ${selectedStyle.toUpperCase()}
 ${styleInstruction}
 Apply this design style consistently throughout the website.
@@ -818,37 +934,80 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 
       setLastPrompt(prompt);
       
-      // 🔒 SECURITY: Get auth token
+      // Get auth token with refresh if needed
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      let token = session?.access_token;
 
-      if (!token) {
+      if (!token || !session) {
         toast({
-          title: "Authentication Error",
-          description: "Please log in again to generate websites.",
+          title: "Session Expired",
+          description: "Please log in again to continue.",
           variant: "destructive",
         });
-        navigate('/login');
+        navigate('/auth');
         return;
+      }
+
+      // Refresh token if close to expiry (within 5 minutes)
+      const expiresAt = session?.expires_at;
+      if (expiresAt) {
+        const expiryTime = new Date(expiresAt * 1000);
+        const now = new Date();
+        const minutesUntilExpiry = (expiryTime.getTime() - now.getTime()) / (1000 * 60);
+        
+        if (minutesUntilExpiry < 5) {
+          console.log('⏰ Token expiring soon, refreshing...');
+          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError || !refreshed.session) {
+            toast({
+              title: "Session Expired",
+              description: "Please log in again to continue.",
+              variant: "destructive",
+            });
+            navigate('/auth');
+            return;
+          }
+          
+          token = refreshed.session.access_token;
+        }
       }
 
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // 🔒 ADD THIS LINE!
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ prompt }),
         signal: abortControllerRef.current?.signal
       });
 
-      // Clear intervals after fetch
-      clearInterval(progressInterval);
-      clearInterval(progressInterval2);
-
       const data = await response.json();
 
-      // 🔒 SECURITY: Handle server-side limit check
+      // Handle auth errors from backend
+      if (response.status === 401) {
+        if (data.code === 'TOKEN_EXPIRED') {
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Logging you out...",
+            variant: "destructive",
+          });
+          await signOut();
+          navigate('/auth');
+        } else {
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again to continue.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+        }
+        setIsGenerating(false);
+        return;
+      }
+
+      // Handle server-side limit rejection
       if (response.status === 403) {
         setShowUpgradeModal(true);
         toast({
@@ -861,9 +1020,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         setProgressStage("");
         return;
       }
-
+      
       if (!response.ok) {
         throw new Error(data.error || 'Generation failed');
+      }
+
+      // Check if this request is still valid
+      if (generateRequestId.current !== requestId) {
+        console.log('⚠️ Request superseded, ignoring result');
+        return;
       }
 
       let htmlCode = data.htmlCode;
@@ -883,9 +1048,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-
-      // DON'T auto-show project modal - let user view the website first
-      // Modal can be opened manually if user wants to edit project details
 
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
@@ -908,36 +1070,40 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         });
       }, 2000);
     } catch (error) {
-      clearInterval(progressInterval);
-      clearInterval(progressInterval2);
+      // Cleanup intervals
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      if (progressInterval2Ref.current) {
+        clearInterval(progressInterval2Ref.current);
+        progressInterval2Ref.current = null;
+      }
+      
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Generation Cancelled",
           description: "You stopped the website generation process.",
         });
       } else if (error instanceof TypeError && error.message.includes('fetch')) {
-        // Network error
         toast({
           title: "🌐 Network Error",
           description: "Unable to connect to the server. Please check your internet connection and try again.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('timeout')) {
-        // Timeout error
         toast({
           title: "⏱️ Request Timeout",
           description: "The generation took too long. Please try again with a shorter description.",
           variant: "destructive",
         });
       } else if (error instanceof Error && error.message.includes('429')) {
-        // Rate limit error
         toast({
           title: "🚦 Too Many Requests",
           description: "You're generating too fast! Please wait a moment and try again.",
           variant: "destructive",
         });
       } else {
-        // Generic error
         console.error('Generation error:', error);
         toast({
           title: "❌ Generation Failed",
@@ -945,14 +1111,30 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
+      
       setIsGenerating(false);
       setProgress(0);
       setProgressStage("");
       setShowSuccess(false);
+    } finally {
+      // Only clear if this is still the active request
+      if (generateRequestId.current === requestId) {
+        setIsGenerating(false);
+        generateRequestId.current = null;
+      }
     }
   };
 
   const handleRegenerate = async () => {
+    // Prevent concurrent requests
+    if (isGenerating) {
+      toast({
+        title: "Already Generating",
+        description: "Please wait for the current generation to complete.",
+      });
+      return;
+    }
+
     if (!lastPrompt) {
       toast({
         title: "No prompt to regenerate",
@@ -962,19 +1144,30 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       return;
     }
 
+    // Frontend UX check only
+    if (!canGenerateMore) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // Create unique request ID
+    const requestId = `regen_${Date.now()}_${Math.random()}`;
+    generateRequestId.current = requestId;
+
     setIsGenerating(true);
     setProgress(0);
     setGeneratedCode(null);
     setShowSuccess(false);
     
-    // Create abort controller
     abortControllerRef.current = new AbortController();
     
-    // Start progress simulation
-    const progressInterval = simulateProgress();
+    simulateProgress();
     
-    // Smooth progress animation
-    const progressInterval2 = setInterval(() => {
+    if (progressInterval2Ref.current) {
+      clearInterval(progressInterval2Ref.current);
+    }
+    
+    progressInterval2Ref.current = setInterval(() => {
       setProgress((p) => {
         const newProgress = Math.min(p + 0.5, 95);
         return newProgress;
@@ -982,37 +1175,76 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     }, 150);
 
     try {
-      // 🔒 SECURITY: Get auth token
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      let token = session?.access_token;
 
-      if (!token) {
+      if (!token || !session) {
         toast({
-          title: "Authentication Error",
-          description: "Please log in again to regenerate.",
+          title: "Session Expired",
+          description: "Please log in again to continue.",
           variant: "destructive",
         });
-        navigate('/login');
+        navigate('/auth');
         return;
+      }
+
+      const expiresAt = session?.expires_at;
+      if (expiresAt) {
+        const expiryTime = new Date(expiresAt * 1000);
+        const now = new Date();
+        const minutesUntilExpiry = (expiryTime.getTime() - now.getTime()) / (1000 * 60);
+        
+        if (minutesUntilExpiry < 5) {
+          console.log('⏰ Token expiring soon, refreshing...');
+          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError || !refreshed.session) {
+            toast({
+              title: "Session Expired",
+              description: "Please log in again to continue.",
+              variant: "destructive",
+            });
+            navigate('/auth');
+            return;
+          }
+          
+          token = refreshed.session.access_token;
+        }
       }
 
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // 🔒 ADD THIS LINE!
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ prompt: lastPrompt }),
         signal: abortControllerRef.current?.signal
       });
 
-      // Clear intervals after fetch
-      clearInterval(progressInterval);
-      clearInterval(progressInterval2);
-
       const data = await response.json();
 
-      // 🔒 SECURITY: Handle server-side limit check
+      if (response.status === 401) {
+        if (data.code === 'TOKEN_EXPIRED') {
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Logging you out...",
+            variant: "destructive",
+          });
+          await signOut();
+          navigate('/auth');
+        } else {
+          toast({
+            title: "Authentication Error",
+            description: "Please log in again to continue.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+        }
+        setIsGenerating(false);
+        return;
+      }
+
       if (response.status === 403) {
         setShowUpgradeModal(true);
         toast({
@@ -1030,9 +1262,13 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         throw new Error(data.error || 'Generation failed');
       }
 
+      if (generateRequestId.current !== requestId) {
+        console.log('⚠️ Request superseded, ignoring result');
+        return;
+      }
+
       let htmlCode = data.htmlCode;
       
-      // Save to history
       const newWebsite = {
         id: Date.now().toString(),
         name: `Website ${websiteHistory.length + 1}`,
@@ -1048,13 +1284,11 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
 
-      // DON'T auto-show project modal - let user view the website first
-      // Modal can be opened manually if user wants to edit project details
-
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
 
-      // Show success state for 2 seconds
+      await incrementGeneration();
+
       setShowSuccess(true);
       setTimeout(async () => {
         setGeneratedCode(htmlCode);
@@ -1069,8 +1303,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         });
       }, 2000);
     } catch (error) {
-      clearInterval(progressInterval);
-      clearInterval(progressInterval2);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      if (progressInterval2Ref.current) {
+        clearInterval(progressInterval2Ref.current);
+        progressInterval2Ref.current = null;
+      }
+      
       if (error instanceof Error && error.name === 'AbortError') {
         toast({
           title: "❌ Regeneration Cancelled",
@@ -1102,10 +1343,16 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
           variant: "destructive",
         });
       }
+      
       setIsGenerating(false);
       setProgress(0);
       setProgressStage("");
       setShowSuccess(false);
+    } finally {
+      if (generateRequestId.current === requestId) {
+        setIsGenerating(false);
+        generateRequestId.current = null;
+      }
     }
   };
 
@@ -1129,17 +1376,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   const handleDownload = async () => {
     if (!generatedCode) return;
     const zip = new JSZip();
-    // Extract CSS from HTML
     const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
     const styles = styleMatch ? styleMatch[1] : '';
-    // Extract JS from HTML
     const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
     const scripts = scriptMatch ? scriptMatch[1] : '';
-    // Create clean HTML without inline styles/scripts
+    
     let cleanHtml = generatedCode
       .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
       .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
-    // Add files to ZIP
+    
     zip.file("index.html", cleanHtml);
     zip.file("styles.css", styles);
     zip.file("script.js", scripts);
@@ -1160,7 +1405,7 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 Generated with AI Website Builder
 ${new Date().toLocaleDateString()}
 `);
-    // Generate and download ZIP
+    
     const content = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(content);
     const a = document.createElement("a");
@@ -1168,6 +1413,7 @@ ${new Date().toLocaleDateString()}
     a.download = `website-${Date.now()}.zip`;
     a.click();
     URL.revokeObjectURL(url);
+    
     toast({
       title: "Downloaded!",
       description: "Your website ZIP has been saved",
@@ -1209,9 +1455,7 @@ ${new Date().toLocaleDateString()}
   };
 
   const handleTemplateClick = (prompt: string) => {
-    // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    // Auto-generate with template prompt
     setInput(prompt);
     handleGenerate();
   };
@@ -1292,6 +1536,29 @@ ${new Date().toLocaleDateString()}
     return <LoadingScreen />;
   }
 
+  // Show profile loading skeleton
+  if (isLoadingProfile) {
+    return (
+      <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
+        <div className="pt-20">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className={`glass-card-enhanced rounded-2xl p-8 ${dynamicGlassClass}`}>
+              <div className="animate-pulse space-y-6">
+                <div className={`h-8 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '60%' }}></div>
+                <div className={`h-4 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`} style={{ width: '80%' }}></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className={`h-32 rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-200'}`}></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900' : 'bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50'} relative overflow-hidden`}>
       {/* Analytics Dashboard Modal */}
@@ -1340,7 +1607,6 @@ ${new Date().toLocaleDateString()}
         generationsLimit={tierLimits.generationsPerMonth}
       />
 
-      {/* ← CHANGE 3: Added Feature Lock Modal */}
       {/* Feature Lock Modal */}
       <FeatureLockModal
         isOpen={featureLockModal.isOpen}
@@ -1351,10 +1617,8 @@ ${new Date().toLocaleDateString()}
 
       {/* Enhanced Animated Background Gradient */}
       <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/30 via-gray-900 to-indigo-900/30' : 'bg-gradient-to-br from-blue-900/20 via-gray-50 to-purple-900/20'}`}>
-        {/* Multiple animated gradient layers */}
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/20 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/20 via-transparent to-transparent animate-pulse'}`}></div>
         <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-blue-600/15 via-transparent to-transparent' : 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-400/15 via-transparent to-transparent'}`} style={{ animationDelay: '1s' }}></div>
-        {/* Floating orbs */}
         <div className={`absolute top-20 left-20 w-72 h-72 ${isDarkMode ? 'bg-purple-500/10' : 'bg-blue-400/10'} rounded-full blur-3xl animate-float-slow`}></div>
         <div className={`absolute bottom-20 right-20 w-96 h-96 ${isDarkMode ? 'bg-blue-500/10' : 'bg-purple-400/10'} rounded-full blur-3xl animate-float-slower`}></div>
       </div>
@@ -1551,7 +1815,6 @@ ${new Date().toLocaleDateString()}
               <div className="text-center mb-12 sm:mb-16 space-y-6 sm:space-y-8">
                 <div className="space-y-6">
                   <div className="relative">
-                    {/* Animated Gradient Background */}
                     <div className="absolute inset-0 -z-10">
                       <div className="absolute top-20 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
                       <div className="absolute top-40 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
@@ -1570,7 +1833,6 @@ ${new Date().toLocaleDateString()}
                     Describe your vision. Watch AI build it in seconds.
                   </p>
                 </div>
-                {/* Video section removed - moved to input-first design */}
                 <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass}`}>
                   <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
                   <span className={dynamicMutedClass}>
@@ -1578,12 +1840,10 @@ ${new Date().toLocaleDateString()}
                   </span>
                 </div>
 
-                {/* INPUT SECTION - MOVED TO HERO */}
+                {/* INPUT SECTION */}
                 <div className={`glass-card-enhanced rounded-2xl p-8 shadow-card animate-fade-in-up space-y-6 transition-colors duration-300 max-w-4xl mx-auto mt-12 ${dynamicGlassClass}`} style={{ animationDelay: '0.2s' }}>
-                  {/* Floating gradient border effect */}
                   <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
                   
-                  {/* Template Selector */}
                   <TemplateSelector
                     onSelectTemplate={(prompt) => {
                       setInput(prompt);
@@ -1642,7 +1902,6 @@ ${new Date().toLocaleDateString()}
                       className={`min-h-[140px] input-glow transition-all duration-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:bg-white/15' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-gray-50'}`}
                       rows={5}
                     />
-                    {/* Character Counter Component */}
                     <CharacterCounter 
                       current={input.length} 
                       limit={PROMPT_LIMITS[userTier].maxPromptLength}
@@ -1704,7 +1963,7 @@ ${new Date().toLocaleDateString()}
                 </div>
               </div>
 
-              {/* Template Gallery - Moved below input */}
+              {/* Template Gallery */}
               <div className="mt-16">
                 <div className="text-center mb-8">
                   <h2 className={`text-3xl font-bold mb-3 ${dynamicTextClass}`}>✨ Start with a Template</h2>
@@ -1726,13 +1985,10 @@ ${new Date().toLocaleDateString()}
                         disabled={isGenerating}
                         className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up hover:scale-105 hover:shadow-2xl transform`}
                       >
-                        {/* Shimmer effect on hover */}
                         <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        {/* Template Icon */}
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
-                        {/* Template Title */}
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
                           {template.title}
                         </h3>
@@ -1949,13 +2205,13 @@ ${new Date().toLocaleDateString()}
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10 animate-fade-in"></div>
                     )}
                     <iframe
-                      srcDoc={generatedCode}
+                      srcDoc={sanitizedCode}
                       className="w-full h-full border-0"
                       style={{
                         height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px'
                       }}
                       title="Generated Website Preview"
-                      sandbox="allow-scripts allow-same-origin"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     />
                   </div>
                   <div className="flex justify-center gap-3 mt-6">
@@ -1984,7 +2240,6 @@ ${new Date().toLocaleDateString()}
                   <Maximize2 className="w-4 h-4" />
                   Open Full Screen
                 </Button>
-                {/* ← CHANGE 4: Updated DownloadButton */}
                 <DownloadButton 
                   generatedCode={generatedCode}
                   userTier={userTier}
@@ -2302,7 +2557,6 @@ ${new Date().toLocaleDateString()}
         .animate-float-slower { animation: float-slower 10s ease-in-out infinite; }
         .glass-card-enhanced { position: relative; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
         .shadow-glow { box-shadow: 0 0 30px rgba(168, 85, 247, 0.3); }
-        /* Step 3: Input Polish & Micro-interactions */
         .input-glow:focus { 
           box-shadow: 0 0 30px rgba(168, 85, 247, 0.5); 
           transform: scale(1.01);
@@ -2317,7 +2571,6 @@ ${new Date().toLocaleDateString()}
         .template-card-enhanced:hover {
           box-shadow: 0 20px 60px rgba(168, 85, 247, 0.3);
         }
-        /* Step 4: Preview Section & Actions Enhancement */
         .device-frame-3d {
           box-shadow: 
             0 30px 90px rgba(0, 0, 0, 0.5),
@@ -2406,7 +2659,6 @@ ${new Date().toLocaleDateString()}
         .zoom-control:active {
           transform: scale(0.95);
         }
-        /* Step 5: Projects Section Polish */
         .card-hover-enhanced {
           transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
