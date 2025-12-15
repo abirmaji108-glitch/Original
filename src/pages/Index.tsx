@@ -256,8 +256,7 @@ const Index = () => {
     tierLimits,
     incrementGeneration,
     isPro,
-    isFree,
-    refetchUsage
+    isFree
   } = useFeatureGate();
 
   const userTier = isPro ? 'pro' : 'free';
@@ -289,24 +288,17 @@ const Index = () => {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'usage_tracking' || e.key === 'generations_today') {
-        refetchUsage?.();
+        // Reload page to sync usage data across tabs
+        window.location.reload();
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
     
-    // Poll database every 30 seconds when tab is active
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible' && refetchUsage) {
-        refetchUsage();
-      }
-    }, 30000);
-
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
     };
-  }, [refetchUsage]);
+  }, []);
 
   // Load theme preference
   useEffect(() => {
@@ -2549,7 +2541,7 @@ ${new Date().toLocaleDateString()}
         .device-frame-tablet iframe { border-radius: 0; }
         .device-frame-mobile { border-radius: 40px; border: 10px solid #000; max-width: 375px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
         .device-frame-mobile iframe { border-radius: 0; }
-        .zoom-control { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; color: white; transition: all 0.2s; cursor: pointer; }
+        .zoom-control { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-center: center; color: white; transition: all 0.2s; cursor: pointer; }
         .zoom-control:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
         @keyframes float-slow { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, -30px); } }
         @keyframes float-slower { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, 40px); } }
