@@ -9,7 +9,7 @@ import rateLimit from 'express-rate-limit';
 import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
 
 // ✅ FIXED: Import default export from logger
-import logger from './src/utils/logger.js';
+import logger from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
