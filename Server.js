@@ -7,7 +7,9 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
-import { logger } from './src/utils/logger.js';
+
+// ✅ FIXED: Import default export from logger
+import logger from './src/utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
