@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,17 +31,75 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔐 Auth event:', event); // ✅ ADD LOGGING
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // ✅ ADD EVENT HANDLING
+      if (event === 'SIGNED_OUT') {
+        console.log('🔓 User signed out - clearing cache');
+        localStorage.removeItem('user_tier');
+        localStorage.removeItem('generations_today');
+      }
+      
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('✅ Token refreshed successfully');
+      }
+      
+      if (event === 'USER_UPDATED') {
+        console.log('👤 User profile updated');
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [toast]); // ✅ ADD toast dependency
 
   const signUp = async (email: string, password: string) => {
     try {
+      // ✅ VALIDATION BEFORE API CALL
+      
+      // Email validation
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast({
+          title: "Invalid Email",
+          description: "Please enter a valid email address.",
+          variant: "destructive"
+        });
+        return { error: new Error('Invalid email format') };
+      }
+      
+      // Password strength validation
+      if (password.length < 8) {
+        toast({
+          title: "Weak Password",
+          description: "Password must be at least 8 characters long.",
+          variant: "destructive"
+        });
+        return { error: new Error('Password too short') };
+      }
+      
+      if (!/[A-Z]/.test(password)) {
+        toast({
+          title: "Weak Password",
+          description: "Password must contain at least one uppercase letter.",
+          variant: "destructive"
+        });
+        return { error: new Error('Password needs uppercase') };
+      }
+      
+      if (!/[0-9]/.test(password)) {
+        toast({
+          title: "Weak Password",
+          description: "Password must contain at least one number.",
+          variant: "destructive"
+        });
+        return { error: new Error('Password needs number') };
+      }
+      
+      // Now call Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -63,21 +121,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { error: null };
     } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
       return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
+      // ✅ ADD VALIDATION
+      if (!email || !password) {
+        toast({
+          title: "Missing Fields",
+          description: "Please enter both email and password.",
+          variant: "destructive"
+        });
+        return { error: new Error('Missing credentials') };
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        // ✅ BETTER ERROR MESSAGES
+        let errorMsg = error.message;
+        
+        if (error.message.includes('Invalid login credentials')) {
+          errorMsg = 'Incorrect email or password. Please try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMsg = 'Please verify your email before signing in.';
+        }
+        
         toast({
           title: "Sign In Failed",
-          description: error.message,
+          description: errorMsg,
           variant: "destructive"
         });
         return { error };
@@ -90,6 +172,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { error: null };
     } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
       return { error };
     }
   };
