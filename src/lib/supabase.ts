@@ -1,12 +1,19 @@
 import { createClient, SupabaseClient, PostgrestError } from '@supabase/supabase-js';
+
+// ✅ Better error messages for production
+const ENV = import.meta.env.MODE || 'development';
+const IS_PRODUCTION = ENV === 'production';
+
 // Environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // Helper function to create mock client
 const createMockClient = (): SupabaseClient => {
- console.error('❌ Supabase is running in mock mode - Environment variables missing');
- console.error('VITE_SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing');
- console.error('VITE_SUPABASE_ANON_KEY:', supabaseKey ? 'Set' : 'Missing');
+ if (!IS_PRODUCTION) {
+  console.error('⚠️ Supabase running in MOCK MODE - check environment variables');
+  console.error('VITE_SUPABASE_URL:', supabaseUrl ? 'Set' : 'Missing');
+  console.error('VITE_SUPABASE_ANON_KEY:', supabaseKey ? 'Set' : 'Missing');
+ }
  const mockError = (operation: string, table?: string) =>
  new Error(`Supabase not configured. Check environment variables.${table ? ` Attempted ${operation} on: ${table}` : ` Attempted: ${operation}`}`);
  return {
@@ -35,7 +42,6 @@ const createMockClient = (): SupabaseClient => {
  }),
  upsert: (values: any) => Promise.reject(mockError('upsert', table)),
  }),
- 
  // Authentication
  auth: {
  getSession: () => Promise.reject(mockError('getSession')),
@@ -46,7 +52,6 @@ const createMockClient = (): SupabaseClient => {
  resetPasswordForEmail: (email: string) => Promise.reject(mockError('resetPasswordForEmail')),
  onAuthStateChange: (callback: any) => ({ data: { subscription: { unsubscribe: () => {} } } }),
  },
- 
  // Storage
  storage: {
  from: (bucket: string) => ({
@@ -58,19 +63,15 @@ const createMockClient = (): SupabaseClient => {
  getPublicUrl: (path: string) => ({ data: { publicUrl: '' } }),
  }),
  },
- 
  // Realtime
  channel: (name: string) => ({
  on: () => ({ subscribe: () => Promise.reject(mockError('realtime subscribe')) }),
  subscribe: () => Promise.reject(mockError('realtime channel')),
  }),
- 
  // Functions
  rpc: (fn: string, params?: any) => Promise.reject(mockError(`rpc: ${fn}`)),
- 
  // Remove auth header for edge cases
  removeAllChannels: () => {},
- 
  } as unknown as SupabaseClient;
 };
 // Create actual or mock client based on environment variables
@@ -220,7 +221,6 @@ static async safeSelect<T>(
   context: string = `select from ${table}`
 ): Promise<T[]> {
   let query = supabase.from(table).select(columns);
-
   if (filters) {
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -228,13 +228,12 @@ static async safeSelect<T>(
       }
     });
   }
-
   const result = await query;
-  
+ 
   if (result.error) {
     return this.handleError(result.error, context);
   }
-  
+ 
   return (result.data || []) as T[];
 }
  /**
