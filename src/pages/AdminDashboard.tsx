@@ -10,11 +10,12 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  BarChart3,      // ← ADD THIS
-  Download,       // ← ADD THIS
-  Activity,       // ← ADD THIS
-  Zap            // ← ADD THIS
+  BarChart3, // ← ADD THIS
+  Download, // ← ADD THIS
+  Activity, // ← ADD THIS
+  Zap // ← ADD THIS
 } from 'lucide-react';
+
 interface UserStats {
   total: number;
   free: number;
@@ -22,11 +23,13 @@ interface UserStats {
   pro: number;
   business: number;
 }
+
 interface RecentUser {
   email: string;
   user_tier: string;
   created_at: string;
 }
+
 interface UsageData {
   date: string;
   generations: number;
@@ -37,12 +40,13 @@ interface TopUser {
   user_tier: string;
   total_generations: number;
 }
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
- 
+
   // Stats
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [userStats, setUserStats] = useState<UserStats>({
@@ -54,79 +58,91 @@ const AdminDashboard = () => {
   });
   const [conversionRate, setConversionRate] = useState(0);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+
   // Analytics
   const [todayGenerations, setTodayGenerations] = useState(0);
   const [weekGenerations, setWeekGenerations] = useState(0);
   const [monthGenerations, setMonthGenerations] = useState(0);
   const [usageHistory, setUsageHistory] = useState<UsageData[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
+
   useEffect(() => {
     checkAdminAccess();
   }, []);
+
   const checkAdminAccess = async () => {
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-     
+    
       if (!user) {
         navigate('/login');
         return;
       }
+
       // Check if user is admin (your email only)
       const adminEmails = ['abirmaji108@gmail.com']; // Add your admin emails here
-     
+    
       if (!adminEmails.includes(user.email || '')) {
         setError('Access denied. Admin only.');
         setLoading(false);
         setTimeout(() => navigate('/app'), 2000);
         return;
       }
+
       setIsAdmin(true);
       await fetchDashboardData();
-     
+    
     } catch (err) {
       console.error('Admin check error:', err);
       setError('Authentication error');
       setLoading(false);
     }
   };
+
   const fetchDashboardData = async () => {
     try {
       // Fetch all users and their tiers
-      const { data: profiles, error: profilesError } = await supabase
+      const profilesResult = await supabase
         .from('profiles')
         .select('id, email, user_tier, created_at')
         .order('created_at', { ascending: false });
-      if (profilesError) throw profilesError;
+    
+      if (profilesResult.error) throw profilesResult.error;
+      const profiles = profilesResult.data || [];
+
       // Calculate user stats
       const stats: UserStats = {
-        total: profiles?.length || 0,
-        free: profiles?.filter(p => p.user_tier === 'free').length || 0,
-        basic: profiles?.filter(p => p.user_tier === 'basic').length || 0,
-        pro: profiles?.filter(p => p.user_tier === 'pro').length || 0,
-        business: profiles?.filter(p => p.user_tier === 'business').length || 0,
+        total: profiles.length,
+        free: profiles.filter(p => p.user_tier === 'free').length,
+        basic: profiles.filter(p => p.user_tier === 'basic').length,
+        pro: profiles.filter(p => p.user_tier === 'pro').length,
+        business: profiles.filter(p => p.user_tier === 'business').length,
       };
       setUserStats(stats);
+
       // Calculate conversion rate
       const paidUsers = stats.basic + stats.pro + stats.business;
       const rate = stats.total > 0 ? (paidUsers / stats.total) * 100 : 0;
       setConversionRate(Number(rate.toFixed(1)));
-      // Calculate total revenue (monthly recurring revenue)
+
+      // Calculate total revenue
       const revenue =
         (stats.basic * 9) +
         (stats.pro * 22) +
         (stats.business * 49);
       setTotalRevenue(revenue);
-      // Get recent users (last 10)
-      const recent = profiles?.slice(0, 10).map(p => ({
+
+      // Get recent users
+      const recent = profiles.slice(0, 10).map(p => ({
         email: p.email,
         user_tier: p.user_tier,
         created_at: p.created_at
-      })) || [];
+      }));
       setRecentUsers(recent);
 
       // Fetch usage analytics
-      await fetchUsageAnalytics(profiles || []);
+      await fetchUsageAnalytics(profiles);
 
       setLoading(false);
     } catch (err) {
@@ -139,24 +155,26 @@ const AdminDashboard = () => {
   const fetchUsageAnalytics = async (profiles: any[]) => {
     try {
       // Fetch usage tracking data
-      const { data: usageData, error: usageError } = await supabase
+      const usageResult = await supabase
         .from('usage_tracking')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (usageError) {
-        console.error('Usage tracking error:', usageError);
+      if (usageResult.error) {
+        console.error('Usage tracking error:', usageResult.error);
         return;
       }
 
-      if (!usageData || usageData.length === 0) {
+      const usageData = usageResult.data || [];
+
+      if (usageData.length === 0) {
         console.log('No usage data yet');
         return;
       }
 
       // Calculate today's generations
       const today = new Date().toISOString().split('T')[0];
-      const todayData = usageData.filter(d => 
+      const todayData = usageData.filter(d =>
         d.created_at && d.created_at.startsWith(today)
       );
       const todayTotal = todayData.reduce((sum, d) => sum + (d.generations_this_month || 0), 0);
@@ -165,7 +183,7 @@ const AdminDashboard = () => {
       // Calculate this week's generations
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekData = usageData.filter(d => 
+      const weekData = usageData.filter(d =>
         d.created_at && new Date(d.created_at) >= weekAgo
       );
       const weekTotal = weekData.reduce((sum, d) => sum + (d.generations_this_month || 0), 0);
@@ -181,12 +199,12 @@ const AdminDashboard = () => {
         const date = new Date();
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
-        
-        const dayData = usageData.filter(d => 
+       
+        const dayData = usageData.filter(d =>
           d.created_at && d.created_at.startsWith(dateStr)
         );
         const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_this_month || 0), 0);
-        
+       
         history.push({
           date: dateStr,
           generations: dayTotal
@@ -202,7 +220,6 @@ const AdminDashboard = () => {
           userGenerations.set(d.id, current + (d.generations_this_month || 0));
         }
       });
-
       const topUsersList: TopUser[] = Array.from(userGenerations.entries())
         .map(([userId, gens]) => {
           const profile = profiles.find(p => p.id === userId);
@@ -214,9 +231,8 @@ const AdminDashboard = () => {
         })
         .sort((a, b) => b.total_generations - a.total_generations)
         .slice(0, 5);
-      
+     
       setTopUsers(topUsersList);
-
     } catch (err) {
       console.error('Error fetching usage analytics:', err);
     }
@@ -230,9 +246,11 @@ const AdminDashboard = () => {
       default: return 'text-gray-600 bg-gray-100';
     }
   };
+
   const getTierLabel = (tier: string) => {
     return tier.charAt(0).toUpperCase() + tier.slice(1);
   };
+
   const exportToCSV = () => {
     // Prepare CSV data
     const headers = ['Email', 'Tier', 'Total Generations', 'Signed Up'];
@@ -281,6 +299,7 @@ const AdminDashboard = () => {
   const getMaxGenerations = () => {
     return Math.max(...usageHistory.map(d => d.generations), 10);
   };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -291,6 +310,7 @@ const AdminDashboard = () => {
       </div>
     );
   }
+
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -308,7 +328,9 @@ const AdminDashboard = () => {
       </div>
     );
   }
+
   if (!isAdmin) return null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -346,12 +368,13 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-       
+      
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-         
+        
           {/* Total Revenue */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -365,6 +388,7 @@ const AdminDashboard = () => {
             </p>
             <p className="text-xs text-gray-500 mt-2">Monthly Recurring Revenue</p>
           </div>
+
           {/* Total Users */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -378,6 +402,7 @@ const AdminDashboard = () => {
               {userStats.free} free, {userStats.basic + userStats.pro + userStats.business} paid
             </p>
           </div>
+
           {/* Conversion Rate */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -389,6 +414,7 @@ const AdminDashboard = () => {
             <p className="text-3xl font-bold text-gray-900">{conversionRate}%</p>
             <p className="text-xs text-gray-500 mt-2">Free to paid conversion</p>
           </div>
+
           {/* Paid Users */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -406,7 +432,7 @@ const AdminDashboard = () => {
 
         {/* Stats Cards Row 2 - Usage Analytics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          
+         
           <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl shadow-sm p-6 border border-blue-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -447,7 +473,7 @@ const AdminDashboard = () => {
             <BarChart3 className="w-5 h-5 text-purple-600" />
             7-Day Usage History
           </h2>
-          
+         
           {usageHistory.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -458,7 +484,7 @@ const AdminDashboard = () => {
               {usageHistory.map((data, idx) => {
                 const maxGens = getMaxGenerations();
                 const percentage = maxGens > 0 ? (data.generations / maxGens) * 100 : 0;
-                
+               
                 return (
                   <div key={idx}>
                     <div className="flex items-center justify-between mb-2">
@@ -484,7 +510,7 @@ const AdminDashboard = () => {
 
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-         
+        
           {/* User Distribution */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -525,6 +551,7 @@ const AdminDashboard = () => {
               })}
             </div>
           </div>
+
           {/* Top Users */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -536,7 +563,7 @@ const AdminDashboard = () => {
                 <p className="text-gray-500 text-center py-8">No activity yet</p>
               ) : (
                 topUsers.map((user, idx) => (
-                  <div 
+                  <div
                     key={idx}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
@@ -574,7 +601,7 @@ const AdminDashboard = () => {
               <p className="text-gray-500 text-center py-8">No users yet</p>
             ) : (
               recentUsers.map((user, idx) => (
-                <div 
+                <div
                   key={idx}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
@@ -594,6 +621,7 @@ const AdminDashboard = () => {
             )}
           </div>
         </div>
+
         {/* Revenue Breakdown */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mt-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -634,4 +662,5 @@ const AdminDashboard = () => {
     </div>
   );
 };
+
 export default AdminDashboard;
