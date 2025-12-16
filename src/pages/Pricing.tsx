@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Check, Sparkles, Zap, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
 const Pricing = () => {
