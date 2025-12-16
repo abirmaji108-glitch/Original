@@ -145,19 +145,15 @@ export class SupabaseService {
  */
  private static handleError(error: any, context: string): never {
  console.error(`❌ Supabase Error (${context}):`, error);
- 
  const errorMessage = error?.message || 'Unknown database error';
  const errorCode = error?.code || 'UNKNOWN';
- 
  // Check if this is our mock client error
  if (errorMessage.includes('Supabase not configured')) {
  throw new Error('Database is not configured. Please contact support.');
  }
- 
  // Provide user-friendly error messages
  const userMessage = this.userMessages[errorCode] ||
  `Database error in ${context}: ${errorMessage}`;
- 
  throw new Error(userMessage);
  }
  /**
@@ -169,15 +165,12 @@ export class SupabaseService {
  ): Promise<T> {
  try {
  const { data, error } = await query;
- 
  if (error) {
  return this.handleError(error, context);
  }
- 
  if (data === null) {
  throw new Error(`No data returned from ${context}`);
  }
- 
  return data;
  } catch (error) {
  return this.handleError(error, context);
@@ -194,7 +187,6 @@ static async safeInsert<T>(
   const result = await supabase.from(table).insert(data).select().single();
   return this.safeQuery(Promise.resolve(result), context);
 }
-
 /**
  * Safe update with error handling
  */
@@ -207,7 +199,6 @@ static async safeUpdate<T>(
   const result = await supabase.from(table).update(data).match(match).select().single();
   return this.safeQuery(Promise.resolve(result), context);
 }
-
 /**
  * Safe delete with error handling
  */
@@ -219,7 +210,6 @@ static async safeDelete(
   const result = await supabase.from(table).delete().match(match);
   await this.safeQuery(Promise.resolve(result), context);
 }
-
 /**
  * Safe select with error handling
  */
@@ -234,13 +224,18 @@ static async safeSelect<T>(
   if (filters) {
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        query = query.eq(key, value);
+        query = query.eq(key, value) as any;
       }
     });
   }
 
   const result = await query;
-  return this.safeQuery(Promise.resolve(result), context);
+  
+  if (result.error) {
+    return this.handleError(result.error, context);
+  }
+  
+  return (result.data || []) as T[];
 }
  /**
  * Check if Supabase is properly configured
@@ -289,7 +284,6 @@ export const checkSupabaseConnection = async (): Promise<ConnectionStatus> => {
  // Try to fetch from the health endpoint
  const controller = new AbortController();
  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
- 
  try {
  const healthCheck = await fetch(`${supabaseUrl}/rest/v1/`, {
  headers: {
@@ -299,9 +293,7 @@ export const checkSupabaseConnection = async (): Promise<ConnectionStatus> => {
  },
  signal: controller.signal,
  });
- 
  clearTimeout(timeoutId);
- 
  if (healthCheck.ok) {
  return {
  connected: true,
@@ -313,7 +305,6 @@ export const checkSupabaseConnection = async (): Promise<ConnectionStatus> => {
  timestamp,
  };
  }
- 
  return {
  connected: false,
  error: `HTTP ${healthCheck.status}: ${healthCheck.statusText}`,
@@ -329,7 +320,6 @@ export const checkSupabaseConnection = async (): Promise<ConnectionStatus> => {
  }
  } catch (error) {
  console.error('Supabase connection test failed:', error);
- 
  return {
  connected: false,
  error: error instanceof Error ? error.message : 'Unknown connection error',
@@ -357,13 +347,10 @@ export const monitorConnection = async (
  for (let attempt = 1; attempt <= maxRetries; attempt++) {
  try {
  const status = await checkSupabaseConnection();
- 
  if (status.connected) {
  return status;
  }
- 
  lastError = status;
- 
  if (attempt < maxRetries) {
  await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
  }
