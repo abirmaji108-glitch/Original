@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,18 +14,60 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
+
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password !== confirmPassword) {
-      alert('Passwords do not match!');
+    // ✅ EMAIL VALIDATION
+    if (!isValidEmail(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive"
+      });
       return;
     }
 
-    if (password.length < 6) {
-      alert('Password must be at least 6 characters long');
+    // ✅ IMPROVED VALIDATION
+    if (password !== confirmPassword) {
+      toast({
+        title: "Passwords Don't Match",
+        description: "Please make sure both passwords are the same.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (password.length < 8) {
+      toast({
+        title: "Password Too Short",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      toast({
+        title: "Weak Password",
+        description: "Password must contain at least one uppercase letter.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!/[0-9]/.test(password)) {
+      toast({
+        title: "Weak Password",
+        description: "Password must contain at least one number.",
+        variant: "destructive"
+      });
       return;
     }
 
