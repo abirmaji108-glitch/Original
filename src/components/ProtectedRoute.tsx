@@ -7,10 +7,10 @@ interface ProtectedRouteProps {
   adminOnly?: boolean;
 }
 
-export const ProtectedRoute = ({ 
-  children, 
+export const ProtectedRoute = ({
+  children,
   requireAuth = true,
-  adminOnly = false 
+  adminOnly = false
 }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
 
@@ -28,10 +28,9 @@ export const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
 
-  // Check admin access
+  // Check admin access - ONLY these emails can access /admin dashboard
   if (adminOnly && user) {
-    // ⚠️ REPLACE WITH YOUR ACTUAL ADMIN EMAIL
-    const ADMIN_EMAILS = ['your-email@example.com']; 
+    const ADMIN_EMAILS = ['abirmaji108@gmail.com', 'rupsamaji00@gmail.com'];
     
     if (!ADMIN_EMAILS.includes(user.email || '')) {
       return <Navigate to="/app" replace />;
@@ -43,5 +42,6 @@ export const ProtectedRoute = ({
     return <Navigate to="/app" replace />;
   }
 
+  // Render protected content if all checks pass
   return <>{children}</>;
 };
