@@ -11,10 +11,9 @@ export interface UsageData {
 }
 
 export const useUsageTracking = (userId: string | undefined) => {
-  // Default limit to free tier (2 generations)
   const [usage, setUsage] = useState<UsageData>({
     generationsUsed: 0,
-    generationsLimit: 2, // Default to free tier
+    generationsLimit: 2,
     monthYear: new Date().toISOString().slice(0, 7),
     canGenerate: true
   });
@@ -23,15 +22,15 @@ export const useUsageTracking = (userId: string | undefined) => {
   const { toast } = useToast();
 
   const fetchUserTier = async () => {
-    if (!userId) return 2; // Default free tier
+    if (!userId) return 2;
 
-    const { data: profile } = await supabase
+    const result = await supabase
       .from('profiles')
       .select('user_tier')
       .eq('id', userId)
       .single();
 
-    const tier = (profile?.user_tier as UserTier) || 'free';
+    const tier = (result.data?.user_tier as UserTier) || 'free';
     return TIER_LIMITS[tier].generationsPerMonth;
   };
 
@@ -43,25 +42,25 @@ export const useUsageTracking = (userId: string | undefined) => {
 
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const { data, error } = await supabase
+      const result = await supabase
         .from('usage_tracking')
         .select('*')
         .eq('user_id', userId)
         .eq('month_year', currentMonth)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching usage:', error);
+      if (result.error && result.error.code !== 'PGRST116') {
+        console.error('Error fetching usage:', result.error);
       }
 
       const userLimit = await fetchUserTier();
 
-      if (data) {
+      if (result.data) {
         setUsage({
-          generationsUsed: data.generations_used,
+          generationsUsed: result.data.generations_used,
           generationsLimit: userLimit,
           monthYear: currentMonth,
-          canGenerate: data.generations_used < userLimit
+          canGenerate: result.data.generations_used < userLimit
         });
       } else {
         setUsage({
@@ -85,20 +84,20 @@ export const useUsageTracking = (userId: string | undefined) => {
       const currentMonth = new Date().toISOString().slice(0, 7);
       const userLimit = await fetchUserTier();
 
-      const { data: existing, error: fetchError } = await supabase
+      const existingResult = await supabase
         .from('usage_tracking')
         .select('*')
         .eq('user_id', userId)
         .eq('month_year', currentMonth)
         .maybeSingle();
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error fetching usage:', fetchError);
+      if (existingResult.error && existingResult.error.code !== 'PGRST116') {
+        console.error('Error fetching usage:', existingResult.error);
         return false;
       }
 
-      if (existing) {
-        const newCount = existing.generations_used + 1;
+      if (existingResult.data) {
+        const newCount = existingResult.data.generations_used + 1;
 
         const { error } = await supabase
           .from('usage_tracking')
