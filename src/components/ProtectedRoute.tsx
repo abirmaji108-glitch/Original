@@ -1,30 +1,47 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireAuth?: boolean;
+  adminOnly?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ 
+  children, 
+  requireAuth = true,
+  adminOnly = false 
+}: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
 
+  // Show loading spinner while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
-  if (!user) {
+  // Redirect to login if auth required but no user
+  if (requireAuth && !user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check admin access
+  if (adminOnly && user) {
+    // ⚠️ REPLACE WITH YOUR ACTUAL ADMIN EMAIL
+    const ADMIN_EMAILS = ['your-email@example.com']; 
+    
+    if (!ADMIN_EMAILS.includes(user.email || '')) {
+      return <Navigate to="/app" replace />;
+    }
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (!requireAuth && user) {
+    return <Navigate to="/app" replace />;
   }
 
   return <>{children}</>;
 };
-
-export default ProtectedRoute;
