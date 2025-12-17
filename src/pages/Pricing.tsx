@@ -3,11 +3,14 @@ import { Check, Sparkles, Zap, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null); // Track which plan is loading
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const pricingTiers = [
     {
@@ -105,11 +108,29 @@ const Pricing = () => {
   ];
 
   const handleStartPlan = async (plan: typeof pricingTiers[0]) => {
-    // If user not logged in, redirect to signup
+    // Prevent double-clicks
+    if (loadingPlan) {
+      return; // Already processing a payment
+    }
+
+    // Validate user and user.id exist
     if (!user) {
       navigate('/signup');
       return;
     }
+
+    if (!user.id) {
+      toast({
+        title: "Authentication Error",
+        description: "User session is invalid. Please log in again.",
+        variant: "destructive"
+      });
+      navigate('/login');
+      return;
+    }
+
+    // Set loading state
+    setLoadingPlan(plan.id);
 
     // Free plan - just update tier in database
     if (plan.id === 'free') {
@@ -119,11 +140,21 @@ const Pricing = () => {
           .update({ user_tier: 'free' })
           .eq('id', user.id);
         if (error) throw error;
-        alert('Welcome to the Free plan!');
-        navigate('/dashboard');
+
+        toast({
+          title: "Welcome to Free Plan!",
+          description: "You're all set to start creating.",
+        });
+        navigate('/app'); // Changed from /dashboard to /app
       } catch (error) {
         console.error('Error updating tier:', error);
-        alert('Failed to update plan. Please try again.');
+        toast({
+          title: "Update Failed",
+          description: "Failed to update plan. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoadingPlan(null); // Reset loading state
       }
       return;
     }
@@ -131,6 +162,7 @@ const Pricing = () => {
     // Business plan - contact sales
     if (plan.id === 'business') {
       window.location.href = 'mailto:sales@sento.ai?subject=Business Plan Inquiry';
+      setLoadingPlan(null);
       return;
     }
 
@@ -139,17 +171,26 @@ const Pricing = () => {
       try {
         // Determine correct price ID based on billing cycle and plan
         let priceId;
-       
+
+        // Add support for Business plan
         if (billingCycle === 'monthly') {
           // Monthly pricing
-          priceId = plan.id === 'basic'
-            ? import.meta.env.VITE_STRIPE_BASIC_PRICE_ID
-            : import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
+          if (plan.id === 'basic') {
+            priceId = import.meta.env.VITE_STRIPE_BASIC_PRICE_ID;
+          } else if (plan.id === 'pro') {
+            priceId = import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
+          } else if (plan.id === 'business') {
+            priceId = import.meta.env.VITE_STRIPE_BUSINESS_PRICE_ID;
+          }
         } else {
           // Yearly pricing
-          priceId = plan.id === 'basic'
-            ? import.meta.env.VITE_STRIPE_BASIC_YEARLY_PRICE_ID
-            : import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID;
+          if (plan.id === 'basic') {
+            priceId = import.meta.env.VITE_STRIPE_BASIC_YEARLY_PRICE_ID;
+          } else if (plan.id === 'pro') {
+            priceId = import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID;
+          } else if (plan.id === 'business') {
+            priceId = import.meta.env.VITE_STRIPE_BUSINESS_YEARLY_PRICE_ID;
+          }
         }
 
         if (!priceId) {
@@ -158,8 +199,19 @@ const Pricing = () => {
 
         console.log(`💳 Starting checkout: ${plan.name} (${billingCycle}) - Price ID: ${priceId}`);
 
-        // Use flexible backend URL with fallback to localhost:3000
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+        // Never fallback to localhost in production
+        const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+        if (!backendUrl) {
+          console.error('❌ VITE_BACKEND_URL not configured!');
+          toast({
+            title: "Configuration Error",
+            description: "Payment system configuration error. Please contact support.",
+            variant: "destructive"
+          });
+          setLoadingPlan(null); // ← ADD THIS LINE
+          return;
+        }
 
         const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
           method: 'POST',
@@ -171,7 +223,7 @@ const Pricing = () => {
             userId: user.id,
             email: user.email,
             planName: plan.name,
-            billingCycle, // Send billing cycle to backend for logging
+            billingCycle,
           }),
         });
 
@@ -180,10 +232,21 @@ const Pricing = () => {
           throw new Error(data.error || 'Failed to create checkout session');
         }
 
-        // Load Stripe and redirect
-        const stripe = (window as any).Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+        // Better validation and error messages
+        const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+
+        if (!stripePublishableKey) {
+          throw new Error('Stripe publishable key not configured. Please contact support.');
+        }
+
+        if (!(window as any).Stripe) {
+          throw new Error('Stripe.js failed to load. Please check your internet connection and try again.');
+        }
+
+        const stripe = (window as any).Stripe(stripePublishableKey);
+
         if (!stripe) {
-          throw new Error('Stripe failed to load');
+          throw new Error('Failed to initialize Stripe. Please refresh the page and try again.');
         }
 
         const { error } = await stripe.redirectToCheckout({
@@ -195,9 +258,17 @@ const Pricing = () => {
         }
       } catch (error: any) {
         console.error('Stripe checkout error:', error);
-        alert(`Failed to start checkout: ${error.message}. Please try again or contact support.`);
+        toast({
+          title: "Checkout Failed",
+          description: error.message || "Please try again or contact support.",
+          variant: "destructive"
+        });
+        setLoadingPlan(null); // Reset loading state
       }
     }
+
+    // Reset loading state if we didn't redirect
+    setLoadingPlan(null);
   };
 
   const savings = {
@@ -311,13 +382,14 @@ const Pricing = () => {
                 </div>
                 <button
                   onClick={() => handleStartPlan(plan)}
+                  disabled={loadingPlan !== null} // Disable all buttons while loading
                   className={`w-full py-2.5 rounded-lg font-semibold transition-all mb-6 text-sm ${
                     plan.highlighted
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
                       : 'bg-gray-700 hover:bg-gray-600 text-white'
-                  }`}
+                  } ${loadingPlan !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {plan.cta}
+                  {loadingPlan === plan.id ? 'Processing...' : plan.cta}
                 </button>
                 <div className="space-y-2">
                   {plan.features.map((feature, featureIndex) => (
