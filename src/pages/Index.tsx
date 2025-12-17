@@ -41,7 +41,7 @@ import {
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 import JSZip from "jszip";
 import { useAuth } from '@/contexts/AuthContext';
-import { useUsageTracking } from '@/hooks/use-usage-tracking';
+import { useUsageTracking, notifyUsageUpdate } from '@/hooks/use-usage-tracking';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingScreen } from '@/components/ui/spinner';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
@@ -247,19 +247,19 @@ const Index = () => {
   const generateRequestId = useRef<string | null>(null);
   
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  
+  // ✅ CORRECTED: Get userTier directly from useAuth()
+  const { user, userTier, signOut } = useAuth();
   
   // Feature gating
   const { 
     canGenerate: canGenerateMore, 
     generationsToday, 
     tierLimits,
-    incrementGeneration,
     isPro,
     isFree
   } = useFeatureGate();
 
-  const userTier = isPro ? 'pro' : 'free';
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
   const [featureLockModal, setFeatureLockModal] = useState<{
@@ -446,7 +446,7 @@ const Index = () => {
     };
   }, []);
 
-  const { usage, loading: usageLoading, incrementUsage } = useUsageTracking(userId);
+  const { usage, loading: usageLoading, refreshUsage } = useUsageTracking(userId);
 
   const calculateAnalytics = () => {
     const history = websiteHistory;
@@ -869,6 +869,12 @@ Generated on: ${new Date().toLocaleDateString()}
       return;
     }
 
+    // ✅ CORRECTED: ALL CLIENT-SIDE VALIDATIONS REMOVED
+    // Server now handles all validations including:
+    // - Monthly limit check
+    // - Prompt length check
+    // - Premium template check
+
     // Create unique request ID
     const requestId = `gen_${Date.now()}_${Math.random()}`;
     generateRequestId.current = requestId;
@@ -965,57 +971,86 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         }
       }
 
+      // ✅ CORRECTED: SECURE API CALL - Remove user_tier from request
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt: prompt.trim(),
+          user_id: user?.id  // ✅ Only send user_id, server determines tier
+        }),
         signal: abortControllerRef.current?.signal
       });
 
-      const data = await response.json();
-
-      // Handle auth errors from backend
-      if (response.status === 401) {
-        if (data.code === 'TOKEN_EXPIRED') {
+      // ✅ CORRECTED: ENHANCED ERROR HANDLING
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        if (response.status === 429) {
+          if (errorData.limit_reached) {
+            toast({
+              title: "Monthly Limit Reached",
+              description: errorData.upgrade_required 
+                ? "Upgrade your plan to generate more websites."
+                : "Your monthly generation limit has been reached.",
+              variant: "destructive"
+            });
+          } else if (errorData.retry_after) {
+            toast({
+              title: "Rate Limit Exceeded",
+              description: `Please wait ${errorData.retry_after} seconds.`,
+              variant: "destructive"
+            });
+          }
+        } else if (response.status === 403) {
           toast({
-            title: "Session Expired",
-            description: "Your session has expired. Logging you out...",
-            variant: "destructive",
+            title: "Premium Feature",
+            description: errorData.upgrade_required 
+              ? "This feature requires a plan upgrade."
+              : "Access denied.",
+            variant: "destructive"
           });
-          await signOut();
-          navigate('/auth');
+        } else if (response.status === 400) {
+          toast({
+            title: "Invalid Request",
+            description: errorData.error || "Please check your input.",
+            variant: "destructive"
+          });
+        } else if (response.status === 401) {
+          if (errorData.code === 'TOKEN_EXPIRED') {
+            toast({
+              title: "Session Expired",
+              description: "Your session has expired. Logging you out...",
+              variant: "destructive",
+            });
+            await signOut();
+            navigate('/auth');
+          } else {
+            toast({
+              title: "Authentication Error",
+              description: "Please log in again to continue.",
+              variant: "destructive",
+            });
+            navigate('/auth');
+          }
         } else {
           toast({
-            title: "Authentication Error",
-            description: "Please log in again to continue.",
-            variant: "destructive",
+            title: "Generation Failed",
+            description: "An unexpected error occurred.",
+            variant: "destructive"
           });
-          navigate('/auth');
         }
-        setIsGenerating(false);
-        return;
-      }
-
-      // Handle server-side limit rejection
-      if (response.status === 403) {
-        setShowUpgradeModal(true);
-        toast({
-          title: "Generation Limit Reached",
-          description: data.message || "You've reached your monthly limit. Please upgrade!",
-          variant: "destructive",
-        });
+        
         setIsGenerating(false);
         setProgress(0);
         setProgressStage("");
         return;
       }
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Generation failed');
-      }
+
+      const data = await response.json();
 
       // Check if this request is still valid
       if (generateRequestId.current !== requestId) {
@@ -1044,23 +1079,32 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
 
-      // Increment generation counter for tier limits
-      await incrementGeneration();
+      // ✅ CORRECTED: REMOVED incrementGeneration() CALL
+      // Server now handles generation counting
 
-      // Show success state for 2 seconds
-      setShowSuccess(true);
-      setTimeout(async () => {
-        setGeneratedCode(htmlCode);
-        await saveWebsite(htmlCode);
-        setIsGenerating(false);
-        setShowSuccess(false);
-        setProgress(0);
-        setProgressStage("");
-        toast({
-          title: "Success! 🎉",
-          description: "🎉 Your professional website is ready! Preview it below or download the files.",
-        });
-      }, 2000);
+      // ✅ CORRECTED: SUCCESS HANDLER - Refresh usage data from server
+      if (data.success) {
+        // Refresh usage data from server
+        await refreshUsage();
+        
+        // Notify other tabs of usage update
+        notifyUsageUpdate();
+        
+        // Show success state for 2 seconds
+        setShowSuccess(true);
+        setTimeout(async () => {
+          setGeneratedCode(htmlCode);
+          await saveWebsite(htmlCode);
+          setIsGenerating(false);
+          setShowSuccess(false);
+          setProgress(0);
+          setProgressStage("");
+          toast({
+            title: "Success! 🎉",
+            description: `🎉 Your professional website is ready! ${data.usage?.remaining || 0} generations remaining this month.`,
+          });
+        }, 2000);
+      }
     } catch (error) {
       // Cleanup intervals
       if (progressIntervalRef.current) {
@@ -1087,12 +1131,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         toast({
           title: "⏱️ Request Timeout",
           description: "The generation took too long. Please try again with a shorter description.",
-          variant: "destructive",
-        });
-      } else if (error instanceof Error && error.message.includes('429')) {
-        toast({
-          title: "🚦 Too Many Requests",
-          description: "You're generating too fast! Please wait a moment and try again.",
           variant: "destructive",
         });
       } else {
@@ -1204,55 +1242,86 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         }
       }
 
+      // ✅ CORRECTED: SECURE API CALL - Remove user_tier from request
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ prompt: lastPrompt }),
+        body: JSON.stringify({ 
+          prompt: lastPrompt.trim(),
+          user_id: user?.id  // ✅ Only send user_id
+        }),
         signal: abortControllerRef.current?.signal
       });
 
-      const data = await response.json();
-
-      if (response.status === 401) {
-        if (data.code === 'TOKEN_EXPIRED') {
+      // ✅ CORRECTED: ENHANCED ERROR HANDLING
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        if (response.status === 429) {
+          if (errorData.limit_reached) {
+            toast({
+              title: "Monthly Limit Reached",
+              description: errorData.upgrade_required 
+                ? "Upgrade your plan to generate more websites."
+                : "Your monthly generation limit has been reached.",
+              variant: "destructive"
+            });
+          } else if (errorData.retry_after) {
+            toast({
+              title: "Rate Limit Exceeded",
+              description: `Please wait ${errorData.retry_after} seconds.`,
+              variant: "destructive"
+            });
+          }
+        } else if (response.status === 403) {
           toast({
-            title: "Session Expired",
-            description: "Your session has expired. Logging you out...",
-            variant: "destructive",
+            title: "Premium Feature",
+            description: errorData.upgrade_required 
+              ? "This feature requires a plan upgrade."
+              : "Access denied.",
+            variant: "destructive"
           });
-          await signOut();
-          navigate('/auth');
+        } else if (response.status === 400) {
+          toast({
+            title: "Invalid Request",
+            description: errorData.error || "Please check your input.",
+            variant: "destructive"
+          });
+        } else if (response.status === 401) {
+          if (errorData.code === 'TOKEN_EXPIRED') {
+            toast({
+              title: "Session Expired",
+              description: "Your session has expired. Logging you out...",
+              variant: "destructive",
+            });
+            await signOut();
+            navigate('/auth');
+          } else {
+            toast({
+              title: "Authentication Error",
+              description: "Please log in again to continue.",
+              variant: "destructive",
+            });
+            navigate('/auth');
+          }
         } else {
           toast({
-            title: "Authentication Error",
-            description: "Please log in again to continue.",
-            variant: "destructive",
+            title: "Generation Failed",
+            description: "An unexpected error occurred.",
+            variant: "destructive"
           });
-          navigate('/auth');
         }
-        setIsGenerating(false);
-        return;
-      }
-
-      if (response.status === 403) {
-        setShowUpgradeModal(true);
-        toast({
-          title: "Generation Limit Reached",
-          description: data.message || "You've reached your monthly limit. Please upgrade!",
-          variant: "destructive",
-        });
+        
         setIsGenerating(false);
         setProgress(0);
         setProgressStage("");
         return;
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Generation failed');
-      }
+      const data = await response.json();
 
       if (generateRequestId.current !== requestId) {
         console.log('⚠️ Request superseded, ignoring result');
@@ -1279,21 +1348,28 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
 
-      await incrementGeneration();
-
-      setShowSuccess(true);
-      setTimeout(async () => {
-        setGeneratedCode(htmlCode);
-        await saveWebsite(htmlCode);
-        setIsGenerating(false);
-        setShowSuccess(false);
-        setProgress(0);
-        setProgressStage("");
-        toast({
-          title: "Regenerated! 🎉",
-          description: "✨ Fresh version generated! Your website has been regenerated with a new design.",
-        });
-      }, 2000);
+      // ✅ CORRECTED: SUCCESS HANDLER - Refresh usage data from server
+      if (data.success) {
+        // Refresh usage data from server
+        await refreshUsage();
+        
+        // Notify other tabs of usage update
+        notifyUsageUpdate();
+        
+        setShowSuccess(true);
+        setTimeout(async () => {
+          setGeneratedCode(htmlCode);
+          await saveWebsite(htmlCode);
+          setIsGenerating(false);
+          setShowSuccess(false);
+          setProgress(0);
+          setProgressStage("");
+          toast({
+            title: "Regenerated! 🎉",
+            description: `✨ Fresh version generated! ${data.usage?.remaining || 0} generations remaining this month.`,
+          });
+        }, 2000);
+      }
     } catch (error) {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
@@ -1319,12 +1395,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         toast({
           title: "⏱️ Request Timeout",
           description: "The regeneration took too long. Please try again with a shorter description.",
-          variant: "destructive",
-        });
-      } else if (error instanceof Error && error.message.includes('429')) {
-        toast({
-          title: "🚦 Too Many Requests",
-          description: "You're generating too fast! Please wait a moment and try again.",
           variant: "destructive",
         });
       } else {
@@ -1894,10 +1964,9 @@ ${new Date().toLocaleDateString()}
                       className={`min-h-[140px] input-glow transition-all duration-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:bg-white/15' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-gray-50'}`}
                       rows={5}
                     />
+                    {/* ✅ CORRECTED: CharacterCounter - Remove userTier prop */}
                     <CharacterCounter 
-                      current={input.length} 
-                      limit={PROMPT_LIMITS[userTier].maxPromptLength}
-                      tier={userTier}
+                      current={input.length}
                     />
                   </div>
 
