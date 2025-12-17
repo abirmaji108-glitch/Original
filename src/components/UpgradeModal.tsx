@@ -19,14 +19,14 @@ interface UpgradeModalProps {
   description?: string;
 }
 
-export function UpgradeModal({ 
-  open, 
+export function UpgradeModal({
+  open,
   onOpenChange,
   title = "Upgrade to Pro",
   description = "You've reached your free tier limit. Upgrade to Pro for unlimited generations!"
 }: UpgradeModalProps) {
   const navigate = useNavigate();
-
+  
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -42,7 +42,10 @@ export function UpgradeModal({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={() => navigate('/pricing')}
+            onClick={() => {
+              const currentPath = window.location.pathname;
+              navigate(`/pricing?returnUrl=${encodeURIComponent(currentPath)}`);
+            }}
             className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600"
           >
             View Plans
