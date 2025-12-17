@@ -1,96 +1,81 @@
-import React from 'react';
-import { AlertCircle, CheckCircle, Zap } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CharacterCounterProps {
-  current: number;
-  limit: number;
-  tier: 'free' | 'basic' | 'pro' | 'business';
+  currentLength: number;
 }
 
-export const CharacterCounter: React.FC<CharacterCounterProps> = ({ current, limit, tier }) => {
-  const percentage = (current / limit) * 100;
+export const CharacterCounter = ({ currentLength }: CharacterCounterProps) => {
+  // ✅ FIX #27: Get server-verified tier from AuthContext
+  const { userTier } = useAuth();
   
-  const getStatus = () => {
-    if (current > limit) return 'over';
-    if (current < 50) return 'too-short';
-    if (current < 100) return 'short';
-    return 'good';
+  // ✅ Define limits (must match server validation in server.js)
+  const TIER_LIMITS_MAP = {
+    free: 500,
+    basic: 1000,
+    pro: 2000
   };
-
-  const status = getStatus();
-
-  const getColor = () => {
-    switch (status) {
-      case 'over': return 'text-red-500';
-      case 'too-short': return 'text-red-400';
-      case 'short': return 'text-yellow-400';
-      case 'good': return 'text-green-400';
-      default: return 'text-gray-400';
-    }
-  };
-
-  const getIcon = () => {
-    switch (status) {
-      case 'over': return <AlertCircle className="w-4 h-4" />;
-      case 'too-short': return <AlertCircle className="w-4 h-4" />;
-      case 'short': return <Zap className="w-4 h-4" />;
-      case 'good': return <CheckCircle className="w-4 h-4" />;
-      default: return null;
-    }
-  };
-
-  const getMessage = () => {
-    if (current > limit) {
-      return `Exceeds ${tier} limit by ${current - limit} characters`;
-    }
-    if (current < 50) {
-      return `${50 - current} more characters needed (minimum 50)`;
-    }
-    if (current < 100) {
-      return `Add ${100 - current} more for better results`;
-    }
-    return `Perfect! ${limit - current} characters remaining`;
-  };
+  
+  const maxLength = TIER_LIMITS_MAP[userTier as keyof typeof TIER_LIMITS_MAP] || 500;
+  
+  // Calculate percentage for visual feedback
+  const percentage = (currentLength / maxLength) * 100;
+  const isNearLimit = currentLength > maxLength * 0.9;
+  const isOverLimit = currentLength > maxLength;
 
   return (
     <div className="space-y-2">
-      {/* Progress Bar */}
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-        <div
+      {/* Character count with color coding */}
+      <div className="flex items-center justify-between">
+        <div className={`text-sm font-medium ${
+          isOverLimit 
+            ? 'text-destructive' 
+            : isNearLimit 
+              ? 'text-yellow-600 dark:text-yellow-500' 
+              : 'text-muted-foreground'
+        }`}>
+          {currentLength} / {maxLength} characters
+        </div>
+        
+        {/* ✅ FIX #28: Upgrade hint when approaching limit */}
+        {isNearLimit && !isOverLimit && userTier !== 'pro' && (
+          <span className="text-xs text-yellow-600 dark:text-yellow-500">
+            Upgrade for {TIER_LIMITS_MAP[userTier === 'free' ? 'basic' : 'pro']} chars
+          </span>
+        )}
+        
+        {/* Error indicator when exceeded */}
+        {isOverLimit && (
+          <span className="text-xs text-destructive font-medium">
+            Exceeds by {currentLength - maxLength}
+          </span>
+        )}
+      </div>
+      
+      {/* ✅ Visual progress bar */}
+      <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+        <div 
           className={`h-full transition-all duration-300 ${
-            status === 'over' 
-              ? 'bg-red-500' 
-              : status === 'too-short'
-              ? 'bg-red-400'
-              : status === 'short'
-              ? 'bg-yellow-400'
-              : 'bg-green-500'
+            isOverLimit 
+              ? 'bg-destructive' 
+              : isNearLimit 
+                ? 'bg-yellow-500' 
+                : 'bg-primary'
           }`}
-          style={{ width: `${Math.min(percentage, 100)}%` }}
+          style={{ 
+            width: `${Math.min(percentage, 100)}%` 
+          }}
         />
       </div>
-
-      {/* Counter Info */}
-      <div className="flex items-center justify-between text-sm">
-        <div className={`flex items-center gap-2 font-semibold ${getColor()}`}>
-          {getIcon()}
-          <span>
-            {current} / {limit} characters
-          </span>
-        </div>
-        <span className="text-gray-500 dark:text-gray-400 text-xs">
-          {getMessage()}
-        </span>
-      </div>
-
-      {/* Upgrade Prompt if at limit */}
-      {current > limit && tier !== 'business' && (
-        <div className="text-xs text-red-500 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" />
-          {tier === 'free' && 'Upgrade to Basic for 2000 characters!'}
-          {tier === 'basic' && 'Upgrade to Pro for 5000 characters!'}
-          {tier === 'pro' && 'Upgrade to Business for 10000 characters!'}
-        </div>
+      
+      {/* Tier-specific message */}
+      {isOverLimit && (
+        <p className="text-xs text-destructive">
+          {userTier === 'free' 
+            ? 'Free tier allows up to 500 characters. Upgrade to Basic for 1,000 or Pro for 2,000.' 
+            : userTier === 'basic'
+              ? 'Basic tier allows up to 1,000 characters. Upgrade to Pro for 2,000.'
+              : 'Maximum 2,000 characters allowed.'}
+        </p>
       )}
     </div>
   );
