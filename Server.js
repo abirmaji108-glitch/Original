@@ -22,7 +22,6 @@ const PORT = process.env.PORT || 3000;
 async function fetchWithTimeout(url, options, timeoutMs = 60000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
- 
   try {
     const response = await fetch(url, {
       ...options,
@@ -48,11 +47,11 @@ async function retryOperation(operation, maxRetries = 3, delayMs = 1000) {
       return result;
     } catch (error) {
       logger.log(`Attempt ${attempt}/${maxRetries} failed:`, error.message);
-     
+    
       if (attempt === maxRetries) {
         throw error;
       }
-     
+    
       const delay = delayMs * Math.pow(2, attempt - 1);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -65,7 +64,6 @@ function sanitizePrompt(prompt) {
   if (typeof prompt !== 'string') {
     throw new Error('Prompt must be a string');
   }
- 
   let sanitized = prompt
     .replace(/IGNORE\s+(ALL\s+)?PREVIOUS\s+INSTRUCTIONS?/gi, '')
     .replace(/SYSTEM\s*:/gi, '')
@@ -77,7 +75,6 @@ function sanitizePrompt(prompt) {
     .replace(/<script>/gi, '')
     .replace(/<\/script>/gi, '')
     .trim();
- 
   const blockedKeywords = [
     'phishing', 'malware', 'hack', 'exploit', 'illegal',
     'darknet', 'weapon', 'bomb', 'drug', 'gambling',
@@ -85,14 +82,12 @@ function sanitizePrompt(prompt) {
     // ✅ OPTIONAL ADDITIONS:
     'scam', 'fraud', 'ransomware', 'trojan', 'virus'
   ];
- 
   const lowerPrompt = sanitized.toLowerCase();
   for (const keyword of blockedKeywords) {
     if (lowerPrompt.includes(keyword)) {
       throw new Error(`Content policy violation: "${keyword}" not allowed`);
     }
   }
- 
   return sanitized;
 }
 /**
@@ -119,15 +114,15 @@ async function logAnalytics(userId, generationsThisMonth, currentMonth, retries 
         }, {
           onConflict: 'id'
         });
-     
+    
       if (error) throw error;
-     
+    
       logger.log(`📊 Analytics logged for user ${userId}`);
       return true;
-     
+    
     } catch (error) {
       logger.log(`Analytics attempt ${attempt}/${retries} failed:`, error.message);
-     
+    
       if (attempt === retries) {
         logger.error('❌ CRITICAL: Analytics logging completely failed', {
           userId,
@@ -137,7 +132,7 @@ async function logAnalytics(userId, generationsThisMonth, currentMonth, retries 
         });
         return false;
       }
-     
+    
       await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
   }
@@ -169,6 +164,32 @@ if (stripeKey) {
 } else {
   logger.warn('⚠️ STRIPE_SECRET_KEY not configured - payment features disabled');
 }
+// ✅ FIX: Validate all Stripe price IDs are configured at startup
+if (stripe) {
+  const requiredPriceIds = [
+    { name: 'STRIPE_BASIC_PRICE_ID', value: process.env.STRIPE_BASIC_PRICE_ID },
+    { name: 'STRIPE_PRO_PRICE_ID', value: process.env.STRIPE_PRO_PRICE_ID }
+  ];
+  
+  const missingPriceIds = requiredPriceIds.filter(p => !p.value);
+  
+  if (missingPriceIds.length > 0) {
+    logger.error('❌ CRITICAL: Missing required Stripe price IDs:', 
+      missingPriceIds.map(p => p.name).join(', ')
+    );
+    logger.error('⚠️ Payments will fail! Please configure these in Render.com environment variables.');
+  } else {
+    logger.log('✅ All required Stripe price IDs configured');
+  }
+  
+  // Optional: warn about missing yearly price IDs
+  if (!process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
+    logger.warn('⚠️ STRIPE_BASIC_YEARLY_PRICE_ID not set - yearly Basic plan disabled');
+  }
+  if (!process.env.STRIPE_PRO_YEARLY_PRICE_ID) {
+    logger.warn('⚠️ STRIPE_PRO_YEARLY_PRICE_ID not set - yearly Pro plan disabled');
+  }
+}
 // ============================================
 // RATE LIMITING
 // ============================================
@@ -188,25 +209,24 @@ const generateLimiter = rateLimit({
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return false;
       }
-     
+    
       const token = authHeader.replace('Bearer ', '');
       const { data: { user } } = await supabase.auth.getUser(token);
-     
+    
       if (!user) return false;
-     
+    
       const { data: profile } = await supabase
         .from('profiles')
         .select('user_tier')
         .eq('id', user.id)
         .single();
-     
+    
       return ['pro', 'business'].includes(profile?.user_tier);
     } catch {
       return false;
     }
   }
 });
-
 // ✅ ADD RATE LIMITER FOR CHECKOUT
 const checkoutLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -240,59 +260,86 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
- 
   let event;
- 
   try {
     if (!stripe || !webhookSecret) {
       logger.error('Stripe or webhook secret not configured');
       return res.status(500).send('Server configuration error');
     }
-   
+  
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
     logger.error('❌ Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
- 
   logger.log('✅ Verified webhook event:', event.type);
- 
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
+        const sessionId = session.id;
+        
+        // ✅ FIX: Idempotency - check if this session was already processed
+        const { data: existingSession, error: checkError } = await supabase
+          .from('processed_webhooks')
+          .select('session_id')
+          .eq('session_id', sessionId)
+          .single();
+        
+        if (existingSession) {
+          logger.log(`⚠️ Webhook already processed for session ${sessionId} - ignoring duplicate`);
+          return res.json({ received: true, duplicate: true });
+        }
+        
+        // Continue with existing code...
         const userId = session.metadata?.userId;
         const subscriptionId = session.subscription;
         const customerId = session.customer;
         const priceId = session.line_items?.data[0]?.price?.id;
-       
+        
+        // ✅ FIX: Validate customer ID exists
+        if (!customerId) {
+          logger.error('❌ No customer ID in session', {
+            sessionId: session.id,
+            userId,
+            timestamp: new Date().toISOString()
+          });
+          
+          return res.status(400).json({
+            error: 'No customer ID',
+            message: 'Stripe customer ID missing from session'
+          });
+        }
+      
         if (!priceId) {
           logger.error('❌ No price ID found in session');
           return res.status(400).json({ error: 'No price ID in session' });
         }
-       
+      
         if (!userId) {
           logger.error('❌ No userId in session metadata');
           return res.status(400).json({ error: 'No userId in session' });
         }
-       
-        // Determine tier from price ID
-        let tier = 'free';
+      
+        // Determine tier from price ID with strict validation
         const basicPriceIds = [
           process.env.STRIPE_BASIC_PRICE_ID,
           process.env.STRIPE_BASIC_YEARLY_PRICE_ID
         ].filter(Boolean);
-       
+
         const proPriceIds = [
           process.env.STRIPE_PRO_PRICE_ID,
           process.env.STRIPE_PRO_YEARLY_PRICE_ID
         ].filter(Boolean);
-       
+
         const businessPriceIds = [
           process.env.STRIPE_BUSINESS_PRICE_ID,
           process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
         ].filter(Boolean);
-       
+
+        // ✅ FIX: Strict validation - reject if price ID doesn't match any tier
+        let tier = null;
+
         if (basicPriceIds.includes(priceId)) {
           tier = 'basic';
         } else if (proPriceIds.includes(priceId)) {
@@ -300,70 +347,144 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         } else if (businessPriceIds.includes(priceId)) {
           tier = 'business';
         }
-       
-        // Update profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            user_tier: tier,
-            stripe_customer_id: customerId,
-            warning_email_sent_at: null // Reset warning flag
-          })
-          .eq('id', userId);
-       
-        if (profileError) {
-          logger.error('Profile update error:', profileError);
-          throw profileError;
-        }
-       
-        // Upsert subscription
-        const { error: subError } = await supabase
-          .from('subscriptions')
-          .upsert({
-            user_id: userId,
-            stripe_subscription_id: subscriptionId,
-            stripe_customer_id: customerId,
-            status: 'active',
-            current_period_end: new Date(session.expires_at * 1000).toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'stripe_subscription_id'
+
+        // ✅ FIX: If no tier matched, this is an invalid/unknown price ID
+        if (!tier) {
+          logger.error('❌ CRITICAL: Unknown price ID received in webhook', {
+            priceId,
+            userId,
+            sessionId: session.id,
+            timestamp: new Date().toISOString()
           });
-       
-        if (subError) {
-          logger.error('Subscription upsert error:', subError);
-          throw subError;
+          
+          return res.status(400).json({
+            error: 'Invalid price ID',
+            message: 'Price ID does not match any configured tier'
+          });
         }
-       
+
+        logger.log(`✅ Price ID ${priceId} mapped to tier: ${tier}`);
+      
+        // ✅ FIX: Use transaction-like approach with rollback capability
+        let profileUpdated = false;
+        let subscriptionUpdated = false;
+
+        try {
+          // Step 1: Update profile
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              user_tier: tier,
+              stripe_customer_id: customerId,
+              warning_email_sent_at: null
+            })
+            .eq('id', userId);
+
+          if (profileError) {
+            logger.error('❌ Profile update failed:', profileError);
+            throw new Error(`Profile update failed: ${profileError.message}`);
+          }
+          
+          profileUpdated = true;
+          logger.log('✅ Profile updated successfully');
+
+          // Step 2: Upsert subscription
+          const { error: subError } = await supabase
+            .from('subscriptions')
+            .upsert({
+              user_id: userId,
+              stripe_subscription_id: subscriptionId,
+              stripe_customer_id: customerId,
+              status: 'active',
+              current_period_end: new Date(session.expires_at * 1000).toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'stripe_subscription_id'
+            });
+
+          if (subError) {
+            logger.error('❌ Subscription upsert failed:', subError);
+            throw new Error(`Subscription upsert failed: ${subError.message}`);
+          }
+          
+          subscriptionUpdated = true;
+          logger.log('✅ Subscription created/updated successfully');
+
+        } catch (error) {
+          logger.error('❌ CRITICAL: Database operation failed in webhook', {
+            error: error.message,
+            profileUpdated,
+            subscriptionUpdated,
+            userId,
+            tier,
+            sessionId: session.id
+          });
+          
+          // If profile updated but subscription failed, try to rollback
+          if (profileUpdated && !subscriptionUpdated) {
+            logger.log('⚠️ Attempting rollback of profile tier...');
+            await supabase
+              .from('profiles')
+              .update({ user_tier: 'free' })
+              .eq('id', userId)
+              .then(() => logger.log('✅ Rollback successful'))
+              .catch(err => logger.error('❌ Rollback failed:', err));
+          }
+          
+          return res.status(500).json({
+            error: 'Database operation failed',
+            message: error.message
+          });
+        }
+      
         logger.log(`✅ Payment successful - User ${userId} upgraded to ${tier}`);
-       
-        // Send welcome email
-        const { data: userProfile } = await supabase
+
+        // ✅ FIX: Mark webhook as processed (idempotency)
+        const { error: trackError } = await supabase
+          .from('processed_webhooks')
+          .insert({
+            session_id: sessionId,
+            event_type: 'checkout.session.completed',
+            user_id: userId,
+            processed_at: new Date().toISOString()
+          });
+
+        if (trackError) {
+          logger.error('⚠️ Failed to track webhook idempotency:', trackError);
+          // Don't fail the request - tier already updated successfully
+        }
+      
+        // ✅ FIX: Send welcome email asynchronously (non-blocking)
+        supabase
           .from('profiles')
           .select('email, full_name')
           .eq('id', userId)
-          .single();
-       
-        if (userProfile?.email && isValidEmail(userProfile.email)) {
-          await sendWelcomeEmail(
-            userProfile.email,
-            userProfile.full_name || 'there',
-            tier
-          );
-        }
-       
+          .single()
+          .then(({ data: userProfile }) => {
+            if (userProfile?.email && isValidEmail(userProfile.email)) {
+              sendWelcomeEmail(
+                userProfile.email,
+                userProfile.full_name || 'there',
+                tier
+              )
+                .then(() => logger.log('📧 Welcome email sent successfully'))
+                .catch(err => logger.error('⚠️ Email sending failed (non-critical):', err));
+            }
+          })
+          .catch(err => logger.error('⚠️ Failed to fetch user profile for email:', err));
+
         break;
       }
-     
+    
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         const customerId = subscription.customer;
-       
+      
         await supabase
           .from('profiles')
           .update({ user_tier: 'free' })
           .eq('stripe_customer_id', customerId);
-       
+      
         await supabase
           .from('subscriptions')
           .update({
@@ -371,14 +492,14 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             updated_at: new Date().toISOString()
           })
           .eq('stripe_subscription_id', subscription.id);
-       
+      
         logger.log(`❌ Subscription canceled for customer ${customerId}`);
         break;
       }
-     
+    
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-       
+      
         await supabase
           .from('subscriptions')
           .update({
@@ -387,16 +508,16 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             updated_at: new Date().toISOString()
           })
           .eq('stripe_subscription_id', subscription.id);
-       
+      
         break;
       }
-     
+    
       default:
         logger.log(`ℹ️ Unhandled event type: ${event.type}`);
     }
-   
+  
     res.json({ received: true });
-   
+  
   } catch (error) {
     logger.error('❌ Error processing webhook:', error);
     res.status(500).json({
@@ -422,13 +543,11 @@ app.get('/api/health', (req, res) => {
 // ============================================
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const { prompt } = req.body;
- 
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({
       error: 'Prompt is required and must be a string'
     });
   }
- 
   // 🔒 STEP 1: Authentication with JWT expiry check
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -437,16 +556,14 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       message: 'Authorization header required'
     });
   }
- 
   const token = authHeader.replace('Bearer ', '');
   let user;
- 
   try {
     const { data, error: authError } = await supabase.auth.getUser(token);
-   
+  
     if (authError) {
       logger.error('Auth error:', authError.message);
-     
+    
       if (authError.message.includes('expired') || authError.message.includes('invalid')) {
         return res.status(401).json({
           error: 'Session expired',
@@ -454,22 +571,22 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           message: 'Please log in again'
         });
       }
-     
+    
       return res.status(401).json({
         error: 'Invalid authentication token',
         message: 'Please log in again'
       });
     }
-   
+  
     if (!data.user) {
       return res.status(401).json({
         error: 'User not found',
         message: 'Please log in again'
       });
     }
-   
+  
     user = data.user;
-   
+  
   } catch (err) {
     logger.error('Unexpected auth error:', err);
     return res.status(500).json({
@@ -477,7 +594,6 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       message: 'Please try again later'
     });
   }
- 
   // 🔒 STEP 2: Fetch user profile with retry logic
   let profile;
   try {
@@ -487,12 +603,12 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         .select('user_tier, generations_this_month, last_generation_reset, warning_email_sent_at')
         .eq('id', user.id)
         .single();
-     
+    
       if (result.error) throw result.error;
       if (!result.data) throw new Error('Profile not found');
       return result;
     });
-   
+  
     if (profileError || !profileData) {
       logger.error('Profile fetch error:', profileError);
       return res.status(404).json({
@@ -500,9 +616,9 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         message: 'Please contact support'
       });
     }
-   
+  
     profile = profileData;
-   
+  
   } catch (error) {
     logger.error('❌ Database operation failed:', error);
     return res.status(500).json({
@@ -510,7 +626,6 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       message: 'Please try again in a moment'
     });
   }
- 
   // 🔒 STEP 3: Define tier limits
   const TIER_LIMITS = {
     free: 2,
@@ -518,18 +633,15 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     pro: 12,
     business: 40
   };
- 
   const PROMPT_LENGTH_LIMITS = {
     free: 1000,
     basic: 2000,
     pro: 5000,
     business: 10000
   };
- 
   const userTier = profile.user_tier || 'free';
   const limit = TIER_LIMITS[userTier];
   const promptLimit = PROMPT_LENGTH_LIMITS[userTier];
- 
   // 🔒 STEP 4: Validate prompt length
   if (prompt.length > promptLimit) {
     return res.status(400).json({
@@ -540,31 +652,29 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       current: prompt.length
     });
   }
- 
   // 🔒 STEP 5: Atomic monthly reset check using RPC
   const currentMonth = new Date().toISOString().slice(0, 7);
   let generationsThisMonth;
- 
   try {
     const { data: resetResult, error: resetError } = await supabase
       .rpc('reset_monthly_generations_if_needed', {
         user_id: user.id,
         current_month: currentMonth
       });
-   
+  
     if (resetError) {
       logger.error('Reset RPC error:', resetError);
       return res.status(500).json({
         error: 'Failed to check generation limit'
       });
     }
-   
+  
     if (!resetResult || resetResult.length === 0) {
       throw new Error('No data returned from reset function');
     }
-   
+  
     generationsThisMonth = resetResult[0].generations_this_month;
-   
+  
   } catch (error) {
     logger.error('❌ Monthly reset failed:', error);
     return res.status(500).json({
@@ -572,7 +682,6 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       message: 'Please try again'
     });
   }
- 
   // 🔒 STEP 6: Check generation limit
   if (generationsThisMonth >= limit) {
     return res.status(403).json({
@@ -583,7 +692,6 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       used: generationsThisMonth
     });
   }
- 
   // 🔒 STEP 7: Sanitize prompt
   let optimizedPrompt;
   try {
@@ -600,15 +708,14 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       message: error.message
     });
   }
- 
   // ✅ STEP 8: Generate website with Claude API
   try {
     logger.log(`📝 Generating for user ${user.id} (${userTier} tier) - Prompt: ${optimizedPrompt.length} chars`);
-   
+  
     // Smart compression for long prompts
     if (optimizedPrompt.length > 1000) {
       logger.log(`🔧 Compressing long prompt...`);
-     
+    
       const compressionResponse = await fetchWithTimeout(
         'https://api.anthropic.com/v1/messages',
         {
@@ -640,7 +747,7 @@ Be comprehensive but concise. Don't lose any important details.`
         },
         30000 // 30 second timeout
       );
-     
+    
       if (compressionResponse.ok) {
         const data = await compressionResponse.json();
         optimizedPrompt = data.content[0].text;
@@ -649,7 +756,7 @@ Be comprehensive but concise. Don't lose any important details.`
         logger.warn('⚠️ Compression failed, using original prompt');
       }
     }
-   
+  
     // Main generation with timeout
     const response = await fetchWithTimeout(
       'https://api.anthropic.com/v1/messages',
@@ -687,24 +794,24 @@ Return ONLY the HTML code.`
       },
       90000 // 90 second timeout
     );
-   
+  
     if (!response.ok) {
       const errorText = await response.text();
       logger.error('Claude API Error:', response.status, errorText);
       throw new Error(`Claude API error: ${response.status}`);
     }
-   
+  
     const data = await response.json();
     let htmlCode = data.content[0].text;
-   
+  
     // Clean markdown artifacts
     htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-   
+  
     // Validate HTML
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
       throw new Error('Generated HTML missing DOCTYPE');
     }
-   
+  
     // 🎨 ADD WATERMARK: Free tier only (with protection)
     if (userTier === 'free') {
       const watermark = `
@@ -746,36 +853,36 @@ Return ONLY the HTML code.`
       `;
       htmlCode = htmlCode.replace('</body>', `${watermark}</body>`);
     }
-   
+  
     // ✅ STEP 9: SUCCESS - Now increment counter
     const newUsage = generationsThisMonth + 1;
-   
+  
     const { error: incrementError } = await supabase
       .from('profiles')
       .update({
         generations_this_month: newUsage
       })
       .eq('id', user.id);
-   
+  
     if (incrementError) {
       logger.error('⚠️ Failed to increment counter (but generation succeeded):', incrementError);
       // Don't fail the request - user got their website
     }
-   
+  
     // 📧 Send warning email if needed (only once per month)
     const usagePercent = (newUsage / limit) * 100;
-   
+  
     if (usagePercent >= 80 && newUsage < limit) {
       const { data: userProfile } = await supabase
         .from('profiles')
         .select('email, full_name, warning_email_sent_at, last_generation_reset')
         .eq('id', user.id)
         .single();
-     
+    
       if (userProfile?.email && isValidEmail(userProfile.email)) {
         const shouldSendWarning = !userProfile.warning_email_sent_at ||
           new Date(userProfile.warning_email_sent_at).getMonth() !== new Date().getMonth();
-       
+      
         if (shouldSendWarning) {
           await sendLimitWarningEmail(
             userProfile.email,
@@ -784,7 +891,7 @@ Return ONLY the HTML code.`
             newUsage,
             limit
           );
-         
+        
           // Mark warning as sent
           await supabase
             .from('profiles')
@@ -792,22 +899,22 @@ Return ONLY the HTML code.`
               warning_email_sent_at: new Date().toISOString()
             })
             .eq('id', user.id);
-           
+          
           logger.log('📧 Limit warning email sent to:', userProfile.email);
         }
       }
     }
-   
+  
     // 📊 Log analytics (non-blocking)
     logAnalytics(user.id, generationsThisMonth, currentMonth)
       .catch(err => logger.error('Analytics logging error:', err));
-   
+  
     logger.log(`✅ Website generated successfully for user ${user.id}`);
     return res.status(200).json({ htmlCode });
-   
+  
   } catch (error) {
     logger.error('❌ Generation failed:', error);
-   
+  
     // ✅ Counter NOT incremented (no refund needed)
     return res.status(500).json({
       error: 'Generation failed',
@@ -821,28 +928,28 @@ Return ONLY the HTML code.`
 app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
   try {
     const { priceId, userId, email } = req.body;
-   
+  
     if (!priceId || !userId || !email) {
       return res.status(400).json({
         error: 'Missing required fields',
         message: 'Price ID, user ID, and email are required'
       });
     }
-   
+  
     if (!stripe) {
       return res.status(500).json({
         error: 'Stripe not configured',
         message: 'Payment system is currently unavailable'
       });
     }
-   
+  
     if (!isValidEmail(email)) {
       return res.status(400).json({
         error: 'Invalid email',
         message: 'Please provide a valid email address'
       });
     }
-   
+  
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
@@ -854,17 +961,106 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
       metadata: { userId },
       allow_promotion_codes: true,
     });
-   
+  
     res.json({
       sessionId: session.id,
       url: session.url
     });
-   
+  
   } catch (error) {
     logger.error('❌ Stripe checkout error:', error);
     res.status(500).json({
       error: 'Failed to create checkout session',
       message: error.message
+    });
+  }
+});
+// ✅ NEW ENDPOINT: Verify Stripe checkout session
+app.post('/api/verify-session', async (req, res) => {
+  try {
+    const { sessionId, userId } = req.body;
+
+    // Validate inputs
+    if (!sessionId || !userId) {
+      return res.status(400).json({
+        verified: false,
+        message: 'Missing session ID or user ID'
+      });
+    }
+
+    // Validate session ID format
+    if (!sessionId.startsWith('cs_')) {
+      return res.status(400).json({
+        verified: false,
+        message: 'Invalid session ID format'
+      });
+    }
+
+    // Check if Stripe is initialized
+    if (!stripe) {
+      return res.status(500).json({
+        verified: false,
+        message: 'Payment system not configured'
+      });
+    }
+
+    // Retrieve session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    // Verify session belongs to this user
+    if (session.metadata?.userId !== userId) {
+      logger.warn('⚠️ Session user mismatch', {
+        sessionUserId: session.metadata?.userId,
+        requestUserId: userId
+      });
+      return res.status(403).json({
+        verified: false,
+        message: 'Session does not belong to this user'
+      });
+    }
+
+    // Verify payment status
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({
+        verified: false,
+        message: 'Payment not completed',
+        paymentStatus: session.payment_status
+      });
+    }
+
+    // All checks passed
+    logger.log('✅ Session verified successfully', {
+      sessionId,
+      userId,
+      amount: session.amount_total,
+      currency: session.currency
+    });
+
+    return res.json({
+      verified: true,
+      session: {
+        id: session.id,
+        paymentStatus: session.payment_status,
+        amountTotal: session.amount_total,
+        currency: session.currency,
+        customerEmail: session.customer_details?.email
+      }
+    });
+
+  } catch (error) {
+    logger.error('❌ Session verification error:', error);
+    
+    if (error.code === 'resource_missing') {
+      return res.status(404).json({
+        verified: false,
+        message: 'Session not found'
+      });
+    }
+
+    return res.status(500).json({
+      verified: false,
+      message: 'Verification failed',
+      error: error.message
     });
   }
 });
