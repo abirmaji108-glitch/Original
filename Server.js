@@ -47,11 +47,11 @@ async function retryOperation(operation, maxRetries = 3, delayMs = 1000) {
       return result;
     } catch (error) {
       logger.log(`Attempt ${attempt}/${maxRetries} failed:`, error.message);
-    
+   
       if (attempt === maxRetries) {
         throw error;
       }
-    
+   
       const delay = delayMs * Math.pow(2, attempt - 1);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -114,15 +114,15 @@ async function logAnalytics(userId, generationsThisMonth, currentMonth, retries 
         }, {
           onConflict: 'id'
         });
-    
+   
       if (error) throw error;
-    
+   
       logger.log(`📊 Analytics logged for user ${userId}`);
       return true;
-    
+   
     } catch (error) {
       logger.log(`Analytics attempt ${attempt}/${retries} failed:`, error.message);
-    
+   
       if (attempt === retries) {
         logger.error('❌ CRITICAL: Analytics logging completely failed', {
           userId,
@@ -132,9 +132,99 @@ async function logAnalytics(userId, generationsThisMonth, currentMonth, retries 
         });
         return false;
       }
-    
+   
       await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
+  }
+}
+// ============================================
+// RATE LIMITING HELPER
+// ============================================
+// FIX #6: In-memory rate limiting (upgrade to Redis for production)
+
+const rateLimitStore = new Map();
+
+async function checkRateLimit(key, maxRequests, windowSeconds) {
+  const now = Date.now();
+  const windowMs = windowSeconds * 1000;
+  
+  if (!rateLimitStore.has(key)) {
+    rateLimitStore.set(key, []);
+  }
+  
+  const timestamps = rateLimitStore.get(key);
+  
+  // Remove expired timestamps
+  const validTimestamps = timestamps.filter(ts => now - ts < windowMs);
+  
+  if (validTimestamps.length >= maxRequests) {
+    const oldestTimestamp = validTimestamps[0];
+    const resetIn = Math.ceil((windowMs - (now - oldestTimestamp)) / 1000);
+    
+    return {
+      allowed: false,
+      current: validTimestamps.length,
+      resetIn
+    };
+  }
+  
+  // Add current timestamp
+  validTimestamps.push(now);
+  rateLimitStore.set(key, validTimestamps);
+  
+  return {
+    allowed: true,
+    current: validTimestamps.length,
+    resetIn: windowSeconds
+  };
+}
+
+// Cleanup old entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamps] of rateLimitStore.entries()) {
+    const validTimestamps = timestamps.filter(ts => now - ts < 3600000); // 1 hour
+    if (validTimestamps.length === 0) {
+      rateLimitStore.delete(key);
+    } else {
+      rateLimitStore.set(key, validTimestamps);
+    }
+  }
+}, 600000); // 10 minutes
+// ============================================
+// SECURITY AUDIT LOGGING
+// ============================================
+// FIX #14: Logs security events to tier_audit_log table
+
+async function logSecurityEvent({
+  user_id,
+  event_type,
+  attempted_tier = null,
+  actual_tier = null,
+  endpoint,
+  ip_address = null,
+  user_agent = null,
+  request_details = {}
+}) {
+  try {
+    await supabase
+      .from('tier_audit_log')
+      .insert({
+        user_id,
+        event_type,
+        attempted_tier,
+        actual_tier,
+        endpoint,
+        ip_address,
+        user_agent,
+        request_details,
+        created_at: new Date().toISOString()
+      });
+    
+    logger.log(`🔒 Security event logged: ${event_type} for user ${user_id}`);
+  } catch (error) {
+    // Don't fail the request if logging fails
+    logger.error('⚠️ Failed to log security event:', error);
   }
 }
 // ============================================
@@ -170,18 +260,18 @@ if (stripe) {
     { name: 'STRIPE_BASIC_PRICE_ID', value: process.env.STRIPE_BASIC_PRICE_ID },
     { name: 'STRIPE_PRO_PRICE_ID', value: process.env.STRIPE_PRO_PRICE_ID }
   ];
-  
+ 
   const missingPriceIds = requiredPriceIds.filter(p => !p.value);
-  
+ 
   if (missingPriceIds.length > 0) {
-    logger.error('❌ CRITICAL: Missing required Stripe price IDs:', 
+    logger.error('❌ CRITICAL: Missing required Stripe price IDs:',
       missingPriceIds.map(p => p.name).join(', ')
     );
     logger.error('⚠️ Payments will fail! Please configure these in Render.com environment variables.');
   } else {
     logger.log('✅ All required Stripe price IDs configured');
   }
-  
+ 
   // Optional: warn about missing yearly price IDs
   if (!process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
     logger.warn('⚠️ STRIPE_BASIC_YEARLY_PRICE_ID not set - yearly Basic plan disabled');
@@ -209,18 +299,18 @@ const generateLimiter = rateLimit({
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return false;
       }
-    
+   
       const token = authHeader.replace('Bearer ', '');
       const { data: { user } } = await supabase.auth.getUser(token);
-    
+   
       if (!user) return false;
-    
+   
       const { data: profile } = await supabase
         .from('profiles')
         .select('user_tier')
         .eq('id', user.id)
         .single();
-    
+   
       return ['pro', 'business'].includes(profile?.user_tier);
     } catch {
       return false;
@@ -266,7 +356,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
       logger.error('Stripe or webhook secret not configured');
       return res.status(500).send('Server configuration error');
     }
-  
+ 
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
     logger.error('❌ Webhook signature verification failed:', err.message);
@@ -278,25 +368,25 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
       case 'checkout.session.completed': {
         const session = event.data.object;
         const sessionId = session.id;
-        
+       
         // ✅ FIX: Idempotency - check if this session was already processed
         const { data: existingSession, error: checkError } = await supabase
           .from('processed_webhooks')
           .select('session_id')
           .eq('session_id', sessionId)
           .single();
-        
+       
         if (existingSession) {
           logger.log(`⚠️ Webhook already processed for session ${sessionId} - ignoring duplicate`);
           return res.json({ received: true, duplicate: true });
         }
-        
+       
         // Continue with existing code...
         const userId = session.metadata?.userId;
         const subscriptionId = session.subscription;
         const customerId = session.customer;
         const priceId = session.line_items?.data[0]?.price?.id;
-        
+       
         // ✅ FIX: Validate customer ID exists
         if (!customerId) {
           logger.error('❌ No customer ID in session', {
@@ -304,42 +394,38 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             userId,
             timestamp: new Date().toISOString()
           });
-          
+         
           return res.status(400).json({
             error: 'No customer ID',
             message: 'Stripe customer ID missing from session'
           });
         }
-      
+     
         if (!priceId) {
           logger.error('❌ No price ID found in session');
           return res.status(400).json({ error: 'No price ID in session' });
         }
-      
+     
         if (!userId) {
           logger.error('❌ No userId in session metadata');
           return res.status(400).json({ error: 'No userId in session' });
         }
-      
+     
         // Determine tier from price ID with strict validation
         const basicPriceIds = [
           process.env.STRIPE_BASIC_PRICE_ID,
           process.env.STRIPE_BASIC_YEARLY_PRICE_ID
         ].filter(Boolean);
-
         const proPriceIds = [
           process.env.STRIPE_PRO_PRICE_ID,
           process.env.STRIPE_PRO_YEARLY_PRICE_ID
         ].filter(Boolean);
-
         const businessPriceIds = [
           process.env.STRIPE_BUSINESS_PRICE_ID,
           process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
         ].filter(Boolean);
-
         // ✅ FIX: Strict validation - reject if price ID doesn't match any tier
         let tier = null;
-
         if (basicPriceIds.includes(priceId)) {
           tier = 'basic';
         } else if (proPriceIds.includes(priceId)) {
@@ -347,7 +433,6 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         } else if (businessPriceIds.includes(priceId)) {
           tier = 'business';
         }
-
         // ✅ FIX: If no tier matched, this is an invalid/unknown price ID
         if (!tier) {
           logger.error('❌ CRITICAL: Unknown price ID received in webhook', {
@@ -356,19 +441,17 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             sessionId: session.id,
             timestamp: new Date().toISOString()
           });
-          
+         
           return res.status(400).json({
             error: 'Invalid price ID',
             message: 'Price ID does not match any configured tier'
           });
         }
-
         logger.log(`✅ Price ID ${priceId} mapped to tier: ${tier}`);
-      
+     
         // ✅ FIX: Use transaction-like approach with rollback capability
         let profileUpdated = false;
         let subscriptionUpdated = false;
-
         try {
           // Step 1: Update profile
           const { error: profileError } = await supabase
@@ -379,15 +462,13 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
               warning_email_sent_at: null
             })
             .eq('id', userId);
-
           if (profileError) {
             logger.error('❌ Profile update failed:', profileError);
             throw new Error(`Profile update failed: ${profileError.message}`);
           }
-          
+         
           profileUpdated = true;
           logger.log('✅ Profile updated successfully');
-
           // Step 2: Upsert subscription
           const { error: subError } = await supabase
             .from('subscriptions')
@@ -401,15 +482,13 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             }, {
               onConflict: 'stripe_subscription_id'
             });
-
           if (subError) {
             logger.error('❌ Subscription upsert failed:', subError);
             throw new Error(`Subscription upsert failed: ${subError.message}`);
           }
-          
+         
           subscriptionUpdated = true;
           logger.log('✅ Subscription created/updated successfully');
-
         } catch (error) {
           logger.error('❌ CRITICAL: Database operation failed in webhook', {
             error: error.message,
@@ -419,7 +498,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             tier,
             sessionId: session.id
           });
-          
+         
           // If profile updated but subscription failed, try to rollback
           if (profileUpdated && !subscriptionUpdated) {
             logger.log('⚠️ Attempting rollback of profile tier...');
@@ -430,15 +509,27 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
               .then(() => logger.log('✅ Rollback successful'))
               .catch(err => logger.error('❌ Rollback failed:', err));
           }
-          
+         
           return res.status(500).json({
             error: 'Database operation failed',
             message: error.message
           });
         }
-      
+     
         logger.log(`✅ Payment successful - User ${userId} upgraded to ${tier}`);
-
+        // ✅ FIX #11 & #12: Log successful upgrade
+        await logSecurityEvent({
+          user_id: userId,
+          event_type: 'tier_upgraded',
+          attempted_tier: tier,
+          actual_tier: tier,
+          endpoint: '/api/stripe-webhook',
+          request_details: {
+            priceId,
+            customerId: session.customer,
+            subscriptionId: session.subscription
+          }
+        });
         // ✅ FIX: Mark webhook as processed (idempotency)
         const { error: trackError } = await supabase
           .from('processed_webhooks')
@@ -448,12 +539,11 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             user_id: userId,
             processed_at: new Date().toISOString()
           });
-
         if (trackError) {
           logger.error('⚠️ Failed to track webhook idempotency:', trackError);
           // Don't fail the request - tier already updated successfully
         }
-      
+     
         // ✅ FIX: Send welcome email asynchronously (non-blocking)
         supabase
           .from('profiles')
@@ -472,19 +562,44 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             }
           })
           .catch(err => logger.error('⚠️ Failed to fetch user profile for email:', err));
-
         break;
       }
-    
+   
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
         const customerId = subscription.customer;
-      
+     
+        // Find user by stripe_customer_id
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, user_tier')
+          .eq('stripe_customer_id', customerId)
+          .single();
+     
+        if (profileError || !profile) {
+          logger.error('❌ Failed to find user for cancelled subscription:', profileError);
+          // ✅ FIX #12: Still update subscriptions even if no profile
+          await supabase
+            .from('subscriptions')
+            .update({
+              status: 'canceled',
+              updated_at: new Date().toISOString()
+            })
+            .eq('stripe_subscription_id', subscription.id);
+          return res.status(200).json({ received: true });
+        }
+     
+        const previousTier = profile.user_tier;
+     
         await supabase
           .from('profiles')
-          .update({ user_tier: 'free' })
-          .eq('stripe_customer_id', customerId);
-      
+          .update({ 
+            user_tier: 'free',
+            stripe_subscription_id: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', profile.id);
+     
         await supabase
           .from('subscriptions')
           .update({
@@ -492,14 +607,28 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             updated_at: new Date().toISOString()
           })
           .eq('stripe_subscription_id', subscription.id);
-      
+     
         logger.log(`❌ Subscription canceled for customer ${customerId}`);
+        logger.log(`✅ User ${profile.id} downgraded to free tier`);
+     
+        // ✅ FIX #12 & #14: Log downgrade
+        await logSecurityEvent({
+          user_id: profile.id,
+          event_type: 'tier_downgraded',
+          attempted_tier: 'free',
+          actual_tier: previousTier,
+          endpoint: '/api/stripe-webhook',
+          request_details: {
+            customerId,
+            previousTier
+          }
+        });
         break;
       }
-    
+   
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-      
+     
         await supabase
           .from('subscriptions')
           .update({
@@ -508,16 +637,16 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             updated_at: new Date().toISOString()
           })
           .eq('stripe_subscription_id', subscription.id);
-      
+     
         break;
       }
-    
+   
       default:
         logger.log(`ℹ️ Unhandled event type: ${event.type}`);
     }
-  
+ 
     res.json({ received: true });
-  
+ 
   } catch (error) {
     logger.error('❌ Error processing webhook:', error);
     res.status(500).json({
@@ -542,180 +671,344 @@ app.get('/api/health', (req, res) => {
 // MAIN GENERATION ENDPOINT
 // ============================================
 app.post('/api/generate', generateLimiter, async (req, res) => {
-  const { prompt } = req.body;
-  if (!prompt || typeof prompt !== 'string') {
-    return res.status(400).json({
-      error: 'Prompt is required and must be a string'
-    });
-  }
-  // 🔒 STEP 1: Authentication with JWT expiry check
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      error: 'Not authenticated',
-      message: 'Authorization header required'
-    });
-  }
-  const token = authHeader.replace('Bearer ', '');
-  let user;
   try {
-    const { data, error: authError } = await supabase.auth.getUser(token);
-  
-    if (authError) {
-      logger.error('Auth error:', authError.message);
-    
-      if (authError.message.includes('expired') || authError.message.includes('invalid')) {
+    const { 
+      prompt, 
+      templateId, 
+      style 
+    } = req.body;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Prompt is required and must be a string'
+      });
+    }
+    // ============================================
+    // FIX #1: AUTHENTICATION CHECK
+    // ============================================
+    // 🔒 STEP 1: Authentication with JWT expiry check
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authenticated',
+        message: 'Authorization header required'
+      });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    let user;
+    try {
+      const { data, error: authError } = await supabase.auth.getUser(token);
+ 
+      if (authError) {
+        logger.error('Auth error:', authError.message);
+   
+        if (authError.message.includes('expired') || authError.message.includes('invalid')) {
+          return res.status(401).json({
+            success: false,
+            error: 'Session expired',
+            code: 'TOKEN_EXPIRED',
+            message: 'Please log in again'
+          });
+        }
+   
         return res.status(401).json({
-          error: 'Session expired',
-          code: 'TOKEN_EXPIRED',
+          success: false,
+          error: 'Invalid authentication token',
           message: 'Please log in again'
         });
       }
-    
-      return res.status(401).json({
-        error: 'Invalid authentication token',
-        message: 'Please log in again'
-      });
-    }
-  
-    if (!data.user) {
-      return res.status(401).json({
-        error: 'User not found',
-        message: 'Please log in again'
-      });
-    }
-  
-    user = data.user;
-  
-  } catch (err) {
-    logger.error('Unexpected auth error:', err);
-    return res.status(500).json({
-      error: 'Authentication service unavailable',
-      message: 'Please try again later'
-    });
-  }
-  // 🔒 STEP 2: Fetch user profile with retry logic
-  let profile;
-  try {
-    const { data: profileData, error: profileError } = await retryOperation(async () => {
-      const result = await supabase
-        .from('profiles')
-        .select('user_tier, generations_this_month, last_generation_reset, warning_email_sent_at')
-        .eq('id', user.id)
-        .single();
-    
-      if (result.error) throw result.error;
-      if (!result.data) throw new Error('Profile not found');
-      return result;
-    });
-  
-    if (profileError || !profileData) {
-      logger.error('Profile fetch error:', profileError);
-      return res.status(404).json({
-        error: 'User profile not found',
-        message: 'Please contact support'
-      });
-    }
-  
-    profile = profileData;
-  
-  } catch (error) {
-    logger.error('❌ Database operation failed:', error);
-    return res.status(500).json({
-      error: 'Service temporarily unavailable',
-      message: 'Please try again in a moment'
-    });
-  }
-  // 🔒 STEP 3: Define tier limits
-  const TIER_LIMITS = {
-    free: 2,
-    basic: 5,
-    pro: 12,
-    business: 40
-  };
-  const PROMPT_LENGTH_LIMITS = {
-    free: 1000,
-    basic: 2000,
-    pro: 5000,
-    business: 10000
-  };
-  const userTier = profile.user_tier || 'free';
-  const limit = TIER_LIMITS[userTier];
-  const promptLimit = PROMPT_LENGTH_LIMITS[userTier];
-  // 🔒 STEP 4: Validate prompt length
-  if (prompt.length > promptLimit) {
-    return res.status(400).json({
-      error: 'Prompt too long',
-      message: `${userTier} tier allows maximum ${promptLimit} characters. Your prompt is ${prompt.length} characters.`,
-      tier: userTier,
-      limit: promptLimit,
-      current: prompt.length
-    });
-  }
-  // 🔒 STEP 5: Atomic monthly reset check using RPC
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  let generationsThisMonth;
-  try {
-    const { data: resetResult, error: resetError } = await supabase
-      .rpc('reset_monthly_generations_if_needed', {
-        user_id: user.id,
-        current_month: currentMonth
-      });
-  
-    if (resetError) {
-      logger.error('Reset RPC error:', resetError);
+ 
+      if (!data.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found',
+          message: 'Please log in again'
+        });
+      }
+ 
+      user = data.user;
+ 
+    } catch (err) {
+      logger.error('Unexpected auth error:', err);
       return res.status(500).json({
-        error: 'Failed to check generation limit'
+        success: false,
+        error: 'Authentication service unavailable',
+        message: 'Please try again later'
       });
     }
-  
-    if (!resetResult || resetResult.length === 0) {
-      throw new Error('No data returned from reset function');
+    // ============================================
+    // FIX #1: FETCH ACTUAL TIER FROM DATABASE
+    // ============================================
+    // 🔒 STEP 2: Fetch user profile with retry logic
+    let profile;
+    try {
+      const { data: profileData, error: profileError } = await retryOperation(async () => {
+        const result = await supabase
+          .from('profiles')
+          .select('user_tier, generations_this_month, last_generation_reset, warning_email_sent_at')
+          .eq('id', user.id)
+          .single();
+   
+        if (result.error) throw result.error;
+        if (!result.data) throw new Error('Profile not found');
+        return result;
+      });
+ 
+      if (profileError || !profileData) {
+        logger.error('Profile fetch error:', profileError);
+        // ✅ FIX #14: Log security event
+        await logSecurityEvent({
+          user_id: user.id,
+          event_type: 'profile_fetch_failed',
+          endpoint: '/api/generate',
+          ip_address: req.ip,
+          user_agent: req.get('user-agent'),
+          request_details: { error: profileError?.message }
+        });
+        return res.status(404).json({
+          success: false,
+          error: 'User profile not found',
+          message: 'Please contact support'
+        });
+      }
+ 
+      profile = profileData;
+ 
+    } catch (error) {
+      logger.error('❌ Database operation failed:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Service temporarily unavailable',
+        message: 'Please try again in a moment'
+      });
     }
-  
-    generationsThisMonth = resetResult[0].generations_this_month;
-  
-  } catch (error) {
-    logger.error('❌ Monthly reset failed:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: 'Please try again'
-    });
-  }
-  // 🔒 STEP 6: Check generation limit
-  if (generationsThisMonth >= limit) {
-    return res.status(403).json({
-      error: 'Generation limit reached',
-      message: `You've used ${generationsThisMonth}/${limit} generations this month. Upgrade to generate more!`,
-      tier: userTier,
-      limit,
-      used: generationsThisMonth
-    });
-  }
-  // 🔒 STEP 7: Sanitize prompt
-  let optimizedPrompt;
-  try {
-    optimizedPrompt = sanitizePrompt(prompt);
-  } catch (error) {
-    if (error.message.includes('Content policy violation')) {
+
+    const userTier = profile.user_tier || 'free';
+    logger.log(`✅ User tier verified: ${userTier}`);
+
+    // ============================================
+    // FIX #3: VALIDATE PROMPT LENGTH BY TIER
+    // ============================================
+    const TIER_LIMITS = {
+      free: { 
+        generations: 2,
+        maxPromptLength: 1000,
+        premiumTemplates: false,
+        maxWebsites: 1,
+        rateLimitPerMinute: 2
+      },
+      basic: { 
+        generations: 5,
+        maxPromptLength: 2000,
+        premiumTemplates: false,
+        maxWebsites: 3,
+        rateLimitPerMinute: 5
+      },
+      pro: { 
+        generations: 12,
+        maxPromptLength: 5000,
+        premiumTemplates: true,
+        maxWebsites: 10,
+        rateLimitPerMinute: 15
+      },
+      business: {
+        generations: 40,
+        maxPromptLength: 10000,
+        premiumTemplates: true,
+        maxWebsites: 20,
+        rateLimitPerMinute: 30
+      }
+    };
+
+    const tierLimit = TIER_LIMITS[userTier] || TIER_LIMITS.free;
+
+    // Validate prompt length
+    if (prompt.length > tierLimit.maxPromptLength) {
+      logger.warn(`⚠️ User ${user.id} exceeded prompt limit: ${prompt.length}/${tierLimit.maxPromptLength}`);
+      
+      // ✅ FIX #14: Log attempt
+      await logSecurityEvent({
+        user_id: user.id,
+        event_type: 'prompt_length_exceeded',
+        attempted_tier: userTier,
+        actual_tier: userTier,
+        endpoint: '/api/generate',
+        ip_address: req.ip,
+        user_agent: req.get('user-agent'),
+        request_details: { 
+          promptLength: prompt.length,
+          limit: tierLimit.maxPromptLength 
+        }
+      });
+      
       return res.status(400).json({
-        error: 'Invalid request',
-        message: 'Your prompt violates our content policy. Please remove inappropriate keywords.'
+        success: false,
+        error: 'Prompt exceeds tier limit',
+        upgrade_required: true
       });
     }
-    return res.status(400).json({
-      error: 'Invalid prompt',
-      message: error.message
-    });
-  }
-  // ✅ STEP 8: Generate website with Claude API
-  try {
+
+    // ============================================
+    // FIX #4: VALIDATE PREMIUM TEMPLATE ACCESS
+    // ============================================
+    const PREMIUM_TEMPLATES = ['ultra-modern', 'gradient-glass', 'neo-brutalist'];
+    
+    if (templateId && PREMIUM_TEMPLATES.includes(templateId)) {
+      if (!tierLimit.premiumTemplates) {
+        logger.warn(`⚠️ User ${user.id} (${userTier}) attempted premium template: ${templateId}`);
+        
+        // ✅ FIX #14: Log bypass attempt
+        await logSecurityEvent({
+          user_id: user.id,
+          event_type: 'premium_template_denied',
+          attempted_tier: 'pro',
+          actual_tier: userTier,
+          endpoint: '/api/generate',
+          ip_address: req.ip,
+          user_agent: req.get('user-agent'),
+          request_details: { templateId }
+        });
+        
+        return res.status(403).json({
+          success: false,
+          error: 'Premium feature requires upgrade',
+          upgrade_required: true
+        });
+      }
+    }
+
+    // ============================================
+    // FIX #6: RATE LIMITING CHECK
+    // ============================================
+    const rateLimitKey = `generate_${user.id}`;
+    const rateLimitResult = await checkRateLimit(
+      rateLimitKey, 
+      tierLimit.rateLimitPerMinute,
+      60 // 1 minute window
+    );
+
+    if (!rateLimitResult.allowed) {
+      logger.warn(`⚠️ Rate limit exceeded for user ${user.id}`);
+      
+      await logSecurityEvent({
+        user_id: user.id,
+        event_type: 'rate_limit_exceeded',
+        actual_tier: userTier,
+        endpoint: '/api/generate',
+        ip_address: req.ip,
+        user_agent: req.get('user-agent'),
+        request_details: { 
+          requests: rateLimitResult.current,
+          limit: tierLimit.rateLimitPerMinute 
+        }
+      });
+      
+      return res.status(429).json({
+        success: false,
+        error: 'Too many requests',
+        retry_after: rateLimitResult.resetIn
+      });
+    }
+
+    // ============================================
+    // FIX #2: ATOMIC GENERATION LIMIT CHECK
+    // ============================================
+    // 🔒 STEP 5: Atomic monthly reset check using RPC
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    let generationsThisMonth;
+    try {
+      const { data: limitCheck, error: limitError } = await supabase
+        .rpc('check_and_increment_generation', {
+          p_user_id: user.id,
+          p_month_year: currentMonth,
+          p_user_tier: userTier
+        });
+ 
+      if (limitError) {
+        logger.error('Reset RPC error:', limitError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to check generation limit'
+        });
+      }
+ 
+      if (!limitCheck || limitCheck.length === 0) {
+        throw new Error('No data returned from reset function');
+      }
+ 
+      const result = limitCheck[0];
+
+      if (!result.allowed) {
+        logger.warn(`⚠️ Generation limit reached for user ${user.id}: ${result.current_usage}/${result.tier_limit}`);
+        
+        // ✅ FIX #14: Log limit hit
+        await logSecurityEvent({
+          user_id: user.id,
+          event_type: 'generation_limit_reached',
+          actual_tier: userTier,
+          endpoint: '/api/generate',
+          ip_address: req.ip,
+          user_agent: req.get('user-agent'),
+          request_details: {
+            current_usage: result.current_usage,
+            tier_limit: result.tier_limit
+          }
+        });
+        
+        // ✅ FIX #13: Generic error message (don't leak exact limits)
+        return res.status(429).json({
+          success: false,
+          error: 'Monthly generation limit reached',
+          limit_reached: true,
+          upgrade_required: userTier !== 'pro' && userTier !== 'business'
+        });
+      }
+
+      logger.log(`✅ Generation allowed: ${result.current_usage}/${result.tier_limit}`);
+      generationsThisMonth = result.current_usage - 1; // Previous for analytics if needed
+
+    } catch (error) {
+      logger.error('❌ Monthly reset failed:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        message: 'Please try again'
+      });
+    }
+    // 🔒 STEP 7: Sanitize prompt
+    let optimizedPrompt;
+    try {
+      optimizedPrompt = sanitizePrompt(prompt);
+      // Append template and style if provided
+      if (templateId) {
+        optimizedPrompt += `\n\nUse the ${templateId} template style.`;
+      }
+      if (style) {
+        optimizedPrompt += `\n\nApply the following style: ${style}.`;
+      }
+    } catch (error) {
+      if (error.message.includes('Content policy violation')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid request',
+          message: 'Your prompt violates our content policy. Please remove inappropriate keywords.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid prompt',
+        message: error.message
+      });
+    }
+    // ✅ STEP 8: Generate website with Claude API
     logger.log(`📝 Generating for user ${user.id} (${userTier} tier) - Prompt: ${optimizedPrompt.length} chars`);
-  
+ 
     // Smart compression for long prompts
     if (optimizedPrompt.length > 1000) {
       logger.log(`🔧 Compressing long prompt...`);
-    
+   
       const compressionResponse = await fetchWithTimeout(
         'https://api.anthropic.com/v1/messages',
         {
@@ -747,7 +1040,7 @@ Be comprehensive but concise. Don't lose any important details.`
         },
         30000 // 30 second timeout
       );
-    
+   
       if (compressionResponse.ok) {
         const data = await compressionResponse.json();
         optimizedPrompt = data.content[0].text;
@@ -756,7 +1049,7 @@ Be comprehensive but concise. Don't lose any important details.`
         logger.warn('⚠️ Compression failed, using original prompt');
       }
     }
-  
+ 
     // Main generation with timeout
     const response = await fetchWithTimeout(
       'https://api.anthropic.com/v1/messages',
@@ -794,24 +1087,24 @@ Return ONLY the HTML code.`
       },
       90000 // 90 second timeout
     );
-  
+ 
     if (!response.ok) {
       const errorText = await response.text();
       logger.error('Claude API Error:', response.status, errorText);
       throw new Error(`Claude API error: ${response.status}`);
     }
-  
+ 
     const data = await response.json();
     let htmlCode = data.content[0].text;
-  
+ 
     // Clean markdown artifacts
     htmlCode = htmlCode.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-  
+ 
     // Validate HTML
     if (!htmlCode.includes('<!DOCTYPE html>') && !htmlCode.includes('<!doctype html>')) {
       throw new Error('Generated HTML missing DOCTYPE');
     }
-  
+ 
     // 🎨 ADD WATERMARK: Free tier only (with protection)
     if (userTier === 'free') {
       const watermark = `
@@ -853,45 +1146,32 @@ Return ONLY the HTML code.`
       `;
       htmlCode = htmlCode.replace('</body>', `${watermark}</body>`);
     }
-  
-    // ✅ STEP 9: SUCCESS - Now increment counter
-    const newUsage = generationsThisMonth + 1;
-  
-    const { error: incrementError } = await supabase
-      .from('profiles')
-      .update({
-        generations_this_month: newUsage
-      })
-      .eq('id', user.id);
-  
-    if (incrementError) {
-      logger.error('⚠️ Failed to increment counter (but generation succeeded):', incrementError);
-      // Don't fail the request - user got their website
-    }
-  
+ 
+    const newUsage = result.current_usage;
+ 
     // 📧 Send warning email if needed (only once per month)
-    const usagePercent = (newUsage / limit) * 100;
-  
-    if (usagePercent >= 80 && newUsage < limit) {
-      const { data: userProfile } = await supabase
-        .from('profiles')
-        .select('email, full_name, warning_email_sent_at, last_generation_reset')
-        .eq('id', user.id)
-        .single();
-    
-      if (userProfile?.email && isValidEmail(userProfile.email)) {
-        const shouldSendWarning = !userProfile.warning_email_sent_at ||
-          new Date(userProfile.warning_email_sent_at).getMonth() !== new Date().getMonth();
-      
-        if (shouldSendWarning) {
+    const usagePercent = (newUsage / tierLimit.generations) * 100;
+ 
+    if (usagePercent >= 80 && newUsage < tierLimit.generations) {
+      const shouldSendWarning = !profile.warning_email_sent_at ||
+        new Date(profile.warning_email_sent_at).getMonth() !== new Date().getMonth();
+     
+      if (shouldSendWarning) {
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', user.id)
+          .single();
+   
+        if (userProfile?.email && isValidEmail(userProfile.email)) {
           await sendLimitWarningEmail(
             userProfile.email,
             userProfile.full_name || 'there',
             userTier,
             newUsage,
-            limit
+            tierLimit.generations
           );
-        
+       
           // Mark warning as sent
           await supabase
             .from('profiles')
@@ -899,26 +1179,177 @@ Return ONLY the HTML code.`
               warning_email_sent_at: new Date().toISOString()
             })
             .eq('id', user.id);
-          
+         
           logger.log('📧 Limit warning email sent to:', userProfile.email);
         }
       }
     }
-  
+ 
     // 📊 Log analytics (non-blocking)
     logAnalytics(user.id, generationsThisMonth, currentMonth)
       .catch(err => logger.error('Analytics logging error:', err));
-  
+ 
     logger.log(`✅ Website generated successfully for user ${user.id}`);
-    return res.status(200).json({ htmlCode });
-  
+    return res.status(200).json({ 
+      success: true, 
+      htmlCode,
+      usage: {
+        used: newUsage,
+        limit: tierLimit.generations,
+        remaining: result.remaining
+      }
+    });
+ 
   } catch (error) {
     logger.error('❌ Generation failed:', error);
-  
+ 
+    // ✅ FIX #14: Log error
+    await logSecurityEvent({
+      user_id: user?.id || req.body.user_id,
+      event_type: 'generation_error',
+      endpoint: '/api/generate',
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      request_details: { error: error.message }
+    });
+ 
     // ✅ Counter NOT incremented (no refund needed)
     return res.status(500).json({
+      success: false,
       error: 'Generation failed',
       message: error.message || 'Unknown error during generation'
+    });
+  }
+});
+// ============================================
+// FIX #5: SECURE /api/save-website ENDPOINT
+// ============================================
+app.post('/api/save-website', async (req, res) => {
+  try {
+    const { user_id: bodyUserId, website_data } = req.body;
+
+    // Authentication check (similar to generate)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentication required' 
+      });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    let user;
+    try {
+      const { data, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !data.user) {
+        return res.status(401).json({ 
+          success: false, 
+          error: 'Invalid authentication' 
+        });
+      }
+      user = data.user;
+    } catch (err) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Authentication service unavailable' 
+      });
+    }
+
+    // Validate body user_id matches authenticated
+    if (bodyUserId && bodyUserId !== user.id) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      });
+    }
+
+    const userId = user.id;
+
+    // ============================================
+    // FIX #5: VALIDATE USER & CHECK WEBSITE LIMIT
+    // ============================================
+    logger.log(`🔍 Checking website save limit for user ${userId}`);
+
+    // Call RPC function to check limit
+    const { data: limitCheck, error: limitError } = await supabase
+      .rpc('check_website_save_limit', {
+        p_user_id: userId
+      });
+
+    if (limitError) {
+      logger.error('❌ Failed to check website limit:', limitError);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Unable to verify website limit' 
+      });
+    }
+
+    if (!limitCheck || limitCheck.length === 0) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Service temporarily unavailable' 
+      });
+    }
+
+    const result = limitCheck[0];
+
+    if (!result.allowed) {
+      logger.warn(`⚠️ Website limit reached for user ${userId}: ${result.current_count}/${result.tier_limit}`);
+      
+      // ✅ FIX #14: Log limit hit
+      await logSecurityEvent({
+        user_id: userId,
+        event_type: 'website_limit_reached',
+        actual_tier: result.user_tier,
+        endpoint: '/api/save-website',
+        ip_address: req.ip,
+        user_agent: req.get('user-agent'),
+        request_details: {
+          current_count: result.current_count,
+          tier_limit: result.tier_limit
+        }
+      });
+      
+      return res.status(429).json({
+        success: false,
+        error: 'Website save limit reached',
+        limit_reached: true,
+        upgrade_required: result.user_tier !== 'pro' && result.user_tier !== 'business'
+      });
+    }
+
+    logger.log(`✅ Website save allowed: ${result.current_count + 1}/${result.tier_limit}`);
+
+    // Save website
+    const { data, error } = await supabase
+      .from('websites')
+      .insert({ 
+        user_id: userId, 
+        ...website_data,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('❌ Failed to save website:', error);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to save website' 
+      });
+    }
+
+    logger.log(`✅ Website saved successfully: ${data.id}`);
+
+    return res.json({
+      success: true,
+      website: data
+    });
+
+  } catch (error) {
+    logger.error('❌ Save website error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Failed to save website' 
     });
   }
 });
@@ -928,28 +1359,28 @@ Return ONLY the HTML code.`
 app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
   try {
     const { priceId, userId, email } = req.body;
-  
+ 
     if (!priceId || !userId || !email) {
       return res.status(400).json({
         error: 'Missing required fields',
         message: 'Price ID, user ID, and email are required'
       });
     }
-  
+ 
     if (!stripe) {
       return res.status(500).json({
         error: 'Stripe not configured',
         message: 'Payment system is currently unavailable'
       });
     }
-  
+ 
     if (!isValidEmail(email)) {
       return res.status(400).json({
         error: 'Invalid email',
         message: 'Please provide a valid email address'
       });
     }
-  
+ 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
@@ -961,12 +1392,12 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
       metadata: { userId },
       allow_promotion_codes: true,
     });
-  
+ 
     res.json({
       sessionId: session.id,
       url: session.url
     });
-  
+ 
   } catch (error) {
     logger.error('❌ Stripe checkout error:', error);
     res.status(500).json({
@@ -979,7 +1410,6 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
 app.post('/api/verify-session', async (req, res) => {
   try {
     const { sessionId, userId } = req.body;
-
     // Validate inputs
     if (!sessionId || !userId) {
       return res.status(400).json({
@@ -987,7 +1417,6 @@ app.post('/api/verify-session', async (req, res) => {
         message: 'Missing session ID or user ID'
       });
     }
-
     // Validate session ID format
     if (!sessionId.startsWith('cs_')) {
       return res.status(400).json({
@@ -995,7 +1424,6 @@ app.post('/api/verify-session', async (req, res) => {
         message: 'Invalid session ID format'
       });
     }
-
     // Check if Stripe is initialized
     if (!stripe) {
       return res.status(500).json({
@@ -1003,10 +1431,8 @@ app.post('/api/verify-session', async (req, res) => {
         message: 'Payment system not configured'
       });
     }
-
     // Retrieve session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-
     // Verify session belongs to this user
     if (session.metadata?.userId !== userId) {
       logger.warn('⚠️ Session user mismatch', {
@@ -1018,7 +1444,6 @@ app.post('/api/verify-session', async (req, res) => {
         message: 'Session does not belong to this user'
       });
     }
-
     // Verify payment status
     if (session.payment_status !== 'paid') {
       return res.status(400).json({
@@ -1027,7 +1452,6 @@ app.post('/api/verify-session', async (req, res) => {
         paymentStatus: session.payment_status
       });
     }
-
     // All checks passed
     logger.log('✅ Session verified successfully', {
       sessionId,
@@ -1035,7 +1459,6 @@ app.post('/api/verify-session', async (req, res) => {
       amount: session.amount_total,
       currency: session.currency
     });
-
     return res.json({
       verified: true,
       session: {
@@ -1046,21 +1469,112 @@ app.post('/api/verify-session', async (req, res) => {
         customerEmail: session.customer_details?.email
       }
     });
-
   } catch (error) {
     logger.error('❌ Session verification error:', error);
-    
+   
     if (error.code === 'resource_missing') {
       return res.status(404).json({
         verified: false,
         message: 'Session not found'
       });
     }
-
     return res.status(500).json({
       verified: false,
       message: 'Verification failed',
       error: error.message
+    });
+  }
+});
+// ============================================
+// NEW ENDPOINT: SERVER-VERIFIED USAGE STATS
+// ============================================
+// FIX #9: Returns server-verified tier and usage data
+// Prevents client-side tier manipulation
+
+app.post('/api/usage-stats', async (req, res) => {
+  try {
+    // Authentication check
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    let user;
+    try {
+      const { data, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !data.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid authentication'
+        });
+      }
+      user = data.user;
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        error: 'Authentication service unavailable'
+      });
+    }
+
+    const { user_id: bodyUserId } = req.body;
+    if (bodyUserId && bodyUserId !== user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized'
+      });
+    }
+
+    const userId = user.id;
+
+    logger.log(`📊 Fetching usage stats for user ${userId}`);
+
+    // Call RPC function for server-verified stats
+    const { data: stats, error: statsError } = await supabase
+      .rpc('get_user_usage_stats', {
+        p_user_id: userId
+      });
+
+    if (statsError) {
+      logger.error('❌ Failed to fetch usage stats:', statsError);
+      return res.status(500).json({
+        success: false,
+        error: 'Unable to fetch usage statistics'
+      });
+    }
+
+    if (!stats || stats.length === 0) {
+      // Return default free tier stats if no data
+      return res.json({
+        success: true,
+        tier: 'free',
+        used: 0,
+        limit: 2,
+        remaining: 2,
+        month: new Date().toISOString().slice(0, 7)
+      });
+    }
+
+    const result = stats[0];
+
+    logger.log(`✅ Usage stats: ${result.generations_used}/${result.tier_limit} (${result.user_tier})`);
+
+    return res.json({
+      success: true,
+      tier: result.user_tier,
+      used: result.generations_used,
+      limit: result.tier_limit,
+      remaining: result.remaining,
+      month: result.month_year
+    });
+
+  } catch (error) {
+    logger.error('❌ Usage stats error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch usage statistics'
     });
   }
 });
