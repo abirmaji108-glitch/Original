@@ -9,24 +9,86 @@ const PaymentSuccess = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userTier, setUserTier] = useState('free');
+  const [retryCount, setRetryCount] = useState(0); // ✅ FIX: Track retry attempts
+  const MAX_RETRIES = 5; // ✅ FIX: Maximum 5 retries (15 seconds total)
+
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
     const verifyPayment = async () => {
-      if (!sessionId) {
-        setError('No session ID found. Please contact support.');
-        setLoading(false);
-        return;
-      }
+      // ✅ FIX: Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        if (loading) {
+          setError('Verification timed out. Please refresh the page or contact support.');
+          setLoading(false);
+        }
+      }, 30000); // 30 second timeout
 
       try {
+        // ✅ FIX: Validate session ID format (Stripe session IDs start with "cs_")
+        if (!sessionId) {
+          clearTimeout(timeoutId); // ✅ Clear timeout on early return
+          setError('No payment session found. If you just completed a payment, please check your email for confirmation and contact support with your order number.');
+          setLoading(false);
+          return;
+        }
+
+        if (!sessionId.startsWith('cs_')) {
+          clearTimeout(timeoutId);
+          setError('Invalid session ID format. Please contact support.');
+          setLoading(false);
+          return;
+        }
+
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
-        
+      
         if (!user) {
-          setError('Not authenticated. Please log in again.');
+          clearTimeout(timeoutId);
+          setError('Session expired. Please log in again and check your email for payment confirmation.');
           setLoading(false);
           setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+
+        // ✅ FIX: Verify session with Stripe via backend (SECURITY CRITICAL)
+        const backendUrl = import.meta.env.VITE_BACKEND_URL;
+        if (!backendUrl) {
+          clearTimeout(timeoutId);
+          setError('Configuration error. Please contact support.');
+          setLoading(false);
+          return;
+        }
+
+        // Call backend to verify session with Stripe
+        try {
+          const verifyResponse = await fetch(`${backendUrl}/api/verify-session`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sessionId,
+              userId: user.id
+            })
+          });
+
+          const verifyData = await verifyResponse.json();
+
+          if (!verifyResponse.ok || !verifyData.verified) {
+            clearTimeout(timeoutId);
+            setError(verifyData.message || 'Payment verification failed. Please contact support.');
+            setLoading(false);
+            return;
+          }
+
+          console.log('✅ Stripe session verified:', verifyData);
+         
+        } catch (verifyError) {
+          clearTimeout(timeoutId);
+          console.error('Session verification error:', verifyError);
+          setError('Unable to verify payment. Please contact support with your order confirmation.');
+          setLoading(false);
           return;
         }
 
@@ -38,18 +100,29 @@ const PaymentSuccess = () => {
           .single();
 
         if (profileError) {
+          clearTimeout(timeoutId);
           console.error('Profile fetch error:', profileError);
           setError('Could not verify payment. Please contact support.');
           setLoading(false);
           return;
         }
 
-        // Check if tier was updated (should be 'basic', 'pro', or 'business')
+        // ✅ FIX: Check if tier was updated (should be 'basic', 'pro', or 'business')
         if (profile.user_tier === 'free') {
-          // Webhook might not have processed yet, wait and retry
-          console.log('Tier still free, waiting for webhook...');
+          // Webhook might not have processed yet
+          if (retryCount >= MAX_RETRIES) {
+            clearTimeout(timeoutId);
+            setError('Payment verification timed out. Your payment was successful, but tier upgrade is delayed. Please refresh in a few moments or contact support if issue persists.');
+            setLoading(false);
+            return;
+          }
+         
+          console.log(`Tier still free, retry ${retryCount + 1}/${MAX_RETRIES}...`);
+          setRetryCount(prev => prev + 1);
+         
+          // Retry after 3 seconds
           setTimeout(() => {
-            window.location.reload();
+            verifyPayment(); // ✅ FIX: Re-run verification instead of reload
           }, 3000);
           return;
         }
@@ -57,19 +130,21 @@ const PaymentSuccess = () => {
         // Success! Tier was updated
         setUserTier(profile.user_tier);
         setLoading(false);
+        clearTimeout(timeoutId); // ✅ FIX: Clear timeout on success
 
         // Optional: Track successful payment
         console.log('Payment successful! New tier:', profile.user_tier);
-        
+      
       } catch (err) {
+        clearTimeout(timeoutId); // ✅ FIX: Clear timeout on error
         console.error('Payment verification error:', err);
-        setError('Payment verification failed. Your payment was successful, but please contact support.');
+        setError('Unable to verify payment status. Your payment may have succeeded - please check your email for confirmation or contact support.');
         setLoading(false);
       }
     };
 
     verifyPayment();
-  }, [sessionId, navigate]);
+  }, [sessionId, navigate, retryCount]); // ✅ FIX #1: Added retryCount to dependency array
 
   // Get tier display name and benefits
   const getTierInfo = (tier: string) => {
