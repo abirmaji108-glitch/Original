@@ -1,123 +1,211 @@
-// src/config/tiers.ts
-export type UserTier = 'free' | 'basic' | 'pro' | 'business';
+// ============================================
+// TIER CONFIGURATION - DISPLAY ONLY
+// ============================================
+// ⚠️ SECURITY NOTICE:
+// This file is for UI DISPLAY purposes only.
+// ALL tier enforcement happens on the server.
+// Modifying this file will NOT bypass limits.
+//
+// Server source of truth: server.js TIER_LIMITS
+// Database source of truth: profiles.user_tier
+// ============================================
 
-export interface TierLimits {
-  name: string;
-  generationsPerMonth: number;
-  maxProjects: number;
-  maxPagesPerSite: number;
-  canDownload: boolean;
-  canExportReact: boolean;
-  canUseAIChat: boolean;
-  aiChatIterations: number;
-  customDomains: number;
-  teamMembers: number;
-  hasWhiteLabel: boolean;
-  hasGitHubSync: boolean;
-  hasAdvancedTemplates: boolean;
-  hasPrioritySupport: boolean;
-  hasVersionHistory: boolean;
-  versionHistoryCount: number;
-}
+export type UserTier = 'free' | 'basic' | 'pro';
 
-export const TIER_LIMITS: Record<UserTier, TierLimits> = {
+// ============================================
+// DISPLAY LIMITS - FOR UI ONLY
+// ============================================
+// These MUST match server.js TIER_LIMITS exactly
+// Used only for showing limits in UI components
+// NOT used for validation or enforcement
+
+export const TIER_LIMITS = {
   free: {
-    name: 'Free',
-    generationsPerMonth: 2, // 2 previews per month
-    maxProjects: 2, // Can only save 2 projects
-    maxPagesPerSite: 1, // Single page only (3-5 sections)
-    canDownload: false, // ❌ Cannot download/export
-    canExportReact: false,
-    canUseAIChat: false, // ❌ No AI chat iterations
-    aiChatIterations: 0,
-    customDomains: 0,
-    teamMembers: 1,
-    hasWhiteLabel: false,
-    hasGitHubSync: false,
-    hasAdvancedTemplates: false,
-    hasPrioritySupport: false,
-    hasVersionHistory: false,
-    versionHistoryCount: 0
+    // Display info only
+    maxPromptLength: 500,
+    monthlyGenerations: 2,
+    templatesAccess: ['minimal', 'corporate', 'creative'],
+    displayName: 'Free',
+    description: 'Perfect for trying out our service',
   },
   basic: {
-    name: 'Basic',
-    generationsPerMonth: 5, // 5 downloads per month
-    maxProjects: 10, // Can save up to 10 projects
-    maxPagesPerSite: 3, // 1-3 sections
-    canDownload: true, // ✅ HTML/CSS export
-    canExportReact: false, // ❌ Only HTML/CSS
-    canUseAIChat: false, // ❌ Manual editing only
-    aiChatIterations: 0,
-    customDomains: 1,
-    teamMembers: 1,
-    hasWhiteLabel: false,
-    hasGitHubSync: false,
-    hasAdvancedTemplates: false,
-    hasPrioritySupport: false,
-    hasVersionHistory: false,
-    versionHistoryCount: 0
+    // Display info only
+    maxPromptLength: 1000,
+    monthlyGenerations: 10,
+    templatesAccess: ['minimal', 'corporate', 'creative', 'modern', 'elegant'],
+    displayName: 'Basic',
+    description: 'Great for personal projects',
   },
   pro: {
-    name: 'Pro',
-    generationsPerMonth: 12, // 12 downloads per month
-    maxProjects: 30, // Can save up to 30 projects
-    maxPagesPerSite: 8, // Up to 8 pages per site
-    canDownload: true, // ✅ React/Vue/Next.js export
-    canExportReact: true, // ✅ Modern frameworks
-    canUseAIChat: true, // ✅ 10 iterations per site
-    aiChatIterations: 10,
-    customDomains: 3,
-    teamMembers: 1,
-    hasWhiteLabel: false,
-    hasGitHubSync: true,
-    hasAdvancedTemplates: true,
-    hasPrioritySupport: true,
-    hasVersionHistory: true,
-    versionHistoryCount: 3
+    // Display info only
+    maxPromptLength: 2000,
+    monthlyGenerations: 50,
+    templatesAccess: [
+      'minimal',
+      'corporate',
+      'creative',
+      'modern',
+      'elegant',
+      'ultra-modern',
+      'gradient-glass',
+      'neo-brutalist',
+    ],
+    displayName: 'Pro',
+    description: 'Unlimited creativity for professionals',
   },
-  business: {
-    name: 'Business',
-    generationsPerMonth: 40, // 40 downloads per month
-    maxProjects: -1, // Unlimited projects
-    maxPagesPerSite: 20, // Up to 20 pages per site
-    canDownload: true,
-    canExportReact: true,
-    canUseAIChat: true, // ✅ Unlimited AI iterations
-    aiChatIterations: -1, // -1 = unlimited
-    customDomains: 10,
-    teamMembers: 3,
-    hasWhiteLabel: true, // ✅ Full white label
-    hasGitHubSync: true,
-    hasAdvancedTemplates: true,
-    hasPrioritySupport: true,
-    hasVersionHistory: true,
-    versionHistoryCount: -1 // -1 = unlimited
+} as const;
+
+// ============================================
+// TIER METADATA - FOR DISPLAY
+// ============================================
+
+export const TIER_PRICES = {
+  free: 0,
+  basic: 9.99,
+  pro: 29.99,
+} as const;
+
+export const TIER_FEATURES = {
+  free: [
+    '2 generations per month',
+    'Basic templates',
+    '500 character prompts',
+    'Community support',
+  ],
+  basic: [
+    '10 generations per month',
+    'Premium templates',
+    '1,000 character prompts',
+    'Email support',
+    'Custom styling options',
+  ],
+  pro: [
+    '50 generations per month',
+    'All templates including ultra-modern',
+    '2,000 character prompts',
+    'Priority support',
+    'Advanced customization',
+    'Early access to new features',
+  ],
+} as const;
+
+// ============================================
+// HELPER FUNCTIONS - DISPLAY ONLY
+// ============================================
+
+/**
+ * Get tier display information
+ * @param tier - User tier
+ * @returns Display information for the tier
+ */
+export function getTierInfo(tier: UserTier) {
+  return {
+    ...TIER_LIMITS[tier],
+    price: TIER_PRICES[tier],
+    features: TIER_FEATURES[tier],
+  };
+}
+
+/**
+ * Check if template is available for tier (DISPLAY ONLY)
+ * ⚠️ This is for UI display only - server enforces actual access
+ * @param templateId - Template identifier
+ * @param tier - User tier
+ * @returns Whether template appears available (NOT enforced)
+ */
+export function isTemplateAvailableForTier(
+  templateId: string,
+  tier: UserTier
+): boolean {
+  const tierLimits = TIER_LIMITS[tier];
+  return tierLimits.templatesAccess.includes(templateId);
+}
+
+/**
+ * Get next tier upgrade option
+ * @param currentTier - Current user tier
+ * @returns Next tier or null if already at highest
+ */
+export function getNextTier(currentTier: UserTier): UserTier | null {
+  if (currentTier === 'free') return 'basic';
+  if (currentTier === 'basic') return 'pro';
+  return null;
+}
+
+/**
+ * Get tier comparison data for pricing page
+ * @returns Array of tier information for display
+ */
+export function getAllTiersComparison() {
+  return (['free', 'basic', 'pro'] as const).map((tier) => ({
+    tier,
+    ...getTierInfo(tier),
+  }));
+}
+
+// ============================================
+// PREMIUM TEMPLATES LIST
+// ============================================
+
+export const PREMIUM_TEMPLATES = [
+  'ultra-modern',
+  'gradient-glass',
+  'neo-brutalist',
+] as const;
+
+/**
+ * Check if template is premium (DISPLAY ONLY)
+ * @param templateId - Template identifier
+ * @returns Whether template is marked as premium
+ */
+export function isPremiumTemplate(templateId: string): boolean {
+  return PREMIUM_TEMPLATES.includes(templateId as any);
+}
+
+// ============================================
+// VALIDATION HELPERS - DISPLAY ONLY
+// ============================================
+
+/**
+ * Get remaining generations display text
+ * @param used - Generations used
+ * @param limit - Generation limit
+ * @returns Formatted text for display
+ */
+export function getRemainingGenerationsText(used: number, limit: number): string {
+  const remaining = Math.max(0, limit - used);
+  
+  if (remaining === 0) {
+    return 'Limit reached';
   }
-};
-
-// Helper functions
-export function canGenerate(tier: UserTier, generationsThisMonth: number): boolean {
-  const limit = TIER_LIMITS[tier].generationsPerMonth;
-  return generationsThisMonth < limit;
+  
+  if (remaining === 1) {
+    return '1 generation remaining';
+  }
+  
+  return `${remaining} generations remaining`;
 }
 
-export function canCreateProject(tier: UserTier, projectCount: number): boolean {
-  const maxProjects = TIER_LIMITS[tier].maxProjects;
-  if (maxProjects === -1) return true; // Unlimited
-  return projectCount < maxProjects;
+/**
+ * Get character limit warning level
+ * @param currentLength - Current prompt length
+ * @param maxLength - Maximum allowed length
+ * @returns Warning level for UI styling
+ */
+export function getCharacterLimitWarning(
+  currentLength: number,
+  maxLength: number
+): 'safe' | 'warning' | 'danger' {
+  const percentage = (currentLength / maxLength) * 100;
+  
+  if (percentage >= 100) return 'danger';
+  if (percentage >= 90) return 'warning';
+  return 'safe';
 }
 
-export function canDownload(tier: UserTier): boolean {
-  return TIER_LIMITS[tier].canDownload;
-}
+// ============================================
+// TYPE EXPORTS
+// ============================================
 
-export function canExportReact(tier: UserTier): boolean {
-  return TIER_LIMITS[tier].canExportReact;
-}
-
-export function canUseAIChat(tier: UserTier, iterationsUsed: number): boolean {
-  const limit = TIER_LIMITS[tier].aiChatIterations;
-  if (limit === -1) return true; // Unlimited
-  if (limit === 0) return false; // Not allowed
-  return iterationsUsed < limit;
-}
+export type TierLimits = typeof TIER_LIMITS;
+export type TierLimit = TierLimits[UserTier];
