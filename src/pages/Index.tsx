@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { type UserTier } from "@/config/tiers";  // ← ADD THIS LINE
 import {
   Sparkles,
   MessageSquare,
