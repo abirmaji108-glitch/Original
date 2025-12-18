@@ -1,9 +1,7 @@
 import { createClient, SupabaseClient, PostgrestError } from '@supabase/supabase-js';
-
 // ✅ Better error messages for production
 const ENV = import.meta.env.MODE || 'development';
 const IS_PRODUCTION = ENV === 'production';
-
 // Environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -132,9 +130,10 @@ export class SupabaseService {
  '23505': 'This record already exists.',
  '23503': 'Cannot delete this record as it is referenced by other records.',
  '42501': 'You do not have permission to perform this action.',
+ 'PGRST301': 'Database connection failed. Please try again.',
+ 'ADMIN_ONLY': 'This action requires administrator privileges.',
  '42P01': 'Database table does not exist.',
  'PGRST116': 'Resource not found.',
- 'PGRST301': 'Cannot connect to the database.',
  '57014': 'Query timeout. Please try again.',
  '08P01': 'Connection failure.',
  '28000': 'Invalid authentication credentials.',
@@ -229,12 +228,34 @@ static async safeSelect<T>(
     });
   }
   const result = await query;
- 
   if (result.error) {
     return this.handleError(result.error, context);
   }
- 
   return (result.data || []) as T[];
+}
+/**
+ * Safe RPC function call with error handling
+ */
+static async safeRPC<T>(
+  functionName: string,
+  params?: Record<string, any>,
+  context: string = `RPC call: ${functionName}`
+): Promise<T> {
+  try {
+    const { data, error } = await supabase.rpc(functionName, params);
+    
+    if (error) {
+      return this.handleError(error, context);
+    }
+    
+    if (data === null || data === undefined) {
+      throw new Error(`No data returned from RPC function: ${functionName}`);
+    }
+    
+    return data as T;
+  } catch (error) {
+    return this.handleError(error, context);
+  }
 }
  /**
  * Check if Supabase is properly configured
