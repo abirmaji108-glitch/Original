@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { type UserTier } from "@/config/tiers";  // ← ADD THIS LINE
+import { type UserTier } from "@/config/tiers";
 import {
   Sparkles,
   MessageSquare,
@@ -58,54 +58,15 @@ import { PROMPT_LIMITS } from '@/utils/promptLimits';
 import { FeatureLockModal } from '@/components/FeatureLockModal';
 import DOMPurify from 'dompurify';
 
+// ✅ FIX: Import templates from centralized source
+import { basicTemplates } from '@/data/templates';
+
+// Use first 6 basic templates for quick start section
+const QUICK_START_TEMPLATES = basicTemplates.slice(0, 6);
+
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
 const ProjectModal = lazy(() => import("@/components/ProjectModal").then(m => ({ default: m.ProjectModal })));
-
-const TEMPLATES = [
-  {
-    id: "portfolio",
-    icon: "🎨",
-    title: "Portfolio Website",
-    description: "Showcase your work and skills",
-    prompt: "Create a modern portfolio website with a hero section, about me section, skills grid with icons, project gallery with 6 projects showing images and descriptions, contact form, and smooth scrolling navigation. Use a gradient background from purple to blue. Make it clean and professional."
-  },
-  {
-    id: "ecommerce",
-    icon: "🛪",
-    title: "E-commerce Store",
-    description: "Online shopping experience",
-    prompt: "Build an e-commerce website with a header with shopping cart icon, featured products grid showing 8 products with images, prices, and 'Add to Cart' buttons, product categories sidebar, promotional banner, customer testimonials section, and footer with social links. Use a modern, trustworthy design with green accents."
-  },
-  {
-    id: "blog",
-    icon: "📰",
-    title: "Blog/News Site",
-    description: "Content-focused publishing platform",
-    prompt: "Design a blog website with a clean header, featured article hero section with large image, grid of 6 blog post cards showing thumbnails, titles, excerpts, and dates, sidebar with popular posts and categories, author bio section, and newsletter signup form. Use a minimal, readable design with plenty of white space."
-  },
-  {
-    id: "restaurant",
-    icon: "🍕",
-    title: "Restaurant Menu",
-    description: "Delicious food showcase",
-    prompt: "Create a restaurant website with a hero section showing food imagery, about the restaurant section, interactive menu with categories (Appetizers, Main Courses, Desserts, Drinks) showing dish names, descriptions, and prices, gallery of food photos, reservation form, location map, and opening hours. Use warm colors like orange and red."
-  },
-  {
-    id: "business",
-    icon: "💼",
-    title: "Business Landing",
-    description: "Professional company page",
-    prompt: "Build a business landing page with a bold hero section with call-to-action button, services section with 4 service cards with icons, company statistics (clients, projects, awards), team members grid with photos and roles, client logos section, pricing tables with 3 tiers, and contact form. Use a corporate blue and white color scheme."
-  },
-  {
-    id: "gaming",
-    icon: "🎮",
-    title: "Gaming Community",
-    description: "Gamers unite platform",
-    prompt: "Design a gaming community website with an energetic hero section, featured games carousel, leaderboard table showing top 10 players, upcoming tournaments section with dates and prizes, gaming news cards, live stream section, join community form, and Discord integration button. Use dark theme with neon purple and cyan accents."
-  }
-];
 
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
@@ -458,12 +419,12 @@ const Index = () => {
       : 0;
     
     const templateUsage: Record<string, number> = {};
-    TEMPLATES.forEach(template => {
+    QUICK_START_TEMPLATES.forEach(template => {
       const count = history.filter(site =>
-        site.prompt.toLowerCase().includes(template.title.toLowerCase().split(' ')[0])
+        site.prompt.toLowerCase().includes(template.name.toLowerCase().split(' ')[0])
       ).length;
       if (count > 0) {
-        templateUsage[template.title] = count;
+        templateUsage[template.name] = count;
       }
     });
     
@@ -2040,7 +2001,7 @@ ${new Date().toLocaleDateString()}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {TEMPLATES.map((template, index) => (
+                    {QUICK_START_TEMPLATES.map((template, index) => (
                       <button
                         key={template.id}
                         style={{ animationDelay: `${index * 0.1}s` }}
@@ -2049,15 +2010,35 @@ ${new Date().toLocaleDateString()}
                         className={`group relative template-card-enhanced ${dynamicCardClass} backdrop-blur-sm rounded-xl p-6 text-left transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed animate-fade-in-up hover:scale-105 hover:shadow-2xl transform`}
                       >
                         <div className="absolute inset-0 -z-10 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        {/* ✅ FIX: Add premium badge */}
+                        {template.isPremium && (
+                          <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            PRO
+                          </div>
+                        )}
+                        
                         <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">
                           {template.icon}
                         </div>
                         <h3 className={`text-xl font-bold mb-2 transition-colors ${dynamicTextClass}`}>
-                          {template.title}
+                          {template.name}
                         </h3>
                         <p className={`text-sm ${dynamicMutedClass}`}>
                           {template.description}
                         </p>
+                        
+                        {/* ✅ FIX: Add category tag */}
+                        <div className="mt-3">
+                          <span className={`inline-block text-xs px-2 py-1 rounded-full ${
+                            isDarkMode 
+                              ? 'bg-purple-500/20 text-purple-300' 
+                              : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {template.category}
+                          </span>
+                        </div>
                       </button>
                     ))}
                   </div>
