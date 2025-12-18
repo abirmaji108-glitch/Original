@@ -2,7 +2,6 @@
 // Template definitions for Sento AI
 // Basic templates: Available to all users (Free, Basic, Pro, Business)
 // Premium templates: Available to Pro and Business users only
-
 export interface Template {
   id: string;
   name: string;
@@ -12,7 +11,6 @@ export interface Template {
   isPremium: boolean;
   icon: string;
 }
-
 // 🆓 BASIC TEMPLATES (20 templates - Free tier included)
 export const basicTemplates: Template[] = [
   {
@@ -196,7 +194,6 @@ export const basicTemplates: Template[] = [
     prompt: 'Create a coffee shop website with cozy design. Include: hero with signature drink, menu with photos and descriptions, daily specials, location with hours, loyalty program, online ordering, barista profiles, community events. Use warm colors (browns, cream, orange), inviting imagery, and casual typography.'
   }
 ];
-
 // 💎 PREMIUM TEMPLATES (30 templates - Pro & Business tiers only)
 export const premiumTemplates: Template[] = [
   {
@@ -470,22 +467,25 @@ export const premiumTemplates: Template[] = [
     prompt: 'Create a robotics company website with industrial design. Include: hero with robot demo, product lineup, applications by industry, technical specifications, AI capabilities, case studies, research team, partnership inquiries. Use mechanical aesthetics, robot imagery, tech colors, and futuristic design.'
   }
 ];
-
 // Combine all templates
 export const allTemplates: Template[] = [...basicTemplates, ...premiumTemplates];
-
 // Helper functions
 export const getBasicTemplates = () => basicTemplates;
 export const getPremiumTemplates = () => premiumTemplates;
 export const getAllTemplates = () => allTemplates;
-
 export const getTemplatesByTier = (tier: 'free' | 'basic' | 'pro' | 'business') => {
   if (tier === 'free' || tier === 'basic') {
     return basicTemplates;
   }
   return allTemplates;
 };
-
-export const getTemplateById = (id: string) => {
-  return allTemplates.find(t => t.id === id);
+export const getTemplateById = (id: string): Template | undefined => {
+  const template = allTemplates.find(t => t.id === id);
+  
+  // ✅ FIX: Log warning if template not found
+  if (!template) {
+    console.warn(`[Templates] Template not found: "${id}". Available IDs:`, allTemplates.map(t => t.id));
+  }
+  
+  return template;
 };
