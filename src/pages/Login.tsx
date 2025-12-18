@@ -15,10 +15,10 @@ const Login = () => {
   const { toast } = useToast();
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  
+ 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+   
     // ✅ ADD VALIDATION
     if (!email || !password) {
       toast({
@@ -28,7 +28,7 @@ const Login = () => {
       });
       return;
     }
-    
+   
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast({
         title: "Invalid Email",
@@ -37,13 +37,14 @@ const Login = () => {
       });
       return;
     }
-    
+   
     setLoading(true);
 
-    const { error } = await signIn(email, password);
-
-    if (!error) {
+    try {
+      await signIn(email, password);
       navigate('/app');
+    } catch (error) {
+      console.error('Login error:', error);
     }
 
     setLoading(false);
