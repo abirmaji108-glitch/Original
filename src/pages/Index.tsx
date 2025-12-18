@@ -250,6 +250,7 @@ const Index = () => {
   
   // ✅ CORRECTED: Get userTier directly from useAuth()
   const { user, userTier, signOut } = useAuth();
+  const tier = (userTier || 'free') as UserTier;
   
   // Feature gating
   const { 
@@ -1664,7 +1665,7 @@ ${new Date().toLocaleDateString()}
       <EnhancedUpgradeModal
         open={showUpgradeModal}
         onOpenChange={setShowUpgradeModal}
-        currentTier={userTier}
+        currentTier={tier}
         generationsUsed={generationsToday}
         generationsLimit={tierLimits.monthlyGenerations}
       />
@@ -1674,7 +1675,7 @@ ${new Date().toLocaleDateString()}
         isOpen={featureLockModal.isOpen}
         onClose={() => setFeatureLockModal({ ...featureLockModal, isOpen: false })}
         feature={featureLockModal.feature}
-        currentTier={userTier}
+        currentTier={tier}
       />
 
       {/* Enhanced Animated Background Gradient */}
@@ -1755,7 +1756,7 @@ ${new Date().toLocaleDateString()}
                     </>
                   )}
                 </div>
-                <UpgradeButton tier={userTier} size="sm" />
+                <UpgradeButton tier={tier} size="sm" />
               </div>
             </div>
             <Button
@@ -1843,7 +1844,7 @@ ${new Date().toLocaleDateString()}
                     </div>
                   </div>
                 </div>
-                <UpgradeButton tier={userTier} size="sm" />
+                <UpgradeButton tier={tier} size="sm" />
               </div>
               <Button
                 variant="outline"
@@ -1865,7 +1866,7 @@ ${new Date().toLocaleDateString()}
       <UpgradeBanner 
         generationsUsed={generationsToday} 
         generationsLimit={tierLimits.monthlyGenerations}
-        tier={userTier}
+        tier={tier}
       />
 
       {/* Main Content */}
@@ -1911,7 +1912,7 @@ ${new Date().toLocaleDateString()}
                       setInput(prompt);
                       handleGenerate();
                     }}
-                    userTier={userTier}
+                    userTier={tier}
                     isDarkMode={isDarkMode}
                   />
 
@@ -1966,7 +1967,7 @@ ${new Date().toLocaleDateString()}
                     />
                     {/* ✅ CORRECTED: CharacterCounter - userTier prop removed */}
                     <CharacterCounter 
-                      current={input.length}
+                      currentLength={input.length}
                     />
                   </div>
 
@@ -2303,7 +2304,7 @@ ${new Date().toLocaleDateString()}
                 </Button>
                 <DownloadButton 
                   generatedCode={generatedCode}
-                  userTier={userTier}
+                  userTier={tier}
                   onUpgrade={() => setFeatureLockModal({ isOpen: true, feature: 'download' })}
                   isDarkMode={isDarkMode}
                 />
@@ -2610,7 +2611,7 @@ ${new Date().toLocaleDateString()}
         .device-frame-tablet iframe { border-radius: 0; }
         .device-frame-mobile { border-radius: 40px; border: 10px solid #000; max-width: 375px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
         .device-frame-mobile iframe { border-radius: 0; }
-        .zoom-control { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-center: center; color: white; transition: all 0.2s; cursor: pointer; }
+        .zoom-control { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; color: white; transition: all 0.2s; cursor: pointer; }
         .zoom-control:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
         @keyframes float-slow { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(30px, -30px); } }
         @keyframes float-slower { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, 40px); } }
