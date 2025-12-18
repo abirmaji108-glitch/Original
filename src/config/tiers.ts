@@ -9,16 +9,13 @@
 // Server source of truth: server.js TIER_LIMITS
 // Database source of truth: profiles.user_tier
 // ============================================
-
 export type UserTier = 'free' | 'basic' | 'pro';
-
 // ============================================
 // DISPLAY LIMITS - FOR UI ONLY
 // ============================================
 // These MUST match server.js TIER_LIMITS exactly
 // Used only for showing limits in UI components
 // NOT used for validation or enforcement
-
 export const TIER_LIMITS = {
  free: {
   // Display info only
@@ -57,17 +54,14 @@ export const TIER_LIMITS = {
   description: 'Unlimited creativity for professionals',
  },
 } as const;
-
 // ============================================
 // TIER METADATA - FOR DISPLAY
 // ============================================
-
 export const TIER_PRICES = {
  free: 0,
  basic: 9.99,
  pro: 29.99,
 } as const;
-
 export const TIER_FEATURES = {
  free: [
   '2 generations per month',
@@ -91,11 +85,9 @@ export const TIER_FEATURES = {
   'Early access to new features',
  ],
 } as const;
-
 // ============================================
 // HELPER FUNCTIONS - DISPLAY ONLY
 // ============================================
-
 /**
  * Get tier display information
  * @param tier - User tier
@@ -108,7 +100,6 @@ export function getTierInfo(tier: UserTier) {
   features: TIER_FEATURES[tier],
  };
 }
-
 /**
  * Check if template is available for tier (DISPLAY ONLY)
  * ⚠️ This is for UI display only - server enforces actual access
@@ -121,9 +112,8 @@ export function isTemplateAvailableForTier(
  tier: UserTier
 ): boolean {
  const tierLimits = TIER_LIMITS[tier];
- return tierLimits.templatesAccess.includes(templateId);
+ return tierLimits.templatesAccess.includes(templateId as any);
 }
-
 /**
  * Get next tier upgrade option
  * @param currentTier - Current user tier
@@ -134,7 +124,6 @@ export function getNextTier(currentTier: UserTier): UserTier | null {
  if (currentTier === 'basic') return 'pro';
  return null;
 }
-
 /**
  * Get tier comparison data for pricing page
  * @returns Array of tier information for display
@@ -145,17 +134,14 @@ export function getAllTiersComparison() {
   ...getTierInfo(tier),
  }));
 }
-
 // ============================================
 // PREMIUM TEMPLATES LIST
 // ============================================
-
 export const PREMIUM_TEMPLATES = [
  'ultra-modern',
  'gradient-glass',
  'neo-brutalist',
 ] as const;
-
 /**
  * Check if template is premium (DISPLAY ONLY)
  * @param templateId - Template identifier
@@ -164,11 +150,9 @@ export const PREMIUM_TEMPLATES = [
 export function isPremiumTemplate(templateId: string): boolean {
  return PREMIUM_TEMPLATES.includes(templateId as any);
 }
-
 // ============================================
 // VALIDATION HELPERS - DISPLAY ONLY
 // ============================================
-
 /**
  * Get remaining generations display text
  * @param used - Generations used
@@ -177,18 +161,14 @@ export function isPremiumTemplate(templateId: string): boolean {
  */
 export function getRemainingGenerationsText(used: number, limit: number): string {
  const remaining = Math.max(0, limit - used);
- 
  if (remaining === 0) {
   return 'Limit reached';
  }
- 
  if (remaining === 1) {
   return '1 generation remaining';
  }
- 
  return `${remaining} generations remaining`;
 }
-
 /**
  * Get character limit warning level
  * @param currentLength - Current prompt length
@@ -200,15 +180,12 @@ export function getCharacterLimitWarning(
  maxLength: number
 ): 'safe' | 'warning' | 'danger' {
  const percentage = (currentLength / maxLength) * 100;
- 
  if (percentage >= 100) return 'danger';
  if (percentage >= 90) return 'warning';
  return 'safe';
 }
-
 // ============================================
 // TYPE EXPORTS
 // ============================================
-
 export type TierLimits = typeof TIER_LIMITS;
 export type TierLimit = TierLimits[UserTier];
