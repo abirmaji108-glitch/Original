@@ -17,42 +17,54 @@ export type UserTier = 'free' | 'basic' | 'pro';
 // Used only for showing limits in UI components
 // NOT used for validation or enforcement
 export const TIER_LIMITS = {
- free: {
-  // Display info only
-  maxPromptLength: 500,
-  monthlyGenerations: 2,
-  generationsPerMonth: 2,
-  templatesAccess: ['minimal', 'corporate', 'creative'],
-  displayName: 'Free',
-  description: 'Perfect for trying out our service',
- },
- basic: {
-  // Display info only
-  maxPromptLength: 1000,
-  monthlyGenerations: 10,
-  generationsPerMonth: 10,
-  templatesAccess: ['minimal', 'corporate', 'creative', 'modern', 'elegant'],
-  displayName: 'Basic',
-  description: 'Great for personal projects',
- },
- pro: {
-  // Display info only
-  maxPromptLength: 2000,
-  monthlyGenerations: 50,
-  generationsPerMonth: 50,
-  templatesAccess: [
-   'minimal',
-   'corporate',
-   'creative',
-   'modern',
-   'elegant',
-   'ultra-modern',
-   'gradient-glass',
-   'neo-brutalist',
-  ],
-  displayName: 'Pro',
-  description: 'Unlimited creativity for professionals',
- },
+  free: {
+    maxPromptLength: 500,
+    monthlyGenerations: 2,
+    generationsPerMonth: 2,
+    // ✅ FIX: Use actual template IDs from templates.ts
+    templatesAccess: [
+      'restaurant', 'portfolio', 'agency', 'landing', 'ecommerce',
+      'blog', 'gym', 'education', 'realestate', 'wedding'
+    ],
+    displayName: 'Free',
+    description: 'Perfect for trying out our service',
+  },
+  basic: {
+    maxPromptLength: 1000,
+    monthlyGenerations: 10,
+    generationsPerMonth: 10,
+    // ✅ FIX: All basic templates (20 total)
+    templatesAccess: [
+      'restaurant', 'portfolio', 'agency', 'landing', 'ecommerce',
+      'blog', 'gym', 'education', 'realestate', 'wedding',
+      'saas', 'nonprofit', 'medical', 'photography', 'hotel',
+      'lawyer', 'music', 'construction', 'automotive', 'coffee'
+    ],
+    displayName: 'Basic',
+    description: 'Great for personal projects',
+  },
+  pro: {
+    maxPromptLength: 2000,
+    monthlyGenerations: 50,
+    generationsPerMonth: 50,
+    // ✅ FIX: All templates (basic + premium = 50 total)
+    templatesAccess: [
+      // Basic templates
+      'restaurant', 'portfolio', 'agency', 'landing', 'ecommerce',
+      'blog', 'gym', 'education', 'realestate', 'wedding',
+      'saas', 'nonprofit', 'medical', 'photography', 'hotel',
+      'lawyer', 'music', 'construction', 'automotive', 'coffee',
+      // Premium templates
+      'luxury-hotel', 'tech-startup', 'crypto', 'ai-saas', 'fintech',
+      'fashion-brand', 'architecture', 'gaming', 'podcast', 'space-tech',
+      'wellness', 'vineyard', 'art-gallery', 'yacht', 'biotech',
+      'film-production', 'eco-brand', 'metaverse', 'luxury-car', 'investment-fund',
+      'space-tourism', 'quantum-computing', 'culinary-academy', 'smart-home', 'luxury-travel',
+      'ai-avatar', 'mental-health', 'drone-services', 'vr-experience', 'robotics'
+    ],
+    displayName: 'Pro',
+    description: 'Unlimited creativity for professionals',
+  },
 } as const;
 // ============================================
 // TIER METADATA - FOR DISPLAY
@@ -138,9 +150,12 @@ export function getAllTiersComparison() {
 // PREMIUM TEMPLATES LIST
 // ============================================
 export const PREMIUM_TEMPLATES = [
- 'ultra-modern',
- 'gradient-glass',
- 'neo-brutalist',
+  'luxury-hotel', 'tech-startup', 'crypto', 'ai-saas', 'fintech',
+  'fashion-brand', 'architecture', 'gaming', 'podcast', 'space-tech',
+  'wellness', 'vineyard', 'art-gallery', 'yacht', 'biotech',
+  'film-production', 'eco-brand', 'metaverse', 'luxury-car', 'investment-fund',
+  'space-tourism', 'quantum-computing', 'culinary-academy', 'smart-home', 'luxury-travel',
+  'ai-avatar', 'mental-health', 'drone-services', 'vr-experience', 'robotics'
 ] as const;
 /**
  * Check if template is premium (DISPLAY ONLY)
