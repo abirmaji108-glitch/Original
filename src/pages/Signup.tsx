@@ -23,7 +23,6 @@ const Signup = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
     // ✅ EMAIL VALIDATION
     if (!isValidEmail(email)) {
       toast({
@@ -33,7 +32,6 @@ const Signup = () => {
       });
       return;
     }
-
     // ✅ IMPROVED VALIDATION
     if (password !== confirmPassword) {
       toast({
@@ -43,7 +41,6 @@ const Signup = () => {
       });
       return;
     }
-
     if (password.length < 8) {
       toast({
         title: "Password Too Short",
@@ -52,7 +49,7 @@ const Signup = () => {
       });
       return;
     }
-    
+   
     if (!/[A-Z]/.test(password)) {
       toast({
         title: "Weak Password",
@@ -61,7 +58,7 @@ const Signup = () => {
       });
       return;
     }
-    
+   
     if (!/[0-9]/.test(password)) {
       toast({
         title: "Weak Password",
@@ -70,13 +67,13 @@ const Signup = () => {
       });
       return;
     }
-
     setLoading(true);
 
-    const { error } = await signUp(email, password);
-
-    if (!error) {
+    try {
+      await signUp(email, password);
       navigate('/app');
+    } catch (error) {
+      console.error('Signup error:', error);
     }
 
     setLoading(false);
