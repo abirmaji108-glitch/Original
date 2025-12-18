@@ -16,21 +16,21 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  
+
   const templates = getTemplatesByTier(userTier);
-  
+
   // Get unique categories
   const categories = ['all', ...new Set(templates.map(t => t.category))];
-  
+
   // Filter templates by category
-  const filteredTemplates = selectedCategory === 'all' 
-    ? templates 
+  const filteredTemplates = selectedCategory === 'all'
+    ? templates
     : templates.filter(t => t.category === selectedCategory);
-  
+
   // Group templates by basic/premium
   const basicTemplates = filteredTemplates.filter(t => !t.isPremium);
   const premiumTemplates = filteredTemplates.filter(t => t.isPremium);
-  
+
   const handleTemplateClick = (template: Template) => {
     if (template.isPremium && (userTier === 'free' || userTier === 'basic')) {
       // Show upgrade modal (handled by parent)
@@ -40,14 +40,22 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     setIsOpen(false);
   };
 
-  const dynamicBgClass = isDarkMode 
-    ? 'bg-gray-800 border-gray-700' 
+  // ✅ FIX: Add keyboard support
+  const handleKeyDown = (e: React.KeyboardEvent, template: Template) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleTemplateClick(template);
+    }
+  };
+
+  const dynamicBgClass = isDarkMode
+    ? 'bg-gray-800 border-gray-700'
     : 'bg-white border-gray-200';
-  
+
   const dynamicTextClass = isDarkMode ? 'text-gray-100' : 'text-gray-900';
   const dynamicSecondaryText = isDarkMode ? 'text-gray-400' : 'text-gray-600';
-  const dynamicHoverClass = isDarkMode 
-    ? 'hover:bg-gray-700' 
+  const dynamicHoverClass = isDarkMode
+    ? 'hover:bg-gray-700'
     : 'hover:bg-gray-50';
 
   return (
@@ -56,7 +64,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         <Sparkles className="w-4 h-4 text-purple-500" />
         ✨ Quick Start Templates
       </label>
-      
+    
       {/* Template Selector Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -75,7 +83,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       {/* Template Dropdown */}
       {isOpen && (
         <div className={`rounded-lg border ${dynamicBgClass} p-4 space-y-4 max-h-[500px] overflow-y-auto`}>
-          
+        
           {/* Category Filter */}
           <div className="flex flex-wrap gap-2">
             {categories.map(cat => (
@@ -106,9 +114,12 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                   <button
                     key={template.id}
                     onClick={() => handleTemplateClick(template)}
+                    onKeyDown={(e) => handleKeyDown(e, template)}
+                    tabIndex={0}
+                    aria-label={`Select ${template.name} template`}
                     className={`text-left p-3 rounded-lg border ${
-                      isDarkMode 
-                        ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' 
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 hover:bg-gray-600'
                         : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                     } transition-colors`}
                   >
@@ -139,12 +150,15 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {premiumTemplates.map(template => {
                   const isLocked = userTier === 'free' || userTier === 'basic';
-                  
+                
                   return (
                     <button
                       key={template.id}
                       onClick={() => handleTemplateClick(template)}
+                      onKeyDown={(e) => handleKeyDown(e, template)}
                       disabled={isLocked}
+                      tabIndex={0}
+                      aria-label={`Select ${template.name} template`}
                       className={`text-left p-3 rounded-lg border relative ${
                         isLocked
                           ? isDarkMode
@@ -172,7 +186,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                           </div>
                           {isLocked && (
                             <div className="text-xs text-purple-600 font-medium mt-2">
-                              Upgrade to Pro to unlock
+                              Upgrade to {userTier === 'free' ? 'Basic or Pro' : 'Pro'} to unlock
                             </div>
                           )}
                         </div>
@@ -187,7 +201,15 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           {/* Empty State */}
           {filteredTemplates.length === 0 && (
             <div className={`text-center py-8 ${dynamicSecondaryText}`}>
-              <p className="text-sm">No templates found in this category.</p>
+              {/* ✅ FIX: Better empty state message */}
+              <div className="text-4xl mb-2">🔍</div>
+              <p className="text-sm font-medium">No templates in "{selectedCategory}" category</p>
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className="text-xs text-purple-600 hover:text-purple-700 mt-2 underline"
+              >
+                View all templates
+              </button>
             </div>
           )}
 
@@ -197,8 +219,8 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           }`}>
             {userTier === 'free' || userTier === 'basic' ? (
               <p>
-                You have access to {basicTemplates.length} basic templates. 
-                <span className="text-purple-600 font-medium"> Upgrade to Pro</span> to unlock 
+                You have access to {basicTemplates.length} basic templates.
+                <span className="text-purple-600 font-medium"> Upgrade to Pro</span> to unlock
                 {premiumTemplates.length} premium templates!
               </p>
             ) : (
