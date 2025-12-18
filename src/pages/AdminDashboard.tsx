@@ -10,10 +10,12 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  BarChart3, // ← ADD THIS
-  Download, // ← ADD THIS
-  Activity, // ← ADD THIS
-  Zap // ← ADD THIS
+  BarChart3,
+  Download,
+  Activity,
+  Zap,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 
 interface UserStats {
@@ -46,7 +48,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   // Stats
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [userStats, setUserStats] = useState<UserStats>({
@@ -58,7 +60,6 @@ const AdminDashboard = () => {
   });
   const [conversionRate, setConversionRate] = useState(0);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
-
   // Analytics
   const [todayGenerations, setTodayGenerations] = useState(0);
   const [weekGenerations, setWeekGenerations] = useState(0);
@@ -70,9 +71,20 @@ const AdminDashboard = () => {
     checkAdminAccess();
   }, []);
 
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing dashboard...');
+      fetchDashboardData();
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
   const checkAdminAccess = async () => {
     try {
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
     
       if (!user) {
@@ -80,14 +92,32 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Check if user is admin (your email only)
-      const adminEmails = ['abirmaji108@gmail.com']; // Add your admin emails here
-    
-      if (!adminEmails.includes(user.email || '')) {
+      // Get auth token for server verification
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        setError('Session expired. Please log in again.');
+        setLoading(false);
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      // Test admin access with server endpoint (server checks admin list)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/stats`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (response.status === 403) {
         setError('Access denied. Admin only.');
         setLoading(false);
         setTimeout(() => navigate('/app'), 2000);
         return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to verify admin access');
       }
 
       setIsAdmin(true);
@@ -102,139 +132,71 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch all users and their tiers
-      const profilesResult = await supabase
-        .from('profiles')
-        .select('id, email, user_tier, created_at')
-        .order('created_at', { ascending: false });
-    
-      if (profilesResult.error) throw profilesResult.error;
-      const profiles = profilesResult.data || [];
+      setLoading(true);
 
-      // Calculate user stats
-      const stats: UserStats = {
-        total: profiles.length,
-        free: profiles.filter(p => p.user_tier === 'free').length,
-        basic: profiles.filter(p => p.user_tier === 'basic').length,
-        pro: profiles.filter(p => p.user_tier === 'pro').length,
-        business: profiles.filter(p => p.user_tier === 'business').length,
-      };
-      setUserStats(stats);
-
-      // Calculate conversion rate
-      const paidUsers = stats.basic + stats.pro + stats.business;
-      const rate = stats.total > 0 ? (paidUsers / stats.total) * 100 : 0;
-      setConversionRate(Number(rate.toFixed(1)));
-
-      // Calculate total revenue
-      const revenue =
-        (stats.basic * 9) +
-        (stats.pro * 22) +
-        (stats.business * 49);
-      setTotalRevenue(revenue);
-
-      // Get recent users
-      const recent = profiles.slice(0, 10).map(p => ({
-        email: p.email,
-        user_tier: p.user_tier,
-        created_at: p.created_at
-      }));
-      setRecentUsers(recent);
-
-      // Fetch usage analytics
-      await fetchUsageAnalytics(profiles);
-
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data');
-      setLoading(false);
-    }
-  };
-
-  const fetchUsageAnalytics = async (profiles: any[]) => {
-    try {
-      // Fetch usage tracking data
-      const usageResult = await supabase
-        .from('usage_tracking')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (usageResult.error) {
-        console.error('Usage tracking error:', usageResult.error);
-        return;
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('No session token');
       }
 
-      const usageData = usageResult.data || [];
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-      if (usageData.length === 0) {
-        console.log('No usage data yet');
-        return;
-      }
-
-      // Calculate today's generations
-      const today = new Date().toISOString().split('T')[0];
-      const todayData = usageData.filter(d =>
-        d.created_at && d.created_at.startsWith(today)
-      );
-      const todayTotal = todayData.reduce((sum, d) => sum + (d.generations_this_month || 0), 0);
-      setTodayGenerations(todayTotal);
-
-      // Calculate this week's generations
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekData = usageData.filter(d =>
-        d.created_at && new Date(d.created_at) >= weekAgo
-      );
-      const weekTotal = weekData.reduce((sum, d) => sum + (d.generations_this_month || 0), 0);
-      setWeekGenerations(weekTotal);
-
-      // Calculate this month's generations
-      const monthTotal = usageData.reduce((sum, d) => sum + (d.generations_this_month || 0), 0);
-      setMonthGenerations(monthTotal);
-
-      // Generate usage history (last 7 days)
-      const history: UsageData[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-       
-        const dayData = usageData.filter(d =>
-          d.created_at && d.created_at.startsWith(dateStr)
-        );
-        const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_this_month || 0), 0);
-       
-        history.push({
-          date: dateStr,
-          generations: dayTotal
-        });
-      }
-      setUsageHistory(history);
-
-      // Calculate top users
-      const userGenerations = new Map<string, number>();
-      usageData.forEach(d => {
-        if (d.id) {
-          const current = userGenerations.get(d.id) || 0;
-          userGenerations.set(d.id, current + (d.generations_this_month || 0));
+      // Fetch stats from secure server endpoint
+      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
         }
       });
-      const topUsersList: TopUser[] = Array.from(userGenerations.entries())
-        .map(([userId, gens]) => {
-          const profile = profiles.find(p => p.id === userId);
-          return {
-            email: profile?.email || 'Unknown',
-            user_tier: profile?.user_tier || 'free',
-            total_generations: gens
-          };
-        })
-        .sort((a, b) => b.total_generations - a.total_generations)
-        .slice(0, 5);
-     
-      setTopUsers(topUsersList);
+
+      if (!statsResponse.ok) {
+        throw new Error(`Stats API error: ${statsResponse.status}`);
+      }
+
+      const statsData = await statsResponse.json();
+      
+      if (!statsData.success) {
+        throw new Error(statsData.error || 'Failed to fetch stats');
+      }
+
+      // Set stats from server response
+      setUserStats(statsData.stats.users);
+      setConversionRate(statsData.stats.conversionRate);
+      setTotalRevenue(statsData.stats.revenue.mrr);
+      setRecentUsers(statsData.stats.recentUsers);
+
+      // Fetch analytics from secure server endpoint
+      const analyticsResponse = await fetch(`${apiUrl}/api/admin/analytics`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!analyticsResponse.ok) {
+        throw new Error(`Analytics API error: ${analyticsResponse.status}`);
+      }
+
+      const analyticsData = await analyticsResponse.json();
+      
+      if (!analyticsData.success) {
+        throw new Error(analyticsData.error || 'Failed to fetch analytics');
+      }
+
+      // Set analytics from server response
+      setTodayGenerations(analyticsData.analytics.today);
+      setWeekGenerations(analyticsData.analytics.week);
+      setMonthGenerations(analyticsData.analytics.month);
+      setUsageHistory(analyticsData.analytics.history);
+      setTopUsers(analyticsData.analytics.topUsers);
+
+      setError('');
+      setLastUpdated(new Date());
+      setLoading(false);
+      
     } catch (err) {
-      console.error('Error fetching usage analytics:', err);
+      console.error('Error fetching dashboard data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      setLoading(false);
     }
   };
 
@@ -252,31 +214,92 @@ const AdminDashboard = () => {
   };
 
   const exportToCSV = () => {
-    // Prepare CSV data
-    const headers = ['Email', 'Tier', 'Total Generations', 'Signed Up'];
-    const rows = topUsers.map(user => [
-      user.email,
-      user.user_tier,
-      user.total_generations.toString(),
-      new Date().toISOString().split('T')[0]
-    ]);
+    if (userStats.total === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Comprehensive CSV data
+    const headers = ['Category', 'Metric', 'Value', 'Details'];
+    
+    const rows = [
+      // User Stats
+      ['Users', 'Total Users', userStats.total.toString(), ''],
+      ['Users', 'Free Tier', userStats.free.toString(), ''],
+      ['Users', 'Basic Tier', userStats.basic.toString(), ''],
+      ['Users', 'Pro Tier', userStats.pro.toString(), ''],
+      ['Users', 'Business Tier', userStats.business.toString(), ''],
+      ['Users', 'Conversion Rate', `${conversionRate}%`, ''],
+      ['', '', '', ''],
+      
+      // Revenue
+      ['Revenue', 'MRR', `$${totalRevenue}`, 'Monthly Recurring Revenue'],
+      ['Revenue', 'ARR', `$${totalRevenue * 12}`, 'Annual Recurring Revenue'],
+      ['Revenue', 'Basic Revenue', `$${userStats.basic * 9}`, `${userStats.basic} users × $9/mo`],
+      ['Revenue', 'Pro Revenue', `$${userStats.pro * 22}`, `${userStats.pro} users × $22/mo`],
+      ['Revenue', 'Business Revenue', `$${userStats.business * 49}`, `${userStats.business} users × $49/mo`],
+      ['', '', '', ''],
+      
+      // Analytics
+      ['Analytics', 'Today Generations', todayGenerations.toString(), ''],
+      ['Analytics', 'Week Generations', weekGenerations.toString(), 'Last 7 days'],
+      ['Analytics', 'Month Generations', monthGenerations.toString(), 'Total this month'],
+      ['', '', '', ''],
+      
+      // Top Users
+      ['Top Users', 'Email', 'Tier', 'Total Generations'],
+      ...topUsers.map(u => [
+        'Top Users',
+        u.email,
+        u.user_tier,
+        u.total_generations.toString()
+      ]),
+      ['', '', '', ''],
+      
+      // Recent Signups
+      ['Recent Signups', 'Email', 'Tier', 'Signed Up'],
+      ...recentUsers.map(u => [
+        'Recent Signups',
+        u.email,
+        u.user_tier,
+        new Date(u.created_at).toLocaleDateString()
+      ])
+    ];
 
     // Create CSV content
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.join(','))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
 
+    // Use UTC timestamp
+    const timestamp = new Date().toISOString().split('T')[0];
+
     // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `sento-ai-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `sento-ai-admin-report-${timestamp}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  };
+
+  const formatLastUpdated = () => {
+    if (!lastUpdated) return 'Never';
+    
+    const now = new Date();
+    const diffSeconds = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000);
+    
+    if (diffSeconds < 10) return 'Just now';
+    if (diffSeconds < 60) return `${diffSeconds}s ago`;
+    
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    
+    return lastUpdated.toLocaleTimeString();
   };
 
   const formatDate = (dateString: string) => {
@@ -349,7 +372,13 @@ const AdminDashboard = () => {
                 <p className="text-gray-600 mt-1">Sento AI Analytics & Revenue</p>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center">
+              {/* Show last updated time */}
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Clock className="w-4 h-4" />
+                <span>Updated: {formatLastUpdated()}</span>
+              </div>
+              
               <button
                 onClick={exportToCSV}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
@@ -361,20 +390,19 @@ const AdminDashboard = () => {
                 onClick={() => fetchDashboardData()}
                 className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
               >
-                <TrendingUp className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4" />
                 Refresh
               </button>
             </div>
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
+     
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        
+       
           {/* Total Revenue */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -388,7 +416,6 @@ const AdminDashboard = () => {
             </p>
             <p className="text-xs text-gray-500 mt-2">Monthly Recurring Revenue</p>
           </div>
-
           {/* Total Users */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -402,7 +429,6 @@ const AdminDashboard = () => {
               {userStats.free} free, {userStats.basic + userStats.pro + userStats.business} paid
             </p>
           </div>
-
           {/* Conversion Rate */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -414,7 +440,6 @@ const AdminDashboard = () => {
             <p className="text-3xl font-bold text-gray-900">{conversionRate}%</p>
             <p className="text-xs text-gray-500 mt-2">Free to paid conversion</p>
           </div>
-
           {/* Paid Users */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
@@ -429,10 +454,9 @@ const AdminDashboard = () => {
             <p className="text-xs text-gray-500 mt-2">Across all paid tiers</p>
           </div>
         </div>
-
         {/* Stats Cards Row 2 - Usage Analytics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         
+        
           <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl shadow-sm p-6 border border-blue-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -443,7 +467,6 @@ const AdminDashboard = () => {
             <p className="text-3xl font-bold text-blue-900">{todayGenerations}</p>
             <p className="text-xs text-blue-700 mt-2">Websites created today</p>
           </div>
-
           <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-sm p-6 border border-purple-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -454,7 +477,6 @@ const AdminDashboard = () => {
             <p className="text-3xl font-bold text-purple-900">{weekGenerations}</p>
             <p className="text-xs text-purple-700 mt-2">Last 7 days</p>
           </div>
-
           <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl shadow-sm p-6 border border-orange-200">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -466,14 +488,13 @@ const AdminDashboard = () => {
             <p className="text-xs text-orange-700 mt-2">Total generations</p>
           </div>
         </div>
-
         {/* Usage Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-purple-600" />
             7-Day Usage History
           </h2>
-         
+        
           {usageHistory.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -484,7 +505,7 @@ const AdminDashboard = () => {
               {usageHistory.map((data, idx) => {
                 const maxGens = getMaxGenerations();
                 const percentage = maxGens > 0 ? (data.generations / maxGens) * 100 : 0;
-               
+              
                 return (
                   <div key={idx}>
                     <div className="flex items-center justify-between mb-2">
@@ -507,10 +528,9 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
-
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        
+       
           {/* User Distribution */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -551,7 +571,6 @@ const AdminDashboard = () => {
               })}
             </div>
           </div>
-
           {/* Top Users */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -589,7 +608,6 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-
         {/* Recent Signups */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -621,7 +639,6 @@ const AdminDashboard = () => {
             )}
           </div>
         </div>
-
         {/* Revenue Breakdown */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mt-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
