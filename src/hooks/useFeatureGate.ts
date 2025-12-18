@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { TIER_LIMITS, UserTier, canGenerate, canCreateProject } from '@/config/tiers';
+import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
 export function useFeatureGate() {
   const { user } = useAuth();
@@ -32,16 +32,15 @@ export function useFeatureGate() {
       // Reset generations if it's a new month
       const currentMonth = new Date().toISOString().slice(0, 7); // "2024-12"
       const lastResetMonth = profile?.last_generation_reset || currentMonth;
-
       if (lastResetMonth !== currentMonth) {
         await supabase
           .from('profiles')
-          .update({ 
-            generations_this_month: 0, 
-            last_generation_reset: currentMonth 
+          .update({
+            generations_this_month: 0,
+            last_generation_reset: currentMonth
           })
           .eq('id', user?.id);
-        
+       
         setGenerationsToday(0); // Keep variable name for now, but it's actually "this month"
       } else {
         setGenerationsToday(profile?.generations_this_month || 0);
@@ -65,17 +64,15 @@ export function useFeatureGate() {
 
   async function incrementGeneration() {
     if (!user) return false;
-
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ 
-          generations_this_month: generationsToday + 1 
+        .update({
+          generations_this_month: generationsToday + 1
         })
         .eq('id', user.id);
 
       if (error) throw error;
-
       setGenerationsToday(prev => prev + 1);
       return true;
     } catch (error) {
@@ -89,11 +86,11 @@ export function useFeatureGate() {
     generationsToday,
     projectCount,
     loading,
-    canGenerate: canGenerate(userTier, generationsToday), // generationsToday = this month's count
-    canCreateProject: canCreateProject(userTier, projectCount),
+    canGenerate: generationsToday < TIER_LIMITS[userTier].monthlyGenerations, // generationsToday = this month's count
+    canCreateProject: true,
     incrementGeneration,
     tierLimits: TIER_LIMITS[userTier],
-    isPro: userTier === 'pro' || userTier === 'business',
+    isPro: userTier === 'pro',
     isFree: userTier === 'free'
   };
 }
