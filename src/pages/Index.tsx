@@ -1666,7 +1666,7 @@ ${new Date().toLocaleDateString()}
         onOpenChange={setShowUpgradeModal}
         currentTier={userTier}
         generationsUsed={generationsToday}
-        generationsLimit={tierLimits.generationsPerMonth}
+        generationsLimit={tierLimits.monthlyGenerations}
       />
 
       {/* Feature Lock Modal */}
@@ -1751,7 +1751,7 @@ ${new Date().toLocaleDateString()}
                     </>
                   ) : (
                     <>
-                      {generationsToday}/{tierLimits.generationsPerMonth} this month
+                      {generationsToday}/{tierLimits.monthlyGenerations} this month
                     </>
                   )}
                 </div>
@@ -1839,7 +1839,7 @@ ${new Date().toLocaleDateString()}
                   <div className="text-sm">
                     <div className={dynamicTextClass}>Free Plan</div>
                     <div className={`text-xs ${dynamicSubtleClass}`}>
-                      {isPro ? "Unlimited Generations" : `${generationsToday}/${tierLimits.generationsPerMonth} this month`}
+                      {isPro ? "Unlimited Generations" : `${generationsToday}/${tierLimits.monthlyGenerations} this month`}
                     </div>
                   </div>
                 </div>
@@ -1864,7 +1864,7 @@ ${new Date().toLocaleDateString()}
       {/* Upgrade Banner - Shows when limit reached */}
       <UpgradeBanner 
         generationsUsed={generationsToday} 
-        generationsLimit={tierLimits.generationsPerMonth}
+        generationsLimit={tierLimits.monthlyGenerations}
         tier={userTier}
       />
 
@@ -1964,7 +1964,7 @@ ${new Date().toLocaleDateString()}
                       className={`min-h-[140px] input-glow transition-all duration-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${isDarkMode ? 'bg-white/10 border-white/20 text-white placeholder-gray-400 focus:bg-white/15' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:bg-gray-50'}`}
                       rows={5}
                     />
-                    {/* ✅ CORRECTED: CharacterCounter - Remove userTier prop */}
+                    {/* ✅ CORRECTED: CharacterCounter - userTier prop removed */}
                     <CharacterCounter 
                       current={input.length}
                     />
