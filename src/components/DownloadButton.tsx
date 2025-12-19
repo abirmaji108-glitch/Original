@@ -28,21 +28,21 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   useEffect(() => {
     const checkDownloadLimit = async () => {
       if (userTier === 'free') return;
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-
       // Get current month's download count
       const currentMonth = new Date().toISOString().slice(0, 7);
       const { data, error } = await supabase
         .from('download_tracking')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .gte('downloaded_at', `${currentMonth}-01T00:00:00Z`);
-
+        .select('id, downloaded_at')
+        .eq('user_id', session.user.id);
       if (!error && data) {
-        setDownloadCount(data.length);
-        
+        // Filter client-side for current month
+        const currentMonthDownloads = data.filter((d: any) => 
+          d.downloaded_at && d.downloaded_at.startsWith(currentMonth)
+        );
+        setDownloadCount(currentMonthDownloads.length);
+       
         // Set limits based on tier
         const limits = {
           basic: 10,
@@ -52,7 +52,6 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
         setDownloadLimit(limits[userTier as keyof typeof limits] || 0);
       }
     };
-
     checkDownloadLimit();
   }, [userTier]);
 
@@ -81,12 +80,15 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 
       const zip = new JSZip();
       zip.file('index.html', cleanHtml);
+
       if (styles.trim()) {
         zip.file('styles.css', styles);
       }
+
       if (scripts.trim()) {
         zip.file('script.js', scripts);
       }
+
       // Add README for paid users
       const readme = `# Your Sento AI Website
 Generated with Sento AI - ${userTier.toUpperCase()} Plan
@@ -106,6 +108,7 @@ Email: support@sento.ai
 Made with ❤️ by Sento AI
 `;
       zip.file('README.md', readme);
+
       const content = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
@@ -135,9 +138,9 @@ Made with ❤️ by Sento AI
       });
     } catch (error: any) {
       console.error('Download failed:', error);
-      
+     
       let errorMessage = 'Download failed. Please try again.';
-      
+     
       if (error.message?.includes('quota')) {
         errorMessage = 'Your browser storage is full. Please free up space and try again.';
       } else if (error.message?.includes('network')) {
@@ -145,7 +148,7 @@ Made with ❤️ by Sento AI
       } else if (error.message?.includes('permission')) {
         errorMessage = 'Permission denied. Please allow downloads in your browser settings.';
       }
-      
+     
       toast({
         title: "Download Failed ❌",
         description: errorMessage,
@@ -191,8 +194,8 @@ Made with ❤️ by Sento AI
                     {userTier === 'free' ? 'Upgrade to Download' : 'Download Limit Reached'}
                   </h3>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {userTier === 'free' 
-                      ? 'Free tier includes preview only' 
+                    {userTier === 'free'
+                      ? 'Free tier includes preview only'
                       : `Your ${userTier} plan allows ${downloadLimit} downloads per month. You have ${downloadCount} used.`
                     }
                   </p>
