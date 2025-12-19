@@ -165,49 +165,47 @@ static async safeQuery<T>(
   maxRetries: number = 2
 ): Promise<T> {
   let lastError: any = null;
- 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const { data, error } = await query;
-     
+    
       if (error) {
         // Check if error is retryable (network issues, timeouts)
         const isRetryable = error.message?.includes('timeout') ||
                           error.message?.includes('network') ||
                           error.message?.includes('connection');
-       
+      
         if (isRetryable && attempt < maxRetries) {
           console.warn(`⚠️ Retrying ${context} (attempt ${attempt}/${maxRetries})`);
           lastError = error;
           await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           continue;
         }
-       
+      
         return this.handleError(error, context);
       }
-     
+    
       if (data === null) {
         throw new Error(`No data returned from ${context}`);
       }
-     
+    
       return data;
     } catch (error) {
       lastError = error;
-     
+    
       // Retry on network errors
       const isNetworkError = error instanceof TypeError &&
                            error.message?.includes('fetch');
-     
+    
       if (isNetworkError && attempt < maxRetries) {
         console.warn(`⚠️ Network error, retrying ${context} (attempt ${attempt}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
-     
+    
       return this.handleError(error, context);
     }
   }
- 
   return this.handleError(lastError, context);
 }
 /**
@@ -308,34 +306,31 @@ static async getMonthlyDownloadCount(userId: string): Promise<{
   remaining: number;
 }> {
   const currentMonth = new Date().toISOString().slice(0, 7);
-  
+ 
   const query1 = supabase.from('download_tracking')
     .select('id, downloaded_at')
     .eq('user_id', userId) as any;
   const downloads = await this.safeQuery<any[]>(query1, 'get monthly downloads');
-  
+ 
   // Filter by current month (done client-side since filter is complex)
-  const monthlyDownloads = downloads.filter((d: any) => 
+  const monthlyDownloads = downloads.filter((d: any) =>
     d.downloaded_at && d.downloaded_at.startsWith(currentMonth)
   );
-  
+ 
   // Get user tier to determine limit
   const query2 = supabase.from('profiles')
     .select('user_tier')
     .eq('id', userId)
     .single() as any;
   const profile = await this.safeQuery(query2, 'get user tier');
- 
   const limits: Record<string, number> = {
     'free': 0,
     'basic': 10,
     'pro': 50,
     'business': 200
   };
- 
-  const limit = limits[profile.user_tier] || 0;
+  const limit = limits[(profile as any).user_tier] || 0;
   const count = monthlyDownloads.length;
- 
   return {
     count,
     limit,
@@ -351,21 +346,18 @@ static async canDownload(userId: string): Promise<{
   remaining?: number;
 }> {
   const { count, limit, remaining } = await this.getMonthlyDownloadCount(userId);
- 
   if (limit === 0) {
     return {
       allowed: false,
       reason: 'Download feature requires upgrade to Basic, Pro, or Business plan'
     };
   }
- 
   if (count >= limit) {
     return {
       allowed: false,
       reason: `Monthly download limit reached (${count}/${limit})`
     };
   }
- 
   return {
     allowed: true,
     remaining
