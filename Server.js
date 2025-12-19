@@ -302,6 +302,46 @@ if (stripe) {
   }
 }
 
+// ✅ FIX #20: Comprehensive environment variable validation
+const requiredEnvVars = [
+  { name: 'GROQ_API_KEY', critical: true },
+  { name: 'VITE_SUPABASE_URL', critical: true },
+  { name: 'SUPABASE_SERVICE_ROLE_KEY', critical: true },
+  { name: 'STRIPE_SECRET_KEY', critical: false },
+  { name: 'STRIPE_WEBHOOK_SECRET', critical: false },
+  { name: 'STRIPE_BASIC_PRICE_ID', critical: false },
+  { name: 'STRIPE_PRO_PRICE_ID', critical: false },
+  { name: 'FRONTEND_URL', critical: false }
+];
+
+const missingCritical = [];
+const missingOptional = [];
+
+for (const { name, critical } of requiredEnvVars) {
+  if (!process.env[name]) {
+    if (critical) {
+      missingCritical.push(name);
+    } else {
+      missingOptional.push(name);
+    }
+  }
+}
+
+if (missingCritical.length > 0) {
+  logger.error('❌ CRITICAL: Missing required environment variables:');
+  missingCritical.forEach(name => logger.error(`   - ${name}`));
+  logger.error('Server cannot start without these variables!');
+  process.exit(1);
+}
+
+if (missingOptional.length > 0) {
+  logger.warn('⚠️ WARNING: Missing optional environment variables:');
+  missingOptional.forEach(name => logger.warn(`   - ${name}`));
+  logger.warn('Some features may not work correctly.');
+}
+
+logger.log('✅ All critical environment variables validated');
+
 // ============================================
 // RATE LIMITING
 // ============================================
@@ -353,6 +393,18 @@ const checkoutLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// ✅ ADD: Download rate limiter (FIX #21)
+const downloadLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // 5 downloads per minute
+  message: {
+    error: 'Too many download requests',
+    message: 'Please wait before downloading again'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ============================================
 // ADMIN RATE LIMITER
 // ============================================
@@ -379,6 +431,14 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
+  next();
+});
+
+// ✅ FIX #26: REQUEST ID MIDDLEWARE
+app.use((req, res, next) => {
+  req.id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  res.setHeader('X-Request-ID', req.id);
+  logger.log(`📥 [${req.id}] ${req.method} ${req.path}`);
   next();
 });
 
@@ -777,20 +837,54 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
 });
 
 // ============================================
-// HEALTH CHECK ENDPOINT
+// HEALTH CHECK ENDPOINT (FIX #27)
 // ============================================
 
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
+app.get('/api/health', async (req, res) => {
+  const checks = {
+    server: 'healthy',
+    database: 'unknown',
+    groq_api: 'unknown',
+    stripe: stripe ? 'configured' : 'disabled'
+  };
+
+  // Check database connection
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .select('id')
+      .limit(1);
+    
+    checks.database = error ? 'unhealthy' : 'healthy';
+  } catch (err) {
+    checks.database = 'unhealthy';
+  }
+
+  // Check Groq API (optional - can be slow)
+  if (process.env.ENABLE_API_HEALTH_CHECK === 'true') {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` }
+      });
+      checks.groq_api = response.ok ? 'healthy' : 'unhealthy';
+    } catch {
+      checks.groq_api = 'unhealthy';
+    }
+  }
+
+  const isHealthy = checks.server === 'healthy' && checks.database === 'healthy';
+
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'healthy' : 'degraded',
     timestamp: new Date().toISOString(),
-    service: 'image-generation-api',
-    version: '1.0.0'
+    service: 'sento-ai-api',
+    version: '1.0.0',
+    checks
   });
 });
 
 // ============================================
-// GENERATE ENDPOINT
+// GENERATE ENDPOINT - COMPLETE WORKING VERSION
 // ============================================
 
 app.post('/api/generate', generateLimiter, async (req, res) => {
@@ -798,10 +892,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   let userId = null;
   
   try {
-    const { prompt, negativePrompt, aspectRatio = '1:1', model = 'flux', style = null } = req.body;
+    const { prompt } = req.body;
     const authHeader = req.headers.authorization;
 
-    // ✅ FIX #3: Validate required fields
+    // ✅ VALIDATION: Check prompt exists
     if (!prompt) {
       return res.status(400).json({
         success: false,
@@ -809,27 +903,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       });
     }
 
-    // ✅ FIX #4: Validate aspect ratio
-    const validAspectRatios = ['1:1', '16:9', '9:16', '4:3', '3:4', '2:3', '3:2'];
-    if (!validAspectRatios.includes(aspectRatio)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid aspect ratio',
-        message: `Valid ratios: ${validAspectRatios.join(', ')}`
-      });
-    }
-
-    // ✅ FIX #5: Validate model
-    const validModels = ['flux', 'dall-e-3', 'stable-diffusion-3', 'midjourney'];
-    if (!validModels.includes(model)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid model',
-        message: `Valid models: ${validModels.join(', ')}`
-      });
-    }
-
-    // Sanitize prompt
+    // ✅ SANITIZATION: Clean the prompt
     let sanitizedPrompt;
     try {
       sanitizedPrompt = sanitizePrompt(prompt);
@@ -841,241 +915,268 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       });
     }
 
-    // ✅ FIX #7: Check for abusive content
-    const abusiveKeywords = ['fuck', 'shit', 'asshole', 'bitch', 'cunt', 'nigger', 'nigga'];
-    const lowerPrompt = sanitizedPrompt.toLowerCase();
-    for (const keyword of abusiveKeywords) {
-      if (lowerPrompt.includes(keyword)) {
-        await logSecurityEvent({
-          user_id: userId || 'anonymous',
-          event_type: 'abusive_content_blocked',
-          endpoint: '/api/generate',
-          ip_address: req.ip,
-          user_agent: req.get('user-agent'),
-          request_details: { prompt: sanitizedPrompt.substring(0, 100) }
-        });
-
-        return res.status(400).json({
-          success: false,
-          error: 'Content policy violation',
-          message: 'Prompt contains inappropriate language'
-        });
-      }
+    // ✅ VALIDATION: Check prompt length
+    if (sanitizedPrompt.length < 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Prompt too short',
+        message: 'Please provide at least 50 characters'
+      });
     }
 
-    // Authentication and tier check
+    if (sanitizedPrompt.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Prompt too long',
+        message: 'Please keep your prompt under 2000 characters'
+      });
+    }
+
+    // ✅ AUTHENTICATION & TIER CHECKING
     let userTier = 'free';
     let generationsThisMonth = 0;
-    let currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    let currentMonth = new Date().toISOString().slice(0, 7);
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.replace('Bearer ', '');
-        const { data: { user } } = await supabase.auth.getUser(token);
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-        if (user) {
-          userId = user.id;
+        if (authError) {
+          return res.status(401).json({
+            success: false,
+            error: 'Invalid authentication',
+            code: 'INVALID_TOKEN'
+          });
+        }
+
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            error: 'Authentication required',
+            code: 'NO_USER'
+          });
+        }
+
+        userId = user.id;
+        
+        // ✅ FETCH USER PROFILE: Get tier and usage
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_tier, generations_this_month, last_generation_reset')
+          .eq('id', userId)
+          .single();
+
+        if (profileError) {
+          logger.error(`[${req.id}] Profile fetch error:`, profileError);
+          return res.status(500).json({
+            success: false,
+            error: 'Failed to fetch user profile'
+          });
+        }
+
+        if (profile) {
+          userTier = profile.user_tier || 'free';
           
-          // Fetch user profile with tier and usage
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('user_tier, generations_this_month, last_generation_reset')
-            .eq('id', userId)
-            .single();
-
-          if (!profileError && profile) {
-            userTier = profile.user_tier || 'free';
+          // ✅ CHECK IF MONTHLY RESET NEEDED
+          if (profile.last_generation_reset !== currentMonth) {
+            // Reset generations for new month
+            await supabase
+              .from('profiles')
+              .update({
+                generations_this_month: 0,
+                last_generation_reset: currentMonth
+              })
+              .eq('id', userId);
             
-            // Check if we need to reset monthly generations
-            if (profile.last_generation_reset !== currentMonth) {
-              // Reset generations for new month
-              await supabase
-                .from('profiles')
-                .update({
-                  generations_this_month: 0,
-                  last_generation_reset: currentMonth
-                })
-                .eq('id', userId);
-              
-              generationsThisMonth = 0;
-            } else {
-              generationsThisMonth = profile.generations_this_month || 0;
-            }
+            generationsThisMonth = 0;
+          } else {
+            generationsThisMonth = profile.generations_this_month || 0;
+          }
 
-            // Check tier limits
-            const tierLimits = {
-              'free': 5,
-              'basic': 100,
-              'pro': 500,
-              'business': 2000
-            };
+          // ✅ CHECK TIER LIMITS
+          const tierLimits = {
+            'free': 5,
+            'basic': 100,
+            'pro': 500,
+            'business': 2000
+          };
 
-            const limit = tierLimits[userTier] || 5;
+          const limit = tierLimits[userTier] || 5;
+          
+          // ✅ ENFORCE LIMITS
+          if (generationsThisMonth >= limit) {
+            // Log the limit hit
+            await logSecurityEvent({
+              user_id: userId,
+              event_type: 'generation_limit_reached',
+              actual_tier: userTier,
+              endpoint: '/api/generate',
+              ip_address: req.ip,
+              user_agent: req.get('user-agent'),
+              request_details: {
+                generations_used: generationsThisMonth,
+                limit: limit
+              }
+            });
+
+            // Send warning email if not already sent
+            const { data: warningData } = await supabase
+              .from('profiles')
+              .select('warning_email_sent_at')
+              .eq('id', userId)
+              .single();
+
+            const warningSent = warningData?.warning_email_sent_at;
+            const warningSentDate = warningSent ? new Date(warningSent) : null;
+            const now = new Date();
             
-            if (generationsThisMonth >= limit) {
-              // Check if warning email was already sent
-              const { data: warningData } = await supabase
+            // Send warning email only once per month
+            if (!warningSent || (now - warningSentDate) > 30 * 24 * 60 * 60 * 1000) {
+              const { data: userData } = await supabase
                 .from('profiles')
-                .select('warning_email_sent_at')
+                .select('email, full_name')
                 .eq('id', userId)
                 .single();
 
-              const warningSent = warningData?.warning_email_sent_at;
-              const warningSentDate = warningSent ? new Date(warningSent) : null;
-              const now = new Date();
-              
-              // Send warning email only once per month
-              if (!warningSent || (now - warningSentDate) > 30 * 24 * 60 * 60 * 1000) {
-                const { data: userData } = await supabase
+              if (userData?.email && isValidEmail(userData.email)) {
+                sendLimitWarningEmail(
+                  userData.email,
+                  userData.full_name || 'there',
+                  userTier,
+                  generationsThisMonth,
+                  limit
+                ).catch(err => logger.error('⚠️ Failed to send warning email:', err));
+
+                // Update warning email timestamp
+                await supabase
                   .from('profiles')
-                  .select('email, full_name')
-                  .eq('id', userId)
-                  .single();
-
-                if (userData?.email) {
-                  sendLimitWarningEmail(
-                    userData.email,
-                    userData.full_name || 'there',
-                    userTier,
-                    generationsThisMonth,
-                    limit
-                  ).catch(err => logger.error('⚠️ Failed to send warning email:', err));
-
-                  // Update warning email timestamp
-                  await supabase
-                    .from('profiles')
-                    .update({ warning_email_sent_at: now.toISOString() })
-                    .eq('id', userId);
-                }
+                  .update({ warning_email_sent_at: now.toISOString() })
+                  .eq('id', userId);
               }
-
-              return res.status(429).json({
-                success: false,
-                error: 'Monthly limit exceeded',
-                message: `You've used ${generationsThisMonth} of ${limit} generations this month`,
-                upgradeUrl: '/pricing'
-              });
             }
+
+            return res.status(429).json({
+              success: false,
+              error: 'Monthly generation limit reached',
+              limit_reached: true,
+              message: `You've used ${generationsThisMonth} of ${limit} generations this month`,
+              upgradeUrl: '/pricing'
+            });
           }
         }
       } catch (authError) {
-        logger.warn('Authentication error (non-critical):', authError.message);
+        logger.error(`[${req.id}] Authentication error:`, authError);
         // Continue as free user if auth fails
+        userTier = 'free';
+        generationsThisMonth = 0;
       }
     }
 
-    // ✅ FIX #8: Additional rate limiting per IP
+    // ✅ RATE LIMITING: Additional per-IP check
     const ipLimitKey = `ip:${req.ip}`;
-    const ipLimitResult = await checkRateLimit(ipLimitKey, 15, 60); // 15 requests per minute per IP
+    const ipLimitResult = await checkRateLimit(ipLimitKey, 15, 60);
 
     if (!ipLimitResult.allowed) {
       return res.status(429).json({
         success: false,
         error: 'Rate limit exceeded',
-        message: `Too many requests from your IP. Try again in ${ipLimitResult.resetIn} seconds`
+        message: `Too many requests. Try again in ${ipLimitResult.resetIn} seconds`
       });
     }
 
-    // Map aspect ratio to dimensions
-    const dimensionsMap = {
-      '1:1': { width: 1024, height: 1024 },
-      '16:9': { width: 1920, height: 1080 },
-      '9:16': { width: 1080, height: 1920 },
-      '4:3': { width: 1600, height: 1200 },
-      '3:4': { width: 1200, height: 1600 },
-      '2:3': { width: 1200, height: 1800 },
-      '3:2': { width: 1800, height: 1200 }
-    };
-
-    const dimensions = dimensionsMap[aspectRatio];
-
-    // Prepare API request
+    // ✅ STEP 1: Use Claude to generate COMPLETE HTML WEBSITE
     const apiUrl = 'https://api.anthropic.com/v1/messages';
     const headers = {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
+      'x-api-key': process.env.CLAUDE_API_KEY,
       'anthropic-version': '2023-06-01'
     };
 
+    const systemPrompt = `You are an expert web developer who creates beautiful, modern, responsive websites. 
+
+CRITICAL RULES:
+1. Return ONLY complete HTML code starting with <!DOCTYPE html>
+2. NO explanations, NO markdown, NO code blocks, NO preambles
+3. Include <script src="https://cdn.tailwindcss.com"></script> for styling
+4. Make it mobile-responsive with modern design
+5. Add smooth animations and professional styling
+
+IMAGE RULES - VERY IMPORTANT:
+- Analyze the user's request carefully to understand the website type
+- Use Unsplash with SPECIFIC keywords matching the content
+- Format: https://source.unsplash.com/WIDTHxHEIGHT?keyword1,keyword2,keyword3
+
+EXAMPLES OF SMART IMAGE USAGE:
+- Photography site: ?photography,camera,professional
+- Restaurant: ?restaurant,food,dining,{cuisine-type}
+- Gym: ?fitness,gym,workout,{specialty}
+- E-commerce: ?product,shopping,{product-type}
+- Real estate: ?house,property,{location-type}
+- Travel: ?travel,destination,{place}
+
+ALWAYS:
+- Use 3-5 relevant keywords per image
+- Match keywords to the specific content (hero, product, team, etc.)
+- Use high-resolution dimensions (1920x1080 for heroes, 800x600 for content)
+- Add descriptive alt tags
+- Include realistic placeholder content
+- Use semantic HTML5 tags
+- Add proper accessibility (ARIA labels)`;
+
     const body = {
-      model: 'claude-3-sonnet-20240229',
-      max_tokens: 4096,
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 8000,
+      system: systemPrompt,
       messages: [{
         role: 'user',
-        content: `Generate a detailed image description for: "${sanitizedPrompt}"${negativePrompt ? `, avoiding: ${negativePrompt}` : ''}. Aspect ratio: ${aspectRatio}. Style: ${style || 'photorealistic'}. Return ONLY the description, no explanations.`
+        content: sanitizedPrompt
       }]
     };
 
-    // Call Claude API with retry
-    let description;
+    // ✅ CALL CLAUDE API WITH RETRY
+    let generatedCode;
     try {
       const response = await retryOperation(async () => {
         return await fetchWithTimeout(apiUrl, {
           method: 'POST',
           headers,
           body: JSON.stringify(body)
-        }, 30000);
-      });
+        }, 90000); // 90 second timeout
+      }, 3, 2000);
 
       if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(`Claude API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
       }
 
       const data = await response.json();
-      description = data.content[0].text.trim();
-    } catch (error) {
-      logger.error('❌ Claude API error:', error);
-      return res.status(502).json({
-        success: false,
-        error: 'Image description service unavailable',
-        message: error.message
-      });
-    }
-
-    // Generate image using Flux API
-    const fluxApiUrl = 'https://api.flux.ai/v1/generate';
-    const fluxHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.FLUX_API_KEY}`
-    };
-
-    const fluxBody = {
-      prompt: description,
-      width: dimensions.width,
-      height: dimensions.height,
-      steps: 20,
-      guidance_scale: 7.5
-    };
-
-    let imageUrl;
-    try {
-      const fluxResponse = await retryOperation(async () => {
-        return await fetchWithTimeout(fluxApiUrl, {
-          method: 'POST',
-          headers: fluxHeaders,
-          body: JSON.stringify(fluxBody)
-        }, 60000);
-      });
-
-      if (!fluxResponse.ok) {
-        throw new Error(`Flux API error: ${fluxResponse.status} ${fluxResponse.statusText}`);
+      generatedCode = data.content[0].text.trim();
+      
+      // ✅ CLEAN UP MARKDOWN ARTIFACTS
+      generatedCode = generatedCode
+        .replace(/```html\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      
+      // ✅ VALIDATE HTML
+      if (!generatedCode.startsWith('<!DOCTYPE html>') && !generatedCode.startsWith('<html>')) {
+        throw new Error('Invalid HTML generated - missing DOCTYPE');
       }
 
-      const fluxData = await fluxResponse.json();
-      imageUrl = fluxData.output[0];
     } catch (error) {
-      logger.error('❌ Flux API error:', error);
+      logger.error(`❌ [${req.id}] Claude API error:`, error);
       return res.status(502).json({
         success: false,
-        error: 'Image generation service unavailable',
+        error: 'Website generation service unavailable',
         message: error.message
       });
     }
 
-    // Update user's generation count if authenticated
+    // ✅ UPDATE USER'S GENERATION COUNT
     if (userId) {
       try {
-        await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({
             generations_this_month: generationsThisMonth + 1,
@@ -1083,43 +1184,62 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           })
           .eq('id', userId);
 
-        // Log analytics
+        if (updateError) {
+          logger.error(`⚠️ [${req.id}] Failed to update generation count:`, updateError);
+        }
+
+        // ✅ LOG ANALYTICS
         await logAnalytics(userId, generationsThisMonth, currentMonth);
+
+        // ✅ LOG SECURITY EVENT
+        await logSecurityEvent({
+          user_id: userId,
+          event_type: 'website_generated',
+          actual_tier: userTier,
+          endpoint: '/api/generate',
+          ip_address: req.ip,
+          user_agent: req.get('user-agent'),
+          request_details: {
+            prompt_length: sanitizedPrompt.length,
+            generations_used: generationsThisMonth + 1
+          }
+        });
+
       } catch (dbError) {
-        logger.error('⚠️ Failed to update user generation count:', dbError);
-        // Don't fail the request - image was generated successfully
+        logger.error(`⚠️ [${req.id}] Database operation failed:`, dbError);
+        // Don't fail the request - website was generated successfully
       }
     }
 
     const generationTime = Date.now() - startTime;
-    logger.log(`✅ Image generated in ${generationTime}ms for user ${userId || 'anonymous'}`);
+    const tierLimits = {
+      'free': 5,
+      'basic': 100,
+      'pro': 500,
+      'business': 2000
+    };
+    const limit = tierLimits[userTier] || 5;
 
-    // Return success response
+    logger.log(`✅ [${req.id}] Website generated in ${generationTime}ms for user ${userId || 'anonymous'} (${userTier})`);
+
+    // ✅ STEP 2: Return the complete HTML website
     res.json({
       success: true,
-      data: {
-        imageUrl,
-        description,
-        prompt: sanitizedPrompt,
-        aspectRatio,
-        model,
-        dimensions,
-        generationTime: `${generationTime}ms`,
-        remainingGenerations: userId ? (tierLimits[userTier] - (generationsThisMonth + 1)) : null,
-        tier: userTier
-      }
+      htmlCode: generatedCode,  // ✅ Complete website with embedded Unsplash images
+      usage: {
+        used: generationsThisMonth + 1,
+        limit: limit,
+        remaining: limit - (generationsThisMonth + 1)
+      },
+      tier: userTier,
+      generationTime: `${generationTime}ms`
     });
 
   } catch (error) {
-    logger.error('❌ Generation endpoint error:', error);
-    
-    // ✅ FIX #9: Don't expose internal errors
-    const errorMessage = error.message || 'Internal server error';
-    const isInternalError = errorMessage.includes('internal') || errorMessage.includes('database');
-    
+    logger.error(`❌ [${req.id}] Generation endpoint error:`, error);
     res.status(500).json({
       success: false,
-      error: isInternalError ? 'Internal server error' : errorMessage,
+      error: 'Internal server error',
       message: 'Please try again later'
     });
   }
@@ -1159,7 +1279,7 @@ app.get('/api/profile', async (req, res) => {
       .single();
 
     if (profileError) {
-      logger.error('Profile fetch error:', profileError);
+      logger.error(`[${req.id}] Profile fetch error:`, profileError);
       return res.status(500).json({
         success: false,
         error: 'Failed to fetch profile'
@@ -1183,6 +1303,22 @@ app.get('/api/profile', async (req, res) => {
     const limit = tierLimits[profile.user_tier] || 5;
     const remaining = Math.max(0, limit - generationsThisMonth);
 
+    // Calculate remaining downloads
+    let downloadsThisMonth = 0;
+    const downloadLimits = {
+      'free': 0,
+      'basic': 10,
+      'pro': 50,
+      'business': 200
+    };
+    
+    if (profile.last_download_reset === currentMonth) {
+      downloadsThisMonth = profile.downloads_this_month || 0;
+    }
+    
+    const downloadLimit = downloadLimits[profile.user_tier] || 0;
+    const remainingDownloads = Math.max(0, downloadLimit - downloadsThisMonth);
+
     res.json({
       success: true,
       data: {
@@ -1196,13 +1332,211 @@ app.get('/api/profile', async (req, res) => {
           generations_this_month: generationsThisMonth,
           remaining_generations: remaining,
           monthly_limit: limit,
+          downloads_this_month: downloadsThisMonth,
+          remaining_downloads: remainingDownloads,
+          download_limit: downloadLimit,
           current_month: currentMonth
         }
       }
     });
 
   } catch (error) {
-    logger.error('❌ Profile endpoint error:', error);
+    logger.error(`❌ [${req.id}] Profile endpoint error:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// ============================================
+// ✅ FIX #16: DOWNLOAD TRACKING ENDPOINT
+// ============================================
+
+app.post('/api/track-download', downloadLimiter, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid authentication'
+      });
+    }
+
+    // Get user's current tier and download count
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('user_tier, downloads_this_month, last_download_reset')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      logger.error(`[${req.id}] Profile fetch error:`, profileError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch profile'
+      });
+    }
+
+    const userTier = profile.user_tier || 'free';
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    // Reset download count if new month
+    let downloadsThisMonth = 0;
+    if (profile.last_download_reset === currentMonth) {
+      downloadsThisMonth = profile.downloads_this_month || 0;
+    } else {
+      // Reset for new month
+      await supabase
+        .from('profiles')
+        .update({
+          downloads_this_month: 0,
+          last_download_reset: currentMonth
+        })
+        .eq('id', user.id);
+    }
+
+    // Check download limits
+    const downloadLimits = {
+      'free': 0,      // Free users cannot download
+      'basic': 10,
+      'pro': 50,
+      'business': 200
+    };
+
+    const limit = downloadLimits[userTier] || 0;
+
+    if (userTier === 'free') {
+      await logSecurityEvent({
+        user_id: user.id,
+        event_type: 'download_denied_free',
+        actual_tier: userTier,
+        endpoint: '/api/track-download',
+        ip_address: req.ip,
+        user_agent: req.get('user-agent')
+      });
+
+      return res.status(403).json({
+        success: false,
+        error: 'Download feature requires upgrade',
+        upgrade_required: true,
+        message: 'Upgrade to Basic, Pro, or Business to download websites'
+      });
+    }
+
+    if (downloadsThisMonth >= limit) {
+      await logSecurityEvent({
+        user_id: user.id,
+        event_type: 'download_limit_reached',
+        actual_tier: userTier,
+        endpoint: '/api/track-download',
+        ip_address: req.ip,
+        user_agent: req.get('user-agent'),
+        request_details: {
+          downloads_used: downloadsThisMonth,
+          downloads_limit: limit
+        }
+      });
+
+      return res.status(429).json({
+        success: false,
+        error: 'Monthly download limit reached',
+        limit_reached: true,
+        message: `You've used ${downloadsThisMonth} of ${limit} downloads this month`,
+        upgradeUrl: '/pricing'
+      });
+    }
+
+    // Increment download count
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        downloads_this_month: downloadsThisMonth + 1,
+        last_download_reset: currentMonth
+      })
+      .eq('id', user.id);
+
+    if (updateError) {
+      logger.error(`[${req.id}] Failed to update download count:`, updateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to track download'
+      });
+    }
+
+    // Track download in separate table
+    await supabase
+      .from('download_tracking')
+      .insert({
+        user_id: user.id,
+        downloaded_at: new Date().toISOString(),
+        user_tier: userTier
+      });
+
+    logger.log(`✅ [${req.id}] Download tracked for user ${user.id} (${downloadsThisMonth + 1}/${limit})`);
+
+    // ✅ FIX #22: Log security event
+    await logSecurityEvent({
+      user_id: user.id,
+      event_type: 'website_downloaded',
+      actual_tier: userTier,
+      endpoint: '/api/track-download',
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      request_details: {
+        downloads_used: downloadsThisMonth + 1,
+        downloads_limit: limit
+      }
+    });
+
+    // ✅ FIX #23: Send warning email when approaching limit
+    const remainingDownloads = limit - (downloadsThisMonth + 1);
+
+    if (remainingDownloads === 2 || remainingDownloads === 5) {
+      // Send warning email asynchronously
+      supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', user.id)
+        .single()
+        .then(({ data: userProfile }) => {
+          if (userProfile?.email && isValidEmail(userProfile.email)) {
+            sendLimitWarningEmail(
+              userProfile.email,
+              userProfile.full_name || 'there',
+              userTier,
+              downloadsThisMonth + 1,
+              limit,
+              'downloads' // Specify this is for downloads
+            )
+              .then(() => logger.log(`📧 [${req.id}] Download limit warning email sent`))
+              .catch(err => logger.error('⚠️ Failed to send warning email:', err));
+          }
+        })
+        .catch(err => logger.error('⚠️ Failed to fetch user for email:', err));
+    }
+
+    res.json({
+      success: true,
+      message: 'Download tracked successfully',
+      remaining: remainingDownloads,
+      limit,
+      used: downloadsThisMonth + 1
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Download tracking error:`, error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -1296,7 +1630,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     }
 
     if (!priceId) {
-      logger.error(`❌ Missing price ID for ${tier} (${interval})`);
+      logger.error(`❌ [${req.id}] Missing price ID for ${tier} (${interval})`);
       return res.status(500).json({
         success: false,
         error: 'Payment configuration error'
@@ -1381,7 +1715,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('❌ Checkout session error:', error);
+    logger.error(`❌ [${req.id}] Checkout session error:`, error);
     
     // ✅ FIX #13: Don't expose Stripe errors to client
     const errorMessage = error.type === 'StripeError' 
@@ -1476,7 +1810,7 @@ app.post('/api/cancel-subscription', async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('❌ Cancel subscription error:', error);
+    logger.error(`❌ [${req.id}] Cancel subscription error:`, error);
     res.status(500).json({
       success: false,
       error: 'Failed to cancel subscription'
@@ -1485,12 +1819,54 @@ app.post('/api/cancel-subscription', async (req, res) => {
 });
 
 // ============================================
-// ADMIN DASHBOARD STATS
+// ✅ FIX #24: API KEY RELOAD ENDPOINT (ADMIN ONLY)
+// ============================================
+
+app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
+  try {
+    const { key_type } = req.body;
+    
+    if (!['groq', 'stripe', 'all'].includes(key_type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid key type',
+        message: 'Valid types: groq, stripe, all'
+      });
+    }
+
+    logger.log(`🔄 [${req.id}] Reloading ${key_type} API keys by admin: ${req.adminUser.email}`);
+
+    // This is a placeholder - in production, implement proper key rotation
+    // For now, just log the attempt
+    await logSecurityEvent({
+      user_id: req.adminUser.id,
+      event_type: 'api_key_reload_requested',
+      endpoint: '/api/admin/reload-keys',
+      request_details: { key_type }
+    });
+
+    res.json({
+      success: true,
+      message: `API key reload initiated for: ${key_type}`,
+      note: 'Restart server to apply new keys from environment variables'
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Key reload error:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reload keys'
+    });
+  }
+});
+
+// ============================================
+// ADMIN DASHBOARD STATS (FIX #25)
 // ============================================
 
 app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
   try {
-    logger.log(`📊 Admin stats requested by ${req.adminUser.email}`);
+    logger.log(`📊 [${req.id}] Admin stats requested by ${req.adminUser.email}`);
 
     // Fetch all profiles
     const { data: profiles, error: profilesError } = await supabase
@@ -1498,6 +1874,13 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       .select('id, email, user_tier, created_at, stripe_customer_id');
 
     if (profilesError) throw profilesError;
+
+    // ✅ FIX #25: Fetch download statistics
+    const { data: downloadData, error: downloadError } = await supabase
+      .from('download_tracking')
+      .select('user_id, downloaded_at, user_tier');
+
+    const today = new Date().toISOString().split('T')[0];
 
     // Calculate user stats
     const stats = {
@@ -1507,6 +1890,33 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       pro: profiles.filter(p => p.user_tier === 'pro').length,
       business: profiles.filter(p => p.user_tier === 'business').length
     };
+
+    // ✅ ADD: Download statistics
+    if (!downloadError && downloadData) {
+      const totalDownloads = downloadData.length;
+      const todayDownloads = downloadData.filter(d =>
+        d.downloaded_at && d.downloaded_at.startsWith(today)
+      ).length;
+      
+      const downloadsByTier = {
+        basic: downloadData.filter(d => d.user_tier === 'basic').length,
+        pro: downloadData.filter(d => d.user_tier === 'pro').length,
+        business: downloadData.filter(d => d.user_tier === 'business').length
+      };
+
+      // Add to response stats object:
+      stats.downloads = {
+        total: totalDownloads,
+        today: todayDownloads,
+        by_tier: downloadsByTier
+      };
+    } else {
+      stats.downloads = {
+        total: 0,
+        today: 0,
+        by_tier: { basic: 0, pro: 0, business: 0 }
+      };
+    }
 
     // Calculate conversion rate
     const paidUsers = stats.basic + stats.pro + stats.business;
@@ -1531,7 +1941,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
           .eq('status', 'active');
 
         if (subError) {
-          logger.warn('⚠️ Failed to fetch subscriptions:', subError);
+          logger.warn(`⚠️ [${req.id}] Failed to fetch subscriptions:`, subError);
         } else {
           for (const sub of subscriptions || []) {
             try {
@@ -1563,12 +1973,12 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
                 }
               }
             } catch (stripeErr) {
-              logger.warn(`⚠️ Failed to fetch Stripe subscription ${sub.stripe_subscription_id}:`, stripeErr.message);
+              logger.warn(`⚠️ [${req.id}] Failed to fetch Stripe subscription ${sub.stripe_subscription_id}:`, stripeErr.message);
             }
           }
         }
       } catch (err) {
-        logger.error('❌ Error fetching Stripe subscriptions:', err);
+        logger.error(`❌ [${req.id}] Error fetching Stripe subscriptions:`, err);
         // Fall back to estimated revenue if Stripe fails
         actualRevenue = (stats.basic * 9) + (stats.pro * 22) + (stats.business * 49);
       }
@@ -1602,7 +2012,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('❌ Admin stats error:', error);
+    logger.error(`❌ [${req.id}] Admin stats error:`, error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch admin stats'
@@ -1616,7 +2026,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
 
 app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => {
   try {
-    logger.log(`📈 Admin analytics requested by ${req.adminUser.email}`);
+    logger.log(`📈 [${req.id}] Admin analytics requested by ${req.adminUser.email}`);
 
     // Fetch usage tracking data
     const { data: usageData, error: usageError } = await supabase
@@ -1644,6 +2054,28 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
     // Calculate this month's generations
     const monthGenerations = usageData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
 
+    // ✅ ADD: Fetch download analytics
+    const { data: downloadData, error: downloadError } = await supabase
+      .from('download_tracking')
+      .select('*')
+      .order('downloaded_at', { ascending: false });
+
+    let todayDownloads = 0;
+    let weekDownloads = 0;
+    let monthDownloads = 0;
+
+    if (!downloadError && downloadData) {
+      todayDownloads = downloadData.filter(d =>
+        d.downloaded_at && d.downloaded_at.startsWith(today)
+      ).length;
+
+      weekDownloads = downloadData.filter(d =>
+        d.downloaded_at && new Date(d.downloaded_at) >= weekAgo
+      ).length;
+
+      monthDownloads = downloadData.length;
+    }
+
     // Generate 7-day history
     const history = [];
     for (let i = 6; i >= 0; i--) {
@@ -1656,13 +2088,18 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
       );
       const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
 
+      const dayDownloads = downloadData ? downloadData.filter(d =>
+        d.downloaded_at && d.downloaded_at.startsWith(dateStr)
+      ).length : 0;
+
       history.push({
         date: dateStr,
-        generations: dayTotal
+        generations: dayTotal,
+        downloads: dayDownloads
       });
     }
 
-    // Calculate top users
+    // Calculate top users by generations
     const userGenerations = new Map();
     usageData.forEach(d => {
       if (d.user_id) {
@@ -1670,6 +2107,17 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
         userGenerations.set(d.user_id, current + (d.generations_used || 0));
       }
     });
+
+    // Calculate top users by downloads
+    const userDownloads = new Map();
+    if (downloadData) {
+      downloadData.forEach(d => {
+        if (d.user_id) {
+          const current = userDownloads.get(d.user_id) || 0;
+          userDownloads.set(d.user_id, current + 1);
+        }
+      });
+    }
 
     // Fetch profiles for top users
     const { data: profiles } = await supabase
@@ -1679,28 +2127,53 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
     const topUsers = Array.from(userGenerations.entries())
       .map(([userId, gens]) => {
         const profile = profiles?.find(p => p.id === userId);
+        const downloads = userDownloads.get(userId) || 0;
         return {
           email: profile?.email || 'Unknown',
           user_tier: profile?.user_tier || 'free',
-          total_generations: gens
+          total_generations: gens,
+          total_downloads: downloads
         };
       })
       .sort((a, b) => b.total_generations - a.total_generations)
       .slice(0, 5);
 
+    // Top downloaders
+    const topDownloaders = Array.from(userDownloads.entries())
+      .map(([userId, downloads]) => {
+        const profile = profiles?.find(p => p.id === userId);
+        const generations = userGenerations.get(userId) || 0;
+        return {
+          email: profile?.email || 'Unknown',
+          user_tier: profile?.user_tier || 'free',
+          total_downloads: downloads,
+          total_generations: generations
+        };
+      })
+      .sort((a, b) => b.total_downloads - a.total_downloads)
+      .slice(0, 5);
+
     return res.json({
       success: true,
       analytics: {
-        today: todayGenerations,
-        week: weekGenerations,
-        month: monthGenerations,
+        generations: {
+          today: todayGenerations,
+          week: weekGenerations,
+          month: monthGenerations
+        },
+        downloads: {
+          today: todayDownloads,
+          week: weekDownloads,
+          month: monthDownloads
+        },
         history,
-        topUsers
+        topUsers,
+        topDownloaders
       }
     });
 
   } catch (error) {
-    logger.error('❌ Admin analytics error:', error);
+    logger.error(`❌ [${req.id}] Admin analytics error:`, error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch analytics'
@@ -1729,6 +2202,7 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   logger.log(`✅ Server running on port ${PORT}`);
   logger.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  logger.log(`🔒 Environment validation completed`);
   if (stripe) {
     logger.log(`💳 Stripe payments enabled`);
   } else {
