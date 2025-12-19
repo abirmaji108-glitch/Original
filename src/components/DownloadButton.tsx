@@ -1,7 +1,9 @@
 // src/components/DownloadButton.tsx
-import React, { useState } from 'react';
-import { Download, Lock, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Lock, Sparkles, Loader2 } from 'lucide-react';
 import JSZip from 'jszip';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 interface DownloadButtonProps {
   generatedCode: string;
@@ -17,46 +19,93 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   isDarkMode
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [showFreeLimitModal, setShowFreeLimitModal] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [downloadCount, setDownloadCount] = useState(0);
+  const [downloadLimit, setDownloadLimit] = useState(0);
+  const { toast } = useToast();
 
-  // Download limits per tier
-  const canDownload = userTier !== 'free';
+  // Add download limit check on mount
+  useEffect(() => {
+    const checkDownloadLimit = async () => {
+      if (userTier === 'free') return;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      // Get current month's download count
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const { data, error } = await supabase
+        .from('download_tracking')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .gte('downloaded_at', `${currentMonth}-01T00:00:00Z`);
+
+      if (!error && data) {
+        setDownloadCount(data.length);
+        
+        // Set limits based on tier
+        const limits = {
+          basic: 10,
+          pro: 50,
+          business: 200
+        };
+        setDownloadLimit(limits[userTier as keyof typeof limits] || 0);
+      }
+    };
+
+    checkDownloadLimit();
+  }, [userTier]);
+
+  const canDownload = userTier !== 'free' && downloadCount < downloadLimit;
 
   const handleDownload = async () => {
     // Check if user can download
     if (!canDownload) {
-      setShowFreeLimitModal(true);
+      setShowLimitModal(true);
       return;
     }
 
     setIsDownloading(true);
 
     try {
-      const zip = new JSZip();
-      zip.file('index.html', generatedCode);
+      // Extract CSS and JavaScript into separate files
+      const styleMatch = generatedCode.match(/<style>([\s\S]*?)<\/style>/);
+      const styles = styleMatch ? styleMatch[1] : '';
+      const scriptMatch = generatedCode.match(/<script>([\s\S]*?)<\/script>/);
+      const scripts = scriptMatch ? scriptMatch[1] : '';
 
+      // Remove inline styles/scripts and link to external files
+      let cleanHtml = generatedCode
+        .replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" href="styles.css">')
+        .replace(/<script>[\s\S]*?<\/script>/, '<script src="script.js"></script>');
+
+      const zip = new JSZip();
+      zip.file('index.html', cleanHtml);
+      if (styles.trim()) {
+        zip.file('styles.css', styles);
+      }
+      if (scripts.trim()) {
+        zip.file('script.js', scripts);
+      }
       // Add README for paid users
       const readme = `# Your Sento AI Website
-
 Generated with Sento AI - ${userTier.toUpperCase()} Plan
-
 ## Files Included:
-- index.html - Your complete website
-
+- index.html - Your main website file
+- styles.css - Your custom styles
+- script.js - Your custom JavaScript
+- README.md - This file
 ## How to Use:
 1. Open index.html in any web browser
 2. Upload to your hosting provider (Netlify, Vercel, etc.)
 3. Share with the world!
-
 ## Need Help?
 Visit: https://sento.ai/support
 Email: support@sento.ai
-
 ---
 Made with ❤️ by Sento AI
 `;
       zip.file('README.md', readme);
-
       const content = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(content);
       const a = document.createElement('a');
@@ -67,20 +116,51 @@ Made with ❤️ by Sento AI
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-    } catch (error) {
+      // Track download in database AFTER successful download
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase
+          .from('download_tracking')
+          .insert({
+            user_id: session.user.id,
+            downloaded_at: new Date().toISOString(),
+            user_tier: userTier
+          });
+      }
+
+      // Success toast after download
+      toast({
+        title: "Download Complete! 📦",
+        description: `Your website has been saved to your downloads folder. ${downloadLimit - downloadCount - 1} downloads remaining this month.`,
+      });
+    } catch (error: any) {
       console.error('Download failed:', error);
-      alert('Download failed. Please try again.');
+      
+      let errorMessage = 'Download failed. Please try again.';
+      
+      if (error.message?.includes('quota')) {
+        errorMessage = 'Your browser storage is full. Please free up space and try again.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.message?.includes('permission')) {
+        errorMessage = 'Permission denied. Please allow downloads in your browser settings.';
+      }
+      
+      toast({
+        title: "Download Failed ❌",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsDownloading(false);
     }
   };
 
-  // Free tier - Show locked download button
-  if (userTier === 'free') {
+  if (!canDownload) {
     return (
       <>
         <button
-          onClick={() => setShowFreeLimitModal(true)}
+          onClick={() => setShowLimitModal(true)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
             isDarkMode
               ? 'bg-gray-700 text-gray-400 border border-gray-600'
@@ -88,27 +168,36 @@ Made with ❤️ by Sento AI
           }`}
         >
           <Lock className="w-4 h-4" />
-          Download (Upgrade Required)
+          {userTier === 'free' ? 'Download (Upgrade Required)' : `Download (${downloadCount}/${downloadLimit} used)`}
         </button>
-
-        {/* Free Limit Modal */}
-        {showFreeLimitModal && (
+        {/* Limit Modal */}
+        {showLimitModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className={`max-w-md w-full rounded-xl p-6 ${
               isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
             }`}>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-purple-600" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  userTier === 'free' ? 'bg-purple-100' : 'bg-yellow-100'
+                }`}>
+                  {userTier === 'free' ? (
+                    <Sparkles className="w-6 h-6 text-purple-600" />
+                  ) : (
+                    <Lock className="w-6 h-6 text-yellow-600" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold">Upgrade to Download</h3>
+                  <h3 className="text-lg font-semibold">
+                    {userTier === 'free' ? 'Upgrade to Download' : 'Download Limit Reached'}
+                  </h3>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Free tier includes preview only
+                    {userTier === 'free' 
+                      ? 'Free tier includes preview only' 
+                      : `Your ${userTier} plan allows ${downloadLimit} downloads per month. You have ${downloadCount} used.`
+                    }
                   </p>
                 </div>
               </div>
-
               <div className="space-y-3 mb-6">
                 <div className={`p-3 rounded-lg ${
                   isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
@@ -122,7 +211,6 @@ Made with ❤️ by Sento AI
                     <li>✅ No watermark</li>
                   </ul>
                 </div>
-
                 <div className={`p-3 rounded-lg border-2 border-purple-500 ${
                   isDarkMode ? 'bg-purple-900/20' : 'bg-purple-50'
                 }`}>
@@ -142,21 +230,20 @@ Made with ❤️ by Sento AI
                   </ul>
                 </div>
               </div>
-
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowFreeLimitModal(false)}
+                  onClick={() => setShowLimitModal(false)}
                   className={`flex-1 px-4 py-2 rounded-lg ${
                     isDarkMode
                       ? 'bg-gray-700 hover:bg-gray-600'
                       : 'bg-gray-200 hover:bg-gray-300'
                   } transition-colors`}
                 >
-                  Maybe Later
+                  {userTier === 'free' ? 'Maybe Later' : 'Close'}
                 </button>
                 <button
                   onClick={() => {
-                    setShowFreeLimitModal(false);
+                    setShowLimitModal(false);
                     onUpgrade();
                   }}
                   className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 transition-all"
@@ -171,7 +258,7 @@ Made with ❤️ by Sento AI
     );
   }
 
-  // Paid tiers - Show working download button
+  // Paid tiers with limits ok - Show working download button
   return (
     <button
       onClick={handleDownload}
@@ -182,8 +269,17 @@ Made with ❤️ by Sento AI
           : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105'
       } ${isDownloading ? '' : 'animate-pulse-subtle'}`}
     >
-      <Download className={`w-4 h-4 ${isDownloading ? '' : 'animate-bounce-subtle'}`} />
-      {isDownloading ? 'Preparing...' : 'Download ZIP'}
+      {isDownloading ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Preparing...
+        </>
+      ) : (
+        <>
+          <Download className="w-4 h-4 animate-bounce-subtle" />
+          Download ZIP
+        </>
+      )}
     </button>
   );
 };
