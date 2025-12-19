@@ -160,54 +160,54 @@ export class SupabaseService {
  * Safe query execution with error handling and retry logic
  */
 static async safeQuery<T>(
-  query: Promise<{ data: T | null; error: PostgrestError | null }>,
+  query: any,
   context: string,
   maxRetries: number = 2
 ): Promise<T> {
   let lastError: any = null;
-  
+ 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const { data, error } = await query;
-      
+     
       if (error) {
         // Check if error is retryable (network issues, timeouts)
         const isRetryable = error.message?.includes('timeout') ||
                           error.message?.includes('network') ||
                           error.message?.includes('connection');
-        
+       
         if (isRetryable && attempt < maxRetries) {
           console.warn(`⚠️ Retrying ${context} (attempt ${attempt}/${maxRetries})`);
           lastError = error;
           await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
           continue;
         }
-        
+       
         return this.handleError(error, context);
       }
-      
+     
       if (data === null) {
         throw new Error(`No data returned from ${context}`);
       }
-      
+     
       return data;
     } catch (error) {
       lastError = error;
-      
+     
       // Retry on network errors
-      const isNetworkError = error instanceof TypeError && 
+      const isNetworkError = error instanceof TypeError &&
                            error.message?.includes('fetch');
-      
+     
       if (isNetworkError && attempt < maxRetries) {
         console.warn(`⚠️ Network error, retrying ${context} (attempt ${attempt}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;
       }
-      
+     
       return this.handleError(error, context);
     }
   }
-  
+ 
   return this.handleError(lastError, context);
 }
 /**
@@ -229,7 +229,8 @@ static async safeUpdate<T>(
   match: Record<string, any>,
   context: string = `update ${table}`
 ): Promise<T> {
-  return this.safeQuery(supabase.from(table).update(data).match(match).select().single(), context);
+  const query = supabase.from(table).update(data).match(match).select().single() as any;
+  return this.safeQuery(query, context);
 }
 /**
  * Safe delete with error handling
@@ -239,7 +240,8 @@ static async safeDelete(
   match: Record<string, any>,
   context: string = `delete from ${table}`
 ): Promise<void> {
-  await this.safeQuery(supabase.from(table).delete().match(match), context);
+  const query = supabase.from(table).delete().match(match) as any;
+  await this.safeQuery(query, context);
 }
 /**
  * Safe select with error handling
@@ -250,15 +252,15 @@ static async safeSelect<T>(
   filters?: Record<string, any>,
   context: string = `select from ${table}`
 ): Promise<T[]> {
-  let query = supabase.from(table).select(columns);
+  let query: any = supabase.from(table).select(columns);
   if (filters) {
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        query = query.eq(key, value) as any;
+        query = query.eq(key, value);
       }
     });
   }
-  const result = await this.safeQuery(query, context);
+  const result = await this.safeQuery(query as any, context);
   return (result as any) || [];
 }
 /**
@@ -269,12 +271,12 @@ static async safeRPC<T>(
   params?: Record<string, any>,
   context: string = `RPC call: ${functionName}`
 ): Promise<T> {
-  return this.safeQuery(supabase.rpc(functionName, params), context);
+  const query = supabase.rpc(functionName, params) as any;
+  return this.safeQuery(query, context);
 }
 // ============================================================================
 // DOWNLOAD TRACKING HELPERS
 // ============================================================================
-
 /**
  * Track a website download
  */
@@ -283,21 +285,20 @@ static async trackDownload(
   userTier: string
 ): Promise<void> {
   try {
-    await this.safeInsert(
-      'download_tracking',
-      {
+    const query = supabase.from('download_tracking')
+      .insert({
         user_id: userId,
         downloaded_at: new Date().toISOString(),
         user_tier: userTier
-      },
-      'track download'
-    );
+      })
+      .select()
+      .single() as any;
+    await this.safeQuery(query, 'track download');
   } catch (error) {
     // Log but don't fail - download tracking is non-critical
     console.error('Failed to track download:', error);
   }
 }
-
 /**
  * Get user's download count for current month
  */
@@ -308,46 +309,39 @@ static async getMonthlyDownloadCount(userId: string): Promise<{
 }> {
   const currentMonth = new Date().toISOString().slice(0, 7);
   
-  const downloads = await this.safeSelect<any>(
-    'download_tracking',
-    'id',
-    {
-      user_id: userId,
-    },
-    'get monthly downloads'
-  );
+  const query1 = supabase.from('download_tracking')
+    .select('id, downloaded_at')
+    .eq('user_id', userId) as any;
+  const downloads = await this.safeQuery<any[]>(query1, 'get monthly downloads');
   
   // Filter by current month (done client-side since filter is complex)
-  const monthlyDownloads = downloads.filter(d => 
+  const monthlyDownloads = downloads.filter((d: any) => 
     d.downloaded_at && d.downloaded_at.startsWith(currentMonth)
   );
   
   // Get user tier to determine limit
-  const profile = await this.safeQuery(
-    supabase.from('profiles')
-      .select('user_tier')
-      .eq('id', userId)
-      .single(),
-    'get user tier'
-  );
-  
+  const query2 = supabase.from('profiles')
+    .select('user_tier')
+    .eq('id', userId)
+    .single() as any;
+  const profile = await this.safeQuery(query2, 'get user tier');
+ 
   const limits: Record<string, number> = {
     'free': 0,
     'basic': 10,
     'pro': 50,
     'business': 200
   };
-  
+ 
   const limit = limits[profile.user_tier] || 0;
   const count = monthlyDownloads.length;
-  
+ 
   return {
     count,
     limit,
     remaining: Math.max(0, limit - count)
   };
 }
-
 /**
  * Check if user can download (has remaining downloads)
  */
@@ -357,21 +351,21 @@ static async canDownload(userId: string): Promise<{
   remaining?: number;
 }> {
   const { count, limit, remaining } = await this.getMonthlyDownloadCount(userId);
-  
+ 
   if (limit === 0) {
     return {
       allowed: false,
       reason: 'Download feature requires upgrade to Basic, Pro, or Business plan'
     };
   }
-  
+ 
   if (count >= limit) {
     return {
       allowed: false,
       reason: `Monthly download limit reached (${count}/${limit})`
     };
   }
-  
+ 
   return {
     allowed: true,
     remaining
