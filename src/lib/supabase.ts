@@ -157,26 +157,60 @@ export class SupabaseService {
  throw new Error(userMessage);
  }
  /**
- * Safe query execution with error handling
+ * Safe query execution with error handling and retry logic
  */
- static async safeQuery<T>(
- query: Promise<{ data: T | null; error: PostgrestError | null }>,
- context: string
- ): Promise<T> {
- try {
- const { data, error } = await query;
- if (error) {
- return this.handleError(error, context);
- }
- if (data === null) {
- throw new Error(`No data returned from ${context}`);
- }
- return data;
- } catch (error) {
- return this.handleError(error, context);
- }
- }
- /**
+static async safeQuery<T>(
+  query: Promise<{ data: T | null; error: PostgrestError | null }>,
+  context: string,
+  maxRetries: number = 2
+): Promise<T> {
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { data, error } = await query;
+      
+      if (error) {
+        // Check if error is retryable (network issues, timeouts)
+        const isRetryable = error.message?.includes('timeout') ||
+                          error.message?.includes('network') ||
+                          error.message?.includes('connection');
+        
+        if (isRetryable && attempt < maxRetries) {
+          console.warn(`⚠️ Retrying ${context} (attempt ${attempt}/${maxRetries})`);
+          lastError = error;
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+        
+        return this.handleError(error, context);
+      }
+      
+      if (data === null) {
+        throw new Error(`No data returned from ${context}`);
+      }
+      
+      return data;
+    } catch (error) {
+      lastError = error;
+      
+      // Retry on network errors
+      const isNetworkError = error instanceof TypeError && 
+                           error.message?.includes('fetch');
+      
+      if (isNetworkError && attempt < maxRetries) {
+        console.warn(`⚠️ Network error, retrying ${context} (attempt ${attempt}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      
+      return this.handleError(error, context);
+    }
+  }
+  
+  return this.handleError(lastError, context);
+}
+/**
  * Safe insert with error handling
  */
 static async safeInsert<T>(
@@ -184,8 +218,7 @@ static async safeInsert<T>(
   data: any,
   context: string = `insert into ${table}`
 ): Promise<T> {
-  const result = await supabase.from(table).insert(data).select().single();
-  return this.safeQuery(Promise.resolve(result), context);
+  return this.safeQuery(supabase.from(table).insert(data).select().single(), context);
 }
 /**
  * Safe update with error handling
@@ -196,8 +229,7 @@ static async safeUpdate<T>(
   match: Record<string, any>,
   context: string = `update ${table}`
 ): Promise<T> {
-  const result = await supabase.from(table).update(data).match(match).select().single();
-  return this.safeQuery(Promise.resolve(result), context);
+  return this.safeQuery(supabase.from(table).update(data).match(match).select().single(), context);
 }
 /**
  * Safe delete with error handling
@@ -207,8 +239,7 @@ static async safeDelete(
   match: Record<string, any>,
   context: string = `delete from ${table}`
 ): Promise<void> {
-  const result = await supabase.from(table).delete().match(match);
-  await this.safeQuery(Promise.resolve(result), context);
+  await this.safeQuery(supabase.from(table).delete().match(match), context);
 }
 /**
  * Safe select with error handling
@@ -227,11 +258,8 @@ static async safeSelect<T>(
       }
     });
   }
-  const result = await query;
-  if (result.error) {
-    return this.handleError(result.error, context);
-  }
-  return (result.data || []) as T[];
+  const result = await this.safeQuery(query, context);
+  return (result as any) || [];
 }
 /**
  * Safe RPC function call with error handling
@@ -241,21 +269,113 @@ static async safeRPC<T>(
   params?: Record<string, any>,
   context: string = `RPC call: ${functionName}`
 ): Promise<T> {
+  return this.safeQuery(supabase.rpc(functionName, params), context);
+}
+// ============================================================================
+// DOWNLOAD TRACKING HELPERS
+// ============================================================================
+
+/**
+ * Track a website download
+ */
+static async trackDownload(
+  userId: string,
+  userTier: string
+): Promise<void> {
   try {
-    const { data, error } = await supabase.rpc(functionName, params);
-    
-    if (error) {
-      return this.handleError(error, context);
-    }
-    
-    if (data === null || data === undefined) {
-      throw new Error(`No data returned from RPC function: ${functionName}`);
-    }
-    
-    return data as T;
+    await this.safeInsert(
+      'download_tracking',
+      {
+        user_id: userId,
+        downloaded_at: new Date().toISOString(),
+        user_tier: userTier
+      },
+      'track download'
+    );
   } catch (error) {
-    return this.handleError(error, context);
+    // Log but don't fail - download tracking is non-critical
+    console.error('Failed to track download:', error);
   }
+}
+
+/**
+ * Get user's download count for current month
+ */
+static async getMonthlyDownloadCount(userId: string): Promise<{
+  count: number;
+  limit: number;
+  remaining: number;
+}> {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  
+  const downloads = await this.safeSelect<any>(
+    'download_tracking',
+    'id',
+    {
+      user_id: userId,
+    },
+    'get monthly downloads'
+  );
+  
+  // Filter by current month (done client-side since filter is complex)
+  const monthlyDownloads = downloads.filter(d => 
+    d.downloaded_at && d.downloaded_at.startsWith(currentMonth)
+  );
+  
+  // Get user tier to determine limit
+  const profile = await this.safeQuery(
+    supabase.from('profiles')
+      .select('user_tier')
+      .eq('id', userId)
+      .single(),
+    'get user tier'
+  );
+  
+  const limits: Record<string, number> = {
+    'free': 0,
+    'basic': 10,
+    'pro': 50,
+    'business': 200
+  };
+  
+  const limit = limits[profile.user_tier] || 0;
+  const count = monthlyDownloads.length;
+  
+  return {
+    count,
+    limit,
+    remaining: Math.max(0, limit - count)
+  };
+}
+
+/**
+ * Check if user can download (has remaining downloads)
+ */
+static async canDownload(userId: string): Promise<{
+  allowed: boolean;
+  reason?: string;
+  remaining?: number;
+}> {
+  const { count, limit, remaining } = await this.getMonthlyDownloadCount(userId);
+  
+  if (limit === 0) {
+    return {
+      allowed: false,
+      reason: 'Download feature requires upgrade to Basic, Pro, or Business plan'
+    };
+  }
+  
+  if (count >= limit) {
+    return {
+      allowed: false,
+      reason: `Monthly download limit reached (${count}/${limit})`
+    };
+  }
+  
+  return {
+    allowed: true,
+    remaining
+  };
 }
  /**
  * Check if Supabase is properly configured
