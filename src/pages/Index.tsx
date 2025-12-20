@@ -978,12 +978,19 @@ Generated on: ${new Date().toLocaleDateString()}
       return;
     }
 
-    // ✅ ADD #15: Prompt length validation
-    const MAX_PROMPT_LENGTH = 2000;
-    if (sanitizedPrompt.length > MAX_PROMPT_LENGTH) {
+    // ✅ FIX #2: Use tier-based validation
+    const tierMaxLengths = {
+      free: 1000,
+      basic: 2000,
+      pro: 5000,
+      business: 10000
+    };
+    const maxLength = tierMaxLengths[tier] || 1000;
+
+    if (sanitizedPrompt.length > maxLength) {
       toast({
         title: "Prompt too long",
-        description: `Please keep your prompt under ${MAX_PROMPT_LENGTH} characters. Current: ${sanitizedPrompt.length}`,
+        description: `${tier.toUpperCase()} users can use up to ${maxLength} characters. Current: ${sanitizedPrompt.length}`,
         variant: "destructive"
       });
       return;
@@ -1684,10 +1691,15 @@ ${new Date().toLocaleDateString()}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // ✅ FIX #1: Prevent "Invalid Input" Error
   const handleTemplateClick = (prompt: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setInput(prompt);
-    handleGenerate();
+    
+    // ✅ FIX: Wait for state update before generating
+    setTimeout(() => {
+      handleGenerate();
+    }, 100);
   };
 
   const getAspectRatio = () => {
@@ -1714,7 +1726,14 @@ ${new Date().toLocaleDateString()}
     }
   };
 
-  const characterLimit = 3000;
+  // ✅ FIX #2: Use tier-based character limits
+  const tierLimitsConfig = {
+    free: 1000,
+    basic: 2000,
+    pro: 5000,
+    business: 10000
+  };
+  const characterLimit = tierLimitsConfig[tier] || 1000;
   const characterCount = input.length;
 
   const examples = [
@@ -2162,7 +2181,7 @@ ${new Date().toLocaleDateString()}
                   <div className="flex gap-4 pt-4">
                     <Button
                       onClick={handleGenerate}
-                      disabled={isGenerating || input.length < 50 || input.length > 3000}
+                      disabled={isGenerating || input.length < 50 || input.length > characterLimit}
                       className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 hover:shadow-[0_0_50px_rgba(168,85,247,0.6)] animate-gradient-shift overflow-hidden"
                       style={{ backgroundSize: '200% 200%' }}
                       title="Ctrl+Enter to generate"
