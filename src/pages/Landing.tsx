@@ -1,7 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Sparkles, Zap, Shield, TrendingUp, Wand2, Code2, Palette, Smartphone, Globe, Timer, Check, Star, ArrowRight } from "lucide-react";
-
 const Landing = () => {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 scroll-smooth">
       {/* Navigation Bar */}
@@ -13,19 +14,19 @@ const Landing = () => {
           </div>
           <div className="flex gap-4 items-center">
             <button
-              onClick={() => window.location.href = '/#/pricing'}
+              onClick={() => navigate('/pricing')}
               className="px-4 py-2 text-gray-900 hover:text-purple-600 font-semibold"
             >
               Pricing
             </button>
             <button
-              onClick={() => window.location.href = '/#/login'}
+              onClick={() => navigate('/login')}
               className="px-4 py-2 text-gray-900 hover:text-purple-600 font-semibold"
             >
               Sign In
             </button>
             <button
-              onClick={() => window.location.href = '/#/signup'}
+              onClick={() => navigate('/signup')}
               className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold"
             >
               Get Started Free
@@ -54,7 +55,7 @@ const Landing = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Button
               size="lg"
-              onClick={() => window.location.href = '/#/signup'}
+              onClick={() => navigate('/signup')}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-lg px-8 py-6 h-auto"
             >
               <Sparkles className="w-5 h-5 mr-2" />
@@ -63,7 +64,7 @@ const Landing = () => {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => window.location.href = '/#/login'}
+              onClick={() => navigate('/login')}
               className="text-lg px-8 py-6 h-auto border-2"
             >
               Watch Demo
@@ -370,7 +371,7 @@ const Landing = () => {
                   </div>
                   <p className="text-sm text-gray-600">Perfect for trying out</p>
                 </div>
-                <Button onClick={() => window.location.href = '/#/signup'} className="w-full bg-gray-800 hover:bg-gray-900 mb-6">Get Started</Button>
+                <Button onClick={() => navigate('/signup')} className="w-full bg-gray-800 hover:bg-gray-900 mb-6">Get Started</Button>
                 <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>2 website previews/month</span></li>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Basic templates</span></li>
@@ -392,7 +393,7 @@ const Landing = () => {
                   </div>
                   <p className="text-sm text-gray-600">For solo entrepreneurs</p>
                 </div>
-                <Button onClick={() => window.location.href = '/#/pricing'} className="w-full bg-cyan-600 hover:bg-cyan-700 mb-6">Start Basic</Button>
+                <Button onClick={() => navigate('/pricing')} className="w-full bg-cyan-600 hover:bg-cyan-700 mb-6">Start Basic</Button>
                 <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>5 downloads/month</span></li>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>20+ premium templates</span></li>
@@ -415,7 +416,7 @@ const Landing = () => {
                   </div>
                   <p className="text-sm text-purple-100">For growing agencies</p>
                 </div>
-                <Button onClick={() => window.location.href = '/#/pricing'} className="w-full bg-white text-purple-600 hover:bg-gray-100 mb-6">Start Pro</Button>
+                <Button onClick={() => navigate('/pricing')} className="w-full bg-white text-purple-600 hover:bg-gray-100 mb-6">Start Pro</Button>
                 <ul className="space-y-3 text-sm text-white">
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>12 downloads/month</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>50+ premium templates</span></li>
@@ -436,7 +437,7 @@ const Landing = () => {
                   </div>
                   <p className="text-sm text-gray-600">For agencies & teams</p>
                 </div>
-                <Button onClick={() => window.location.href = '/#/pricing'} className="w-full bg-orange-600 hover:bg-orange-700 mb-6">Contact Sales</Button>
+                <Button onClick={() => navigate('/pricing')} className="w-full bg-orange-600 hover:bg-orange-700 mb-6">Contact Sales</Button>
                 <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>40 downloads/month</span></li>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Custom templates</span></li>
@@ -450,7 +451,7 @@ const Landing = () => {
           <div className="text-center">
             <Button
               size="lg"
-              onClick={() => window.location.href = '/#/pricing'}
+              onClick={() => navigate('/pricing')}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
             >
               View Full Pricing & Features
@@ -661,5 +662,4 @@ const Landing = () => {
     </div>
   );
 };
-
 export default Landing;
