@@ -33,11 +33,16 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
   const handleTemplateClick = (template: Template) => {
     if (template.isPremium && (userTier === 'free' || userTier === 'basic')) {
-      // Show upgrade modal (handled by parent)
+      // ✅ FIX: Show clear error message
+      alert(`This is a premium template. Upgrade to Pro or Business to unlock!`);
       return;
     }
-    onSelectTemplate(template.prompt);
+    
+    // ✅ FIX: Close dropdown immediately
     setIsOpen(false);
+    
+    // ✅ FIX: Pass prompt to parent (parent handles state update + delay)
+    onSelectTemplate(template.prompt);
   };
 
   // ✅ FIX: Add keyboard support
