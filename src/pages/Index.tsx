@@ -960,19 +960,22 @@ Generated on: ${new Date().toLocaleDateString()}
     // Sanitize input
     const sanitizedPrompt = sanitizeInput(input);
     
-    if (sanitizedPrompt.length === 0) {
+    // ✅ FIX #2: Better validation with trim
+    if (!sanitizedPrompt || sanitizedPrompt.trim().length === 0) {
       toast({
         title: "Invalid Input",
-        description: "Please enter a valid website description.",
+        description: "Please enter a website description.",
         variant: "destructive",
       });
       return;
     }
 
-    if (sanitizedPrompt.length < 50) {
+    // ✅ FIX #2: Check length AFTER trim
+    const trimmedPrompt = sanitizedPrompt.trim();
+    if (trimmedPrompt.length < 50) {
       toast({
         title: "Description too short",
-        description: "Please describe your website with at least 50 characters",
+        description: `Please write at least 50 characters (currently ${trimmedPrompt.length})`,
         variant: "destructive",
       });
       return;
@@ -985,12 +988,14 @@ Generated on: ${new Date().toLocaleDateString()}
       pro: 5000,
       business: 10000
     };
+    
+    // ✅ FIX #2: Use trimmedPrompt for length check
     const maxLength = tierMaxLengths[tier] || 1000;
 
-    if (sanitizedPrompt.length > maxLength) {
+    if (trimmedPrompt.length > maxLength) {
       toast({
         title: "Prompt too long",
-        description: `${tier.toUpperCase()} users can use up to ${maxLength} characters. Current: ${sanitizedPrompt.length}`,
+        description: `${tier.toUpperCase()} users can use up to ${maxLength} characters. Current: ${trimmedPrompt.length}`,
         variant: "destructive"
       });
       return;
@@ -1033,7 +1038,7 @@ Generated on: ${new Date().toLocaleDateString()}
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
       const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
-${sanitizedPrompt}
+${trimmedPrompt}
 DESIGN STYLE: ${selectedStyle.toUpperCase()}
 ${styleInstruction}
 Apply this design style consistently throughout the website.
@@ -1322,6 +1327,18 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       toast({
         title: "No prompt to regenerate",
         description: "Please generate a website first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // ✅ FIX #3: Validate lastPrompt
+    const sanitizedPrompt = sanitizeInput(lastPrompt);
+    
+    if (!sanitizedPrompt || sanitizedPrompt.trim().length === 0) {
+      toast({
+        title: "Invalid Prompt",
+        description: "Cannot regenerate with empty prompt.",
         variant: "destructive",
       });
       return;
@@ -1691,15 +1708,16 @@ ${new Date().toLocaleDateString()}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ✅ FIX #1: Prevent "Invalid Input" Error
+  // ✅ FIX #1: Prevent Auto-Generate from Template Click
   const handleTemplateClick = (prompt: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setInput(prompt);
     
-    // ✅ FIX: Wait for state update before generating
-    setTimeout(() => {
-      handleGenerate();
-    }, 100);
+    // ✅ FIX: Don't auto-generate, let user click button
+    toast({
+      title: "Template Selected! ✨",
+      description: "Review the description and click 'Generate Website' when ready.",
+    });
   };
 
   const getAspectRatio = () => {
