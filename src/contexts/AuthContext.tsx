@@ -2,12 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-// ============================================
-// SECURE AUTH CONTEXT
-// ============================================
-// Fixes Issues: #37, #38, #39, #40, #41
-// Tier is NEVER stored in user_metadata
-// All tier data comes from server verification
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -18,32 +13,27 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshUserTier: () => Promise<void>;
 }
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userTier, setUserTier] = useState<string>('free');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  // ============================================
-  // FIX #37, #38: FETCH TIER FROM DATABASE
-  // ============================================
-  // NEVER trust user_metadata - always fetch from profiles table
-  // Server verification prevents client manipulation
- 
+
   const fetchUserTier = async (userId: string) => {
     try {
       console.log(`🔍 Fetching tier for user ${userId}...`);
 
-      // ✅ FIX: Query correct table 'user_tiers' instead of 'profiles'
       const { data, error } = await supabase
-        .from('user_tiers')  // ✅ CORRECT TABLE
-        .select('tier')       // ✅ Column name is 'tier' not 'user_tier'
-        .eq('user_id', userId) // ✅ Column name is 'user_id' not 'id'
+        .from('user_tiers')
+        .select('tier')
+        .eq('user_id', userId)
         .single();
 
       if (error) {
-        // If no tier exists, create default 'free' tier
         if (error.code === 'PGRST116') {
           console.log('No tier found, creating default tier...');
           
@@ -77,11 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserTier('free');
     }
   };
-  // ============================================
-  // FIX #40: REFRESH TIER MECHANISM
-  // ============================================
-  // Public function to refresh tier (called after payment, upgrades, etc.)
- 
+
   const refreshUserTier = async () => {
     if (!user?.id) {
       console.warn('⚠️ Cannot refresh tier: no user logged in');
@@ -90,16 +76,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔄 Refreshing user tier...');
     await fetchUserTier(user.id);
   };
-  // ============================================
-  // FIX #41: SESSION VALIDATION WITH TIER REFRESH
-  // ============================================
-  // Re-verify tier from database on every session check
- 
+
   const initializeAuth = async () => {
     try {
       setLoading(true);
-      // Check for existing session
+
       const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+
       if (error) {
         console.error('❌ Session error:', error);
         setUser(null);
@@ -107,13 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserTier('free');
         return;
       }
+
       if (currentSession?.user) {
         console.log('✅ Session found, verifying tier...');
-       
+        
         setUser(currentSession.user);
         setSession(currentSession);
-       
-        // ✅ FIX #41: Always re-verify tier from database
+        
         await fetchUserTier(currentSession.user.id);
       } else {
         console.log('ℹ️ No active session');
@@ -130,17 +113,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   };
-  // ============================================
-  // SIGN IN WITH TIER VERIFICATION
-  // ============================================
- 
+
   const signIn = async (email: string, password: string) => {
     try {
-      setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
       if (error) {
         toast({
           title: 'Sign In Failed',
@@ -149,12 +129,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return;
       }
+
       if (data.user) {
         setUser(data.user);
         setSession(data.session);
-       
-        // ✅ FIX #38: Verify tier from database on login
+        
         await fetchUserTier(data.user.id);
+
         toast({
           title: 'Welcome Back!',
           description: 'Successfully signed in.',
@@ -167,21 +148,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'An unexpected error occurred.',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
   };
-  // ============================================
-  // SIGN UP WITH AUTOMATIC PROFILE CREATION
-  // ============================================
- 
+
   const signUp = async (email: string, password: string) => {
     try {
-      setLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
+
       if (error) {
         toast({
           title: 'Sign Up Failed',
@@ -190,16 +166,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return;
       }
+
       if (data.user) {
-        // Profile is automatically created via database trigger
-        // Default tier is 'free' from database schema
-       
         setUser(data.user);
         setSession(data.session);
-        setUserTier('free'); // New users start as free
+        
+        // ✅ FIX: Create tier entry for new user
+        await fetchUserTier(data.user.id);
+
         toast({
           title: 'Account Created!',
-          description: 'Please check your email to verify your account.',
+          description: 'Welcome to Sento AI!',
         });
       }
     } catch (error) {
@@ -209,18 +186,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'An unexpected error occurred.',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
   };
-  // ============================================
-  // SIGN OUT
-  // ============================================
- 
+
   const signOut = async () => {
     try {
-      setLoading(true);
       const { error } = await supabase.auth.signOut();
+
       if (error) {
         toast({
           title: 'Sign Out Failed',
@@ -229,10 +201,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return;
       }
-      // Clear state
+
       setUser(null);
       setSession(null);
       setUserTier('free');
+
       toast({
         title: 'Signed Out',
         description: 'Successfully signed out.',
@@ -244,101 +217,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'An unexpected error occurred.',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
   };
-  // ============================================
-  // AUTH STATE CHANGE LISTENER
-  // ============================================
-  // Listen for auth changes and re-verify tier
- 
+
+  // ✅ FIX: Simplified auth listener - no infinite loops
   useEffect(() => {
-    // Initialize auth on mount
     initializeAuth();
-    // Listen for auth state changes
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('🔔 Auth state changed:', event);
-        if (event === 'SIGNED_IN' && currentSession?.user) {
-          setUser(currentSession.user);
-          setSession(currentSession);
-         
-          // ✅ FIX #38, #41: Re-verify tier on auth change
-          await fetchUserTier(currentSession.user.id);
-        } else if (event === 'SIGNED_OUT') {
+
+        if (event === 'SIGNED_OUT') {
           setUser(null);
           setSession(null);
           setUserTier('free');
-        } else if (event === 'TOKEN_REFRESHED' && currentSession?.user) {
-          setSession(currentSession);
-         
-          // ✅ FIX #41: Re-verify tier on token refresh
-          await fetchUserTier(currentSession.user.id);
-        } else if (event === 'USER_UPDATED' && currentSession?.user) {
-          setUser(currentSession.user);
-         
-          // ✅ FIX #39: Re-verify tier on user update
-          await fetchUserTier(currentSession.user.id);
         }
+        // Other events handled by signIn/signUp functions
       }
     );
+
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
-  // ============================================
-  // FIX #40: PERIODIC TIER REFRESH
-  // ============================================
-  // Poll for tier changes every 2 minutes (catches webhook updates)
- 
-  useEffect(() => {
-    if (!user?.id) return;
-    // Refresh tier every 2 minutes to catch webhook updates
-    const tierRefreshInterval = setInterval(() => {
-      console.log('🔄 Periodic tier refresh...');
-      fetchUserTier(user.id);
-    }, 120000); // 2 minutes
-    return () => clearInterval(tierRefreshInterval);
-  }, [user?.id]);
-  // ============================================
-  // FIX #40: VISIBILITY-BASED TIER REFRESH
-  // ============================================
-  // Refresh tier when user returns to tab (catches upgrades from other tabs)
- 
-  useEffect(() => {
-    if (!user?.id) return;
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('👁️ Tab visible, refreshing tier...');
-        fetchUserTier(user.id);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-   
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user?.id]);
-  // ============================================
-  // FIX #40: CROSS-TAB TIER SYNC
-  // ============================================
-  // Listen for tier updates from other tabs
- 
-  useEffect(() => {
-    if (!user?.id) return;
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'tier_updated') {
-        console.log('🔄 Tier updated in another tab, refreshing...');
-        fetchUserTier(user.id);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-   
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [user?.id]);
+  }, []); // ✅ Empty deps - only run once
+
   const value: AuthContextType = {
     user,
     session,
@@ -349,24 +252,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     refreshUserTier,
   };
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-// ============================================
-// HOOK TO USE AUTH CONTEXT
-// ============================================
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
- 
+  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
- 
+  
   return context;
 };
-// ============================================
-// HELPER: NOTIFY OTHER TABS OF TIER UPDATE
-// ============================================
-// Call this after successful payment/upgrade
+
 export function notifyTierUpdate() {
   try {
     localStorage.setItem('tier_updated', Date.now().toString());
