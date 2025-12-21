@@ -21,17 +21,31 @@ export function useFeatureGate() {
 
   async function fetchUserData() {
     try {
+      // ✅ FIX: Use maybeSingle() instead of single() to avoid 406 errors
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('user_tier, generations_this_month, last_generation_reset')
         .eq('id', user?.id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching user data:', error);
+        throw error;
+      }
+
+      // ✅ FIX: Handle case where profile doesn't exist
+      if (!profile) {
+        console.warn('⚠️ No profile found for user, using defaults');
+        setUserTier('free');
+        setGenerationsToday(0);
+        setLoading(false);
+        return;
+      }
 
       // Reset generations if it's a new month
       const currentMonth = new Date().toISOString().slice(0, 7); // "2024-12"
       const lastResetMonth = profile?.last_generation_reset || currentMonth;
+      
       if (lastResetMonth !== currentMonth) {
         await supabase
           .from('profiles')
@@ -56,7 +70,10 @@ export function useFeatureGate() {
 
       setProjectCount(count || 0);
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('❌ Error fetching user data:', error);
+      // ✅ FIX: Set defaults on error instead of leaving state broken
+      setUserTier('free');
+      setGenerationsToday(0);
     } finally {
       setLoading(false);
     }
@@ -76,7 +93,7 @@ export function useFeatureGate() {
       setGenerationsToday(prev => prev + 1);
       return true;
     } catch (error) {
-      console.error('Error incrementing generation:', error);
+      console.error('❌ Error incrementing generation:', error);
       return false;
     }
   }
