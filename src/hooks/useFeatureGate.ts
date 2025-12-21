@@ -10,15 +10,14 @@ export function useFeatureGate() {
   const [projectCount, setProjectCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // ✅ FIX: Use tier from AuthContext
+  // Use tier from AuthContext
   const userTier = (authTier || 'free') as UserTier;
   const limits = TIER_LIMITS[userTier];
   const isPro = userTier === 'pro' || userTier === 'business';
   const isFree = userTier === 'free';
 
-  // ✅ FIX: Wait for AuthContext to finish loading before fetching data
+  // Wait for AuthContext to finish loading before fetching data
   useEffect(() => {
-    // Don't fetch until auth is loaded
     if (authLoading) {
       console.log('⏳ useFeatureGate: Waiting for auth to load...');
       return;
@@ -66,7 +65,6 @@ export function useFeatureGate() {
 
       console.log('✅ Profile data:', profile);
 
-      // Reset generations if it's a new month
       const currentMonth = new Date().toISOString().slice(0, 7);
       const lastResetMonth = profile.last_generation_reset || currentMonth;
       
@@ -90,7 +88,6 @@ export function useFeatureGate() {
         setGenerationsToday(profile.generations_this_month || 0);
       }
 
-      // Get project count
       const { count, error: countError } = await supabase
         .from('websites')
         .select('*', { count: 'exact', head: true })
@@ -136,14 +133,11 @@ export function useFeatureGate() {
     }
   }
 
-  // ✅ CRITICAL FIX: Consider both auth loading AND data loading
   const loading = authLoading || dataLoading;
   
-  // ✅ Always allow if loading or if pro tier
+  // Check if user can generate based on tier limits
   const canGenerate = loading 
-    ? true  // Allow while loading to prevent blocking UI
-    : isPro 
-    ? true  // Pro/Business unlimited
+    ? true 
     : generationsToday < limits.monthlyGenerations;
 
   console.log('🔍 useFeatureGate final state:', {
