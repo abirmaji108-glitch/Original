@@ -1307,6 +1307,16 @@ app.get('/api/profile', async (req, res) => {
     const downloadLimit = downloadLimits[profile.user_tier] || 0;
     const remainingDownloads = Math.max(0, downloadLimit - downloadsThisMonth);
 
+    // ✅ CHANGE #6: ADD DEBUG LOGGING
+    logger.log(`📊 [${req.id}] Profile data for user ${user.id}:`, {
+      tier: profile.user_tier,
+      generations_used: generationsThisMonth,
+      limit: limit,
+      remaining: remaining,
+      current_month: currentMonth
+    });
+
+    // ✅ CHANGE #5: RESPONSE FORMAT IS ALREADY CORRECT
     res.json({
       success: true,
       data: {
@@ -1317,13 +1327,13 @@ app.get('/api/profile', async (req, res) => {
         },
         profile: {
           ...profile,
-          generations_this_month: generationsThisMonth,
-          remaining_generations: remaining,
-          monthly_limit: limit,
+          generations_this_month: generationsThisMonth,  // ✅ Correct
+          remaining_generations: remaining,               // ✅ Correct
+          monthly_limit: limit,                           // ✅ Correct
           downloads_this_month: downloadsThisMonth,
           remaining_downloads: remainingDownloads,
           download_limit: downloadLimit,
-          current_month: currentMonth
+          current_month: currentMonth                     // ✅ Correct
         }
       }
     });
