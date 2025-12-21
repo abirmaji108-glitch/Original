@@ -27,38 +27,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`🔍 Fetching tier for user ${userId}...`);
 
+      // ✅ FIX: Query profiles table instead of user_tiers
       const { data, error } = await supabase
-        .from('user_tiers')
-        .select('tier')
-        .eq('user_id', userId)
+        .from('profiles')
+        .select('user_tier')
+        .eq('id', userId)
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          console.log('No tier found, creating default tier...');
-          
-          const { error: insertError } = await supabase
-            .from('user_tiers')
-            .insert([{ 
-              user_id: userId, 
-              tier: 'free',
-              created_at: new Date().toISOString()
-            }]);
-
-          if (insertError) {
-            console.error('❌ Failed to create default tier:', insertError);
-          }
-          
-          setUserTier('free');
-          return;
-        }
-        
         console.error('❌ Failed to fetch user tier:', error);
         setUserTier('free');
         return;
       }
 
-      const tier = data?.tier || 'free';
+      const tier = data?.user_tier || 'free';
       setUserTier(tier);
       
       console.log(`✅ User tier verified from database: ${tier}`);
@@ -80,9 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initializeAuth = async () => {
     try {
       setLoading(true);
-
       const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-
       if (error) {
         console.error('❌ Session error:', error);
         setUser(null);
@@ -90,13 +70,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserTier('free');
         return;
       }
-
       if (currentSession?.user) {
         console.log('✅ Session found, verifying tier...');
-        
+       
         setUser(currentSession.user);
         setSession(currentSession);
-        
+       
         await fetchUserTier(currentSession.user.id);
       } else {
         console.log('ℹ️ No active session');
@@ -120,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
       });
-
       if (error) {
         toast({
           title: 'Sign In Failed',
@@ -129,13 +107,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return;
       }
-
       if (data.user) {
         setUser(data.user);
         setSession(data.session);
-        
+       
         await fetchUserTier(data.user.id);
-
         toast({
           title: 'Welcome Back!',
           description: 'Successfully signed in.',
@@ -157,7 +133,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
       });
-
       if (error) {
         toast({
           title: 'Sign Up Failed',
@@ -166,14 +141,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return;
       }
-
       if (data.user) {
         setUser(data.user);
         setSession(data.session);
-        
+       
         // ✅ FIX: Create tier entry for new user
         await fetchUserTier(data.user.id);
-
         toast({
           title: 'Account Created!',
           description: 'Welcome to Sento AI!',
@@ -192,7 +165,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-
       if (error) {
         toast({
           title: 'Sign Out Failed',
@@ -201,11 +173,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return;
       }
-
       setUser(null);
       setSession(null);
       setUserTier('free');
-
       toast({
         title: 'Signed Out',
         description: 'Successfully signed out.',
@@ -223,11 +193,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ✅ FIX: Simplified auth listener - no infinite loops
   useEffect(() => {
     initializeAuth();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('🔔 Auth state changed:', event);
-
         if (event === 'SIGNED_OUT') {
           setUser(null);
           setSession(null);
@@ -236,7 +204,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Other events handled by signIn/signUp functions
       }
     );
-
     return () => {
       subscription.unsubscribe();
     };
@@ -258,11 +225,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  
+ 
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
+ 
   return context;
 };
 
