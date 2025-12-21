@@ -7,6 +7,7 @@ import {
   Download, ExternalLink, Trash2, RefreshCw, Sparkles, X,
   Monitor, Tablet, Smartphone, Copy, Check, Zap, Clock
 } from "lucide-react";
+import { supabase } from '@/lib/supabase';
 import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 
 type ViewMode = "desktop" | "tablet" | "mobile";
@@ -37,13 +38,38 @@ const MyWebsites = () => {
     setShowToast(true);
   };
 
-  const loadWebsites = () => {
+  const loadWebsites = async () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setWebsites(parsed.sort((a: SavedWebsite, b: SavedWebsite) => b.timestamp - a.timestamp));
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        console.error('No user session');
+        return;
       }
+
+      // ✅ FIX: Query database filtered by user_id
+      const { data, error } = await supabase
+        .from('websites')
+        .select('*')
+        .eq('user_id', session.user.id)  // ✅ CRITICAL: Filter by user
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading websites:', error);
+        showNotification("Failed to load websites");
+        return;
+      }
+
+      // Map database response to component state
+      const mapped = (data || []).map(site => ({
+        id: site.id,
+        name: site.name,
+        prompt: site.prompt,
+        htmlCode: site.html_code,
+        timestamp: new Date(site.created_at).getTime(),
+        industry: site.industry || ''
+      }));
+
+      setWebsites(mapped);
     } catch (error) {
       console.error("Error loading websites:", error);
       showNotification("Failed to load saved websites");
@@ -86,11 +112,11 @@ const MyWebsites = () => {
     setWebsiteToDelete(null);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (websiteToDelete === "all") {
-      clearAll();
+      await clearAll();
     } else if (websiteToDelete) {
-      deleteWebsite((websiteToDelete as SavedWebsite).id);
+      await deleteWebsite((websiteToDelete as SavedWebsite).id);
     }
     closeDeleteModal();
   };
@@ -103,10 +129,23 @@ const MyWebsites = () => {
     }
   };
 
-  const deleteWebsite = (id: string) => {
+  const deleteWebsite = async (id: string) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        showNotification("No user session");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('websites')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+
       const updated = websites.filter(w => w.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       setWebsites(updated);
       if (previewWebsite?.id === id) closePreview();
       showNotification("Website deleted successfully");
@@ -116,10 +155,23 @@ const MyWebsites = () => {
     }
   };
 
-  const clearAll = () => {
+  const clearAll = async () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        showNotification("No user session");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('websites')
+        .delete()
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+
       setWebsites([]);
+      closePreview();
       showNotification("All websites removed");
     } catch (error) {
       console.error("Error clearing websites:", error);
@@ -148,7 +200,6 @@ const MyWebsites = () => {
         <div className="absolute top-20 left-20 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-float"></div>
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-float-delayed"></div>
       </div>
-
       <div className="container mx-auto px-4 py-12 relative z-10">
         {/* Hero Section - Lovable-inspired */}
         <div className="text-center mb-16 space-y-6">
@@ -156,7 +207,7 @@ const MyWebsites = () => {
             <Sparkles className="w-4 h-4 text-purple-400" />
             <span className="text-sm text-gray-300">Your Workspace</span>
           </div>
-         
+        
           <h1 className="text-6xl font-bold tracking-tight">
             <span className="text-white">Your next great website</span>
             <br />
@@ -164,14 +215,13 @@ const MyWebsites = () => {
               starts here.
             </span>
           </h1>
-         
+        
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
             {websites.length === 0
               ? "Begin your journey by creating your first stunning website"
               : `You've created ${websites.length} amazing ${websites.length === 1 ? 'website' : 'websites'}. Keep building!`
             }
           </p>
-
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center">
             <Button
@@ -182,7 +232,7 @@ const MyWebsites = () => {
               <Sparkles className="mr-2 h-5 w-5" />
               Create New Website
             </Button>
-           
+          
             {websites.length > 0 && (
               <Button
                 onClick={() => openDeleteModal("all")}
@@ -196,7 +246,6 @@ const MyWebsites = () => {
             )}
           </div>
         </div>
-
         {/* Websites Grid or Empty State */}
         {websites.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -207,12 +256,12 @@ const MyWebsites = () => {
               </div>
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 blur-2xl animate-pulse"></div>
             </div>
-           
+          
             <h2 className="text-3xl font-bold mb-3 text-white">Ready to create something amazing?</h2>
             <p className="text-gray-400 mb-8 text-lg max-w-md">
               Describe your vision and watch our AI bring it to life in seconds
             </p>
-           
+          
             {/* Feature pills */}
             <div className="flex flex-wrap gap-3 justify-center mb-8">
               <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2">
@@ -228,7 +277,7 @@ const MyWebsites = () => {
                 <span className="text-sm text-gray-300">Fully responsive</span>
               </div>
             </div>
-           
+          
             <Button
               onClick={() => navigate('/app')}
               size="lg"
@@ -266,13 +315,11 @@ const MyWebsites = () => {
                     )}
                   </CardDescription>
                 </CardHeader>
-
                 <CardContent>
                   <p className="text-sm text-gray-300 line-clamp-3">
                     {website.prompt}
                   </p>
                 </CardContent>
-
                 <CardFooter className="flex flex-wrap gap-2 pt-4">
                   <Button
                     onClick={() => openPreview(website)}
@@ -310,7 +357,6 @@ const MyWebsites = () => {
           </div>
         )}
       </div>
-
       {/* Preview Modal */}
       <Dialog open={!!previewWebsite} onOpenChange={(open) => !open && closePreview()}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] h-[95vh] p-0 gap-0 bg-gray-900/95 backdrop-blur-xl border-white/10">
@@ -323,7 +369,6 @@ const MyWebsites = () => {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-
             <div className="flex items-center gap-2 px-6 py-3 border-b border-white/10 bg-white/5">
               <Button variant={viewMode === "desktop" ? "default" : "outline"} size="sm" onClick={() => setViewMode("desktop")} className="gap-2">
                 <Monitor className="h-4 w-4" /> Desktop
@@ -335,7 +380,6 @@ const MyWebsites = () => {
                 <Smartphone className="h-4 w-4" /> Mobile
               </Button>
             </div>
-
             <div className="flex-1 p-6 bg-gray-900/50 overflow-auto">
               <div className="h-full flex items-center justify-center">
                 <div
@@ -353,7 +397,6 @@ const MyWebsites = () => {
                 </div>
               </div>
             </div>
-
             <div className="flex items-center justify-center gap-3 px-6 py-4 border-t border-white/10 bg-black/30">
               <Button onClick={() => previewWebsite && downloadWebsite(previewWebsite)} variant="outline" className="gap-2 text-gray-300 border-white/20">
                 <Download className="h-4 w-4" /> Download HTML
@@ -368,7 +411,6 @@ const MyWebsites = () => {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -399,7 +441,6 @@ const MyWebsites = () => {
           </div>
         </div>
       )}
-
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
