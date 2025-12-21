@@ -5,119 +5,127 @@ import { supabase } from '@/integrations/supabase/client';
 import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
 export function useFeatureGate() {
-  const { user } = useAuth();
-  const [userTier, setUserTier] = useState<UserTier>('free');
+  const { user, userTier: authTier, loading: authLoading } = useAuth();
   const [generationsToday, setGenerationsToday] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
+  // ✅ FIX: Use tier from AuthContext
+  const userTier = (authTier || 'free') as UserTier;
+  const limits = TIER_LIMITS[userTier];
+  const isPro = userTier === 'pro' || userTier === 'business';
+  const isFree = userTier === 'free';
+
+  // ✅ FIX: Wait for AuthContext to finish loading before fetching data
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
+    // Don't fetch until auth is loaded
+    if (authLoading) {
+      console.log('⏳ useFeatureGate: Waiting for auth to load...');
       return;
     }
+
+    if (!user) {
+      console.log('⚠️ useFeatureGate: No user found');
+      setDataLoading(false);
+      return;
+    }
+    
+    console.log('✅ useFeatureGate: Auth loaded, fetching user data for:', user.id);
     fetchUserData();
-  }, [user]);
+  }, [user, authLoading]);
 
   async function fetchUserData() {
+    if (!user?.id) {
+      console.error('❌ No user ID in fetchUserData');
+      setDataLoading(false);
+      return;
+    }
+
     try {
-      console.log('🔍 useFeatureGate: Fetching data for user:', user?.id);
+      console.log('🔍 Fetching generation count for user:', user.id);
       
-      // ✅ FIX: Get the actual authenticated session first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        console.error('❌ No valid session in useFeatureGate:', sessionError);
-        setUserTier('free');
-        setGenerationsToday(0);
-        setLoading(false);
-        return;
-      }
-
-      console.log('✅ Session found, user ID:', session.user.id);
-
-      // ✅ FIX: Use session.user.id instead of user?.id
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('user_tier, generations_this_month, last_generation_reset')
-        .eq('id', session.user.id)
+        .select('generations_this_month, last_generation_reset')
+        .eq('id', user.id)
         .maybeSingle();
 
       if (error) {
         console.error('❌ Error fetching profile:', error);
-        // Don't throw - allow user to proceed with defaults
-        setUserTier('free');
         setGenerationsToday(0);
-        setLoading(false);
+        setDataLoading(false);
         return;
       }
 
       if (!profile) {
-        console.warn('⚠️ No profile found for user, using defaults');
-        setUserTier('free');
+        console.warn('⚠️ No profile found, using defaults');
         setGenerationsToday(0);
-        setLoading(false);
+        setDataLoading(false);
         return;
       }
 
-      console.log('✅ Profile found:', profile);
+      console.log('✅ Profile data:', profile);
 
       // Reset generations if it's a new month
       const currentMonth = new Date().toISOString().slice(0, 7);
       const lastResetMonth = profile.last_generation_reset || currentMonth;
       
       if (lastResetMonth !== currentMonth) {
-        console.log('🔄 Resetting generations for new month');
-        await supabase
+        console.log('🔄 New month detected, resetting count');
+        
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({
             generations_this_month: 0,
             last_generation_reset: currentMonth
           })
-          .eq('id', session.user.id);
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('❌ Error resetting count:', updateError);
+        }
        
         setGenerationsToday(0);
       } else {
         setGenerationsToday(profile.generations_this_month || 0);
       }
 
-      setUserTier((profile.user_tier as UserTier) || 'free');
-
       // Get project count
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from('websites')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', session.user.id);
+        .eq('user_id', user.id);
+
+      if (countError) {
+        console.error('❌ Error fetching project count:', countError);
+      }
 
       setProjectCount(count || 0);
 
-      console.log('✅ useFeatureGate data loaded:', {
-        tier: profile.user_tier,
-        generations: profile.generations_this_month,
-        projects: count
+      console.log('✅ useFeatureGate data loaded successfully:', {
+        tier: userTier,
+        generations: profile.generations_this_month || 0,
+        limit: limits.monthlyGenerations,
+        projects: count || 0
       });
 
     } catch (error) {
       console.error('❌ Exception in fetchUserData:', error);
-      setUserTier('free');
       setGenerationsToday(0);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   }
 
   async function incrementGeneration() {
     if (!user) return false;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return false;
-
       const { error } = await supabase
         .from('profiles')
         .update({
           generations_this_month: generationsToday + 1
         })
-        .eq('id', session.user.id);
+        .eq('id', user.id);
 
       if (error) throw error;
       setGenerationsToday(prev => prev + 1);
@@ -128,17 +136,26 @@ export function useFeatureGate() {
     }
   }
 
-  // ✅ CRITICAL FIX: Default to true if still loading to prevent blocking
+  // ✅ CRITICAL FIX: Consider both auth loading AND data loading
+  const loading = authLoading || dataLoading;
+  
+  // ✅ Always allow if loading or if pro tier
   const canGenerate = loading 
-    ? true 
-    : generationsToday < TIER_LIMITS[userTier].monthlyGenerations;
+    ? true  // Allow while loading to prevent blocking UI
+    : isPro 
+    ? true  // Pro/Business unlimited
+    : generationsToday < limits.monthlyGenerations;
 
-  console.log('🔍 useFeatureGate state:', {
+  console.log('🔍 useFeatureGate final state:', {
+    authLoading,
+    dataLoading,
+    loading,
+    user: user?.id,
     userTier,
     generationsToday,
-    limit: TIER_LIMITS[userTier].monthlyGenerations,
+    limit: limits.monthlyGenerations,
     canGenerate,
-    loading
+    isPro
   });
 
   return {
@@ -149,8 +166,8 @@ export function useFeatureGate() {
     canGenerate,
     canCreateProject: true,
     incrementGeneration,
-    tierLimits: TIER_LIMITS[userTier],
-    isPro: userTier === 'pro',
-    isFree: userTier === 'free'
+    tierLimits: limits,
+    isPro,
+    isFree
   };
 }
