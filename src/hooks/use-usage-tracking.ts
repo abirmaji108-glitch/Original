@@ -67,20 +67,22 @@ export const useUsageTracking = (userId: string | undefined) => {
       const result = await response.json();
 
       if (result.success && result.data) {
+        // ✅ FIX: Your backend returns these exact field names
         const profile = result.data.profile;
-        
-        // ✅ Use data from /api/profile response
+
+        // Backend returns: generations_this_month, monthly_limit, remaining_generations, current_month
         setUsage({
           generationsUsed: profile.generations_this_month || 0,
           generationsLimit: profile.monthly_limit || 2,
           monthYear: profile.current_month || new Date().toISOString().slice(0, 7),
           canGenerate: (profile.remaining_generations || 0) > 0
         });
-        
-        console.log('✅ Usage fetched from /api/profile:', {
+
+        console.log('✅ Usage updated from /api/profile:', {
           used: profile.generations_this_month,
           limit: profile.monthly_limit,
-          remaining: profile.remaining_generations
+          remaining: profile.remaining_generations,
+          canGenerate: (profile.remaining_generations || 0) > 0
         });
       } else {
         console.error('❌ Profile data error');
