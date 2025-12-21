@@ -1076,18 +1076,21 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       setLastPrompt(prompt);
       
       // Get auth token with refresh if needed
-      const { data: { session } } = await supabase.auth.getSession();
-      let token = session?.access_token;
+const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (!token || !session) {
-        toast({
-          title: "Session Expired",
-          description: "Please log in again to continue.",
-          variant: "destructive",
-        });
-        navigate('/auth');
-        return;
-      }
+if (sessionError || !session) {
+  console.error('❌ Session error:', sessionError);
+  toast({
+    title: "Session Expired",
+    description: "Please log in again to continue.",
+    variant: "destructive",
+  });
+  navigate('/auth');
+  return;
+}
+
+const token = session.access_token;
+console.log('✅ Session valid, proceeding with generation');
 
       // ✅ CHANGE #1: REMOVED TOKEN REFRESH LOGIC - This was causing "Session Expired" error
       
@@ -1363,18 +1366,21 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
     }, 150);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      let token = session?.access_token;
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (!token || !session) {
-        toast({
-          title: "Session Expired",
-          description: "Please log in again to continue.",
-          variant: "destructive",
-        });
-        navigate('/auth');
-        return;
-      }
+  if (sessionError || !session) {
+    console.error('❌ Session error:', sessionError);
+    toast({
+      title: "Session Expired",
+      description: "Please log in again to continue.",
+      variant: "destructive",
+    });
+    navigate('/auth');
+    return;
+  }
+
+  const token = session.access_token;
+  console.log('✅ Session valid, proceeding with regeneration');
 
       // ✅ CHANGE #1: REMOVED TOKEN REFRESH LOGIC - This was causing "Session Expired" error
       
