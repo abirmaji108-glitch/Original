@@ -927,6 +927,14 @@ Generated on: ${new Date().toLocaleDateString()}
   };
 
   const handleGenerate = async () => {
+    // Debug logging
+    console.log('🔵 Generate called with input:', {
+      inputLength: input.length,
+      inputValue: input.substring(0, 100),
+      tier: tier,
+      canGenerateMore: canGenerateMore
+    });
+    
     // ✅ ADD #13: Rate limiting check
     const now = Date.now();
     const timeSinceLastGen = now - lastGenerationTime;
@@ -960,8 +968,9 @@ Generated on: ${new Date().toLocaleDateString()}
     // Sanitize input
     const sanitizedPrompt = sanitizeInput(input);
     
-    // ✅ FIX #2: Better validation with trim
-    if (!sanitizedPrompt || sanitizedPrompt.trim().length === 0) {
+    // ✅ CHANGE #3: Better validation
+    // Check if empty AFTER sanitization
+    if (!sanitizedPrompt || sanitizedPrompt.length === 0) {
       toast({
         title: "Invalid Input",
         description: "Please enter a website description.",
@@ -970,16 +979,18 @@ Generated on: ${new Date().toLocaleDateString()}
       return;
     }
 
-    // ✅ FIX #2: Check length AFTER trim
-    const trimmedPrompt = sanitizedPrompt.trim();
-    if (trimmedPrompt.length < 50) {
+    // Check minimum length (don't trim for length check)
+    if (sanitizedPrompt.length < 50) {
       toast({
         title: "Description too short",
-        description: `Please write at least 50 characters (currently ${trimmedPrompt.length})`,
+        description: `Please write at least 50 characters (currently ${sanitizedPrompt.length})`,
         variant: "destructive",
       });
       return;
     }
+
+    // Now trim for API submission
+    const trimmedPrompt = sanitizedPrompt.trim();
 
     // ✅ FIX #2: Use tier-based validation
     const tierMaxLengths = {
@@ -1078,31 +1089,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         return;
       }
 
-      // Refresh token if close to expiry (within 5 minutes)
-      const expiresAt = session?.expires_at;
-      if (expiresAt) {
-        const expiryTime = new Date(expiresAt * 1000);
-        const now = new Date();
-        const minutesUntilExpiry = (expiryTime.getTime() - now.getTime()) / (1000 * 60);
-        
-        if (minutesUntilExpiry < 5) {
-          console.log('⏰ Token expiring soon, refreshing...');
-          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-          
-          if (refreshError || !refreshed.session) {
-            toast({
-              title: "Session Expired",
-              description: "Please log in again to continue.",
-              variant: "destructive",
-            });
-            navigate('/auth');
-            return;
-          }
-          
-          token = refreshed.session.access_token;
-        }
-      }
-
+      // ✅ CHANGE #1: REMOVED TOKEN REFRESH LOGIC - This was causing "Session Expired" error
+      
       // ✅ CORRECTED: SECURE API CALL - Remove user_tier from request
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
@@ -1388,30 +1376,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
         return;
       }
 
-      const expiresAt = session?.expires_at;
-      if (expiresAt) {
-        const expiryTime = new Date(expiresAt * 1000);
-        const now = new Date();
-        const minutesUntilExpiry = (expiryTime.getTime() - now.getTime()) / (1000 * 60);
-        
-        if (minutesUntilExpiry < 5) {
-          console.log('⏰ Token expiring soon, refreshing...');
-          const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-          
-          if (refreshError || !refreshed.session) {
-            toast({
-              title: "Session Expired",
-              description: "Please log in again to continue.",
-              variant: "destructive",
-            });
-            navigate('/auth');
-            return;
-          }
-          
-          token = refreshed.session.access_token;
-        }
-      }
-
+      // ✅ CHANGE #1: REMOVED TOKEN REFRESH LOGIC - This was causing "Session Expired" error
+      
       // ✅ CORRECTED: SECURE API CALL - Remove user_tier from request
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
@@ -1708,16 +1674,26 @@ ${new Date().toLocaleDateString()}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ✅ FIX #1: Prevent Auto-Generate from Template Click
+  // ✅ CHANGE #2: Fix Template Click Handler
   const handleTemplateClick = (prompt: string) => {
+    console.log('🔵 Template clicked:', {
+      promptLength: prompt.length,
+      currentInputLength: input.length
+    });
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setInput(prompt);
     
-    // ✅ FIX: Don't auto-generate, let user click button
-    toast({
-      title: "Template Selected! ✨",
-      description: "Review the description and click 'Generate Website' when ready.",
-    });
+    // ✅ Wait for React state update before showing toast
+    setTimeout(() => {
+      console.log('🔵 After setState:', {
+        newInputLength: input.length
+      });
+      toast({
+        title: "Template Selected! ✨",
+        description: "Click 'Generate Website' to create your site.",
+      });
+    }, 100);
   };
 
   const getAspectRatio = () => {
