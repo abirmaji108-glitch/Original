@@ -1075,25 +1075,47 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 
       setLastPrompt(prompt);
       
-      // Get auth token with refresh if needed
-const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // ✅ FIXED: Get auth token with more lenient session handling
+      let { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-if (sessionError || !session) {
-  console.error('❌ Session error:', sessionError);
-  toast({
-    title: "Session Expired",
-    description: "Please log in again to continue.",
-    variant: "destructive",
-  });
-  navigate('/auth');
-  return;
-}
+      // Log for debugging
+      console.log('🔍 Session check:', { 
+        hasSession: !!session, 
+        hasError: !!sessionError,
+        sessionDetails: session ? 'valid' : 'null'
+      });
 
-const token = session.access_token;
-console.log('✅ Session valid, proceeding with generation');
+      if (sessionError) {
+        console.error('❌ Session error:', sessionError);
+        toast({
+          title: "Session Error",
+          description: "Please try again or log in.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // ✅ CHANGE #1: REMOVED TOKEN REFRESH LOGIC - This was causing "Session Expired" error
-      
+      if (!session) {
+        console.warn('⚠️ No session found, refreshing...');
+        // Try to refresh the session once
+        const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+        
+        if (!refreshedSession) {
+          toast({
+            title: "Session Expired",
+            description: "Please log in again to continue.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+        
+        session = refreshedSession;
+      }
+
+      const token = session.access_token;
+      console.log('✅ Session valid, token obtained');
+
       // ✅ CORRECTED: SECURE API CALL - Remove user_tier from request
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
@@ -1366,24 +1388,47 @@ console.log('✅ Session valid, proceeding with generation');
     }, 150);
 
     try {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // ✅ FIXED: Get auth token with more lenient session handling
+      let { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  if (sessionError || !session) {
-    console.error('❌ Session error:', sessionError);
-    toast({
-      title: "Session Expired",
-      description: "Please log in again to continue.",
-      variant: "destructive",
-    });
-    navigate('/auth');
-    return;
-  }
+      // Log for debugging
+      console.log('🔍 Session check:', { 
+        hasSession: !!session, 
+        hasError: !!sessionError,
+        sessionDetails: session ? 'valid' : 'null'
+      });
 
-  const token = session.access_token;
-  console.log('✅ Session valid, proceeding with regeneration');
+      if (sessionError) {
+        console.error('❌ Session error:', sessionError);
+        toast({
+          title: "Session Error",
+          description: "Please try again or log in.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // ✅ CHANGE #1: REMOVED TOKEN REFRESH LOGIC - This was causing "Session Expired" error
-      
+      if (!session) {
+        console.warn('⚠️ No session found, refreshing...');
+        // Try to refresh the session once
+        const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+        
+        if (!refreshedSession) {
+          toast({
+            title: "Session Expired",
+            description: "Please log in again to continue.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+        
+        session = refreshedSession;
+      }
+
+      const token = session.access_token;
+      console.log('✅ Session valid, token obtained');
+
       // ✅ CORRECTED: SECURE API CALL - Remove user_tier from request
       const response = await fetch('https://original-lbxv.onrender.com/api/generate', {
         method: 'POST',
@@ -2086,9 +2131,9 @@ ${new Date().toLocaleDateString()}
                     Describe your vision. Watch AI build it in seconds.
                   </p>
                 </div>
-                <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass}`}>
-                  <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-primary' : 'text-purple-600'}`} />
-                  <span className={dynamicMutedClass}>
+                <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
+                  <span className="text-lg">⌨️</span>
+                  <span className={`text-sm ${dynamicMutedClass}`}>
                     Powered by Groq & Llama 3.3
                   </span>
                 </div>
