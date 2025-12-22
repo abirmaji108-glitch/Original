@@ -1,4 +1,3 @@
-<DOCUMENT filename="useFeatureGate.ts">
 // src/hooks/useFeatureGate.ts
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,12 +37,11 @@ export function useFeatureGate() {
     try {
       console.log('🔍 useFeatureGate: Fetching profile for user:', user.id);
 
-      // ✅ FIX: Use .maybeSingle() instead of .single() to avoid 406 errors
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, user_tier, generations_this_month, last_generation_reset')
         .eq('id', user.id)
-        .maybeSingle(); // ← This prevents 406 errors
+        .maybeSingle();
 
       if (profileError) {
         console.error('❌ useFeatureGate: Profile query error:', profileError);
@@ -68,7 +66,6 @@ export function useFeatureGate() {
         last_reset: profile.last_generation_reset
       });
 
-      // Check if we need to reset for new month
       const currentMonth = new Date().toISOString().slice(0, 7);
       const lastResetMonth = profile.last_generation_reset || currentMonth;
 
@@ -95,7 +92,6 @@ export function useFeatureGate() {
         setGenerationsThisMonth(effectiveGenerations);
       }
 
-      // Fetch project count
       const { count, error: countError } = await supabase
         .from('websites')
         .select('*', { count: 'exact', head: true })
@@ -155,7 +151,6 @@ export function useFeatureGate() {
   const isPro = userTier === 'pro';
   const isFree = userTier === 'free';
   
-  // Allow generation if loading OR under limit
   const canGenerate = loading ? true : generationsThisMonth < limits.monthlyGenerations;
   const canCreateProject = true;
 
@@ -180,4 +175,3 @@ export function useFeatureGate() {
     tierLimits: limits
   };
 }
-</DOCUMENT>
