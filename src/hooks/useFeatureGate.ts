@@ -1,3 +1,4 @@
+<DOCUMENT filename="useFeatureGate.ts">
 // src/hooks/useFeatureGate.ts
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,30 +6,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
 export function useFeatureGate() {
-  const { user, userTier: authTier, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
+  const [userTier, setUserTier] = useState<UserTier>('free');
   const [generationsThisMonth, setGenerationsThisMonth] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
 
-  const userTier = (authTier || 'free') as UserTier;
   const limits = TIER_LIMITS[userTier];
 
   useEffect(() => {
-    if (authLoading) {
-      console.log('⏳ useFeatureGate: Waiting for auth...');
-      return;
-    }
-
-    if (!user) {
+    if (!user?.id) {
       console.log('⚠️ useFeatureGate: No user found');
       setDataLoading(false);
+      setGenerationsThisMonth(0);
+      setProjectCount(0);
+      setUserTier('free');
       return;
     }
 
     console.log('✅ useFeatureGate: Auth ready, user ID:', user.id);
     fetchGenerationData();
-  }, [user, authLoading]);
+  }, [user?.id]);
 
   async function fetchGenerationData() {
     if (!user?.id) {
@@ -55,10 +54,13 @@ export function useFeatureGate() {
 
       if (!profile) {
         console.warn('⚠️ useFeatureGate: No profile found, using defaults');
+        setUserTier('free');
         setGenerationsThisMonth(0);
         setDataLoading(false);
         return;
       }
+
+      setUserTier(profile.user_tier as UserTier || 'free');
 
       console.log('✅ useFeatureGate: Profile loaded:', {
         user_tier: profile.user_tier,
@@ -69,6 +71,8 @@ export function useFeatureGate() {
       // Check if we need to reset for new month
       const currentMonth = new Date().toISOString().slice(0, 7);
       const lastResetMonth = profile.last_generation_reset || currentMonth;
+
+      let effectiveGenerations = profile.generations_this_month || 0;
 
       if (lastResetMonth !== currentMonth) {
         console.log('🔄 useFeatureGate: New month detected, resetting count');
@@ -85,9 +89,10 @@ export function useFeatureGate() {
           console.error('⚠️ useFeatureGate: Reset error:', updateError);
         }
 
+        effectiveGenerations = 0;
         setGenerationsThisMonth(0);
       } else {
-        setGenerationsThisMonth(profile.generations_this_month || 0);
+        setGenerationsThisMonth(effectiveGenerations);
       }
 
       // Fetch project count
@@ -103,8 +108,8 @@ export function useFeatureGate() {
       }
 
       console.log('✅ useFeatureGate: Data loaded successfully:', {
-        tier: userTier,
-        generations: profile.generations_this_month || 0,
+        tier: profile.user_tier || 'free',
+        generations: effectiveGenerations,
         limit: limits.monthlyGenerations,
         projects: count || 0
       });
@@ -175,3 +180,4 @@ export function useFeatureGate() {
     tierLimits: limits
   };
 }
+</DOCUMENT>
