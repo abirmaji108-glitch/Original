@@ -210,16 +210,9 @@ const saveToHistory = async (userId: string | undefined, prompt: string, code: s
   }
 };
 
-// ✅ ADD #10: Deduct generation credits
-const deductGenerationCredit = async (
-  userId: string | undefined,
-  userTier: string
-) => {
+// ✅ CORRECTED #1: Remove userTier === 'free' condition
+const deductGenerationCredit = async (userId: string | undefined) => {
   if (!userId) return;
-
-  // rest of the function stays EXACTLY the same
-
-
 
   try {
     // Get current credits
@@ -1219,8 +1212,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 
       htmlCode = sanitizedCode;
 
-      // ✅ ADD #10: Deduct generation credits
-      await deductGenerationCredit(userId, tier);
+      // ✅ CORRECTED #1: Call deductGenerationCredit with only userId
+      await deductGenerationCredit(userId);
 
       // ✅ ADD #14: Save generation to history
       await saveToHistory(userId, prompt, htmlCode);
@@ -1522,8 +1515,8 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 
       htmlCode = sanitizedCode;
 
-      // ✅ ADD #10: Deduct generation credits
-      await deductGenerationCredit(userId, tier);
+      // ✅ CORRECTED #1: Call deductGenerationCredit with only userId
+      await deductGenerationCredit(userId);
 
       // ✅ ADD #14: Save generation to history
       await saveToHistory(userId, lastPrompt, htmlCode);
