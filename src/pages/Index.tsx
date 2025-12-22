@@ -211,8 +211,15 @@ const saveToHistory = async (userId: string | undefined, prompt: string, code: s
 };
 
 // ✅ ADD #10: Deduct generation credits
-const deductGenerationCredit = async (userId: string | undefined, userTier: string) => {
-  if (!userId || userTier === 'free') return;
+const deductGenerationCredit = async (
+  userId: string | undefined,
+  userTier: string
+) => {
+  if (!userId) return;
+
+  // rest of the function stays EXACTLY the same
+
+
 
   try {
     // Get current credits
@@ -959,6 +966,16 @@ Generated on: ${new Date().toLocaleDateString()}
       return;
     }
 
+    // ✅ CHANGE 2: Empty input validation at TOP
+    if (!input || input.trim().length === 0) {
+      toast({
+        title: "Invalid Input",
+        description: "Please select a template or enter a description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Frontend UX check only - real check is on backend
     if (!canGenerateMore) {
       setShowUpgradeModal(true);
@@ -968,17 +985,6 @@ Generated on: ${new Date().toLocaleDateString()}
     // Sanitize input
     const sanitizedPrompt = sanitizeInput(input);
     
-    // ✅ CHANGE #3: Better validation
-    // Check if empty AFTER sanitization
-    if (!sanitizedPrompt || sanitizedPrompt.length === 0) {
-      toast({
-        title: "Invalid Input",
-        description: "Please enter a website description.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Check minimum length (don't trim for length check)
     if (sanitizedPrompt.length < 50) {
       toast({
@@ -1347,15 +1353,6 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
 
     // ✅ FIX #3: Validate lastPrompt
     const sanitizedPrompt = sanitizeInput(lastPrompt);
-    
-    if (!sanitizedPrompt || sanitizedPrompt.trim().length === 0) {
-      toast({
-        title: "Invalid Prompt",
-        description: "Cannot regenerate with empty prompt.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Frontend UX check only
     if (!canGenerateMore) {
@@ -1725,26 +1722,10 @@ ${new Date().toLocaleDateString()}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ✅ CHANGE #2: Fix Template Click Handler
+  // ✅ CHANGE 1: Fix Template Click Handler
   const handleTemplateClick = (prompt: string) => {
-    console.log('🔵 Template clicked:', {
-      promptLength: prompt.length,
-      currentInputLength: input.length
-    });
-    
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setInput(prompt);
-    
-    // ✅ Wait for React state update before showing toast
-    setTimeout(() => {
-      console.log('🔵 After setState:', {
-        newInputLength: input.length
-      });
-      toast({
-        title: "Template Selected! ✨",
-        description: "Click 'Generate Website' to create your site.",
-      });
-    }, 100);
   };
 
   const getAspectRatio = () => {
