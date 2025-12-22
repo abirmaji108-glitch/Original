@@ -4,39 +4,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
-/**
- * PERMANENT FIX - Feature Gate Hook
- * 
- * This hook:
- * 1. Waits for AuthContext to load the user
- * 2. Fetches generation count from profiles table (with proper RLS)
- * 3. Returns whether user can generate more websites
- * 
- * WHY THIS WORKS:
- * - No session checks (AuthContext handles that)
- * - Direct query to profiles (RLS is properly configured)
- * - Simple, single responsibility
- */
-
 export function useFeatureGate() {
   const { user, userTier: authTier, loading: authLoading } = useAuth();
   
   const [generationsThisMonth, setGenerationsThisMonth] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const userTier = (authTier || 'free') as UserTier;
   const limits = TIER_LIMITS[userTier];
 
   useEffect(() => {
-    // Wait for auth to finish loading
     if (authLoading) {
       console.log('⏳ useFeatureGate: Waiting for auth...');
       return;
     }
 
-    // If no user after auth loads, we're done
     if (!user) {
       console.log('⚠️ useFeatureGate: No user found');
       setDataLoading(false);
@@ -54,27 +37,24 @@ export function useFeatureGate() {
     }
 
     try {
-      setError(null);
       console.log('🔍 useFeatureGate: Fetching profile for user:', user.id);
 
-      // ✅ Direct query - RLS will handle permissions
+      // ✅ FIX: Use .maybeSingle() instead of .single() to avoid 406 errors
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, user_tier, generations_this_month, last_generation_reset')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // ← This prevents 406 errors
 
       if (profileError) {
         console.error('❌ useFeatureGate: Profile query error:', profileError);
-        setError('Failed to load profile');
         setGenerationsThisMonth(0);
         setDataLoading(false);
         return;
       }
 
       if (!profile) {
-        console.error('❌ useFeatureGate: No profile found for user:', user.id);
-        setError('Profile not found');
+        console.warn('⚠️ useFeatureGate: No profile found, using defaults');
         setGenerationsThisMonth(0);
         setDataLoading(false);
         return;
@@ -87,7 +67,7 @@ export function useFeatureGate() {
       });
 
       // Check if we need to reset for new month
-      const currentMonth = new Date().toISOString().slice(0, 7); // "2025-12"
+      const currentMonth = new Date().toISOString().slice(0, 7);
       const lastResetMonth = profile.last_generation_reset || currentMonth;
 
       if (lastResetMonth !== currentMonth) {
@@ -102,7 +82,7 @@ export function useFeatureGate() {
           .eq('id', user.id);
 
         if (updateError) {
-          console.error('❌ useFeatureGate: Reset error:', updateError);
+          console.error('⚠️ useFeatureGate: Reset error:', updateError);
         }
 
         setGenerationsThisMonth(0);
@@ -131,16 +111,12 @@ export function useFeatureGate() {
 
     } catch (err) {
       console.error('❌ useFeatureGate: Exception:', err);
-      setError('Unexpected error');
       setGenerationsThisMonth(0);
     } finally {
       setDataLoading(false);
     }
   }
 
-  /**
-   * Increments the generation count after a successful generation
-   */
   async function incrementGeneration() {
     if (!user?.id) {
       console.error('❌ incrementGeneration: No user ID');
@@ -170,56 +146,32 @@ export function useFeatureGate() {
     }
   }
 
-  // Calculate final values
   const loading = authLoading || dataLoading;
   const isPro = userTier === 'pro';
   const isFree = userTier === 'free';
   
-  // ✅ CRITICAL: Allow generation if:
-  // 1. Still loading (don't block during load)
-  // 2. Pro user (unlimited)
-  // 3. Under monthly limit
-  const canGenerate = loading 
-    ? true 
-    : isPro 
-      ? true 
-      : generationsThisMonth < limits.monthlyGenerations;
-
-  // Always allow project creation (backend will enforce limits)
+  // Allow generation if loading OR under limit
+  const canGenerate = loading ? true : generationsThisMonth < limits.monthlyGenerations;
   const canCreateProject = true;
 
-  // Debug log final state
   console.log('🔍 useFeatureGate: Final state:', {
     loading,
     userTier,
     generationsThisMonth,
     limit: limits.monthlyGenerations,
-    canGenerate,
-    error
+    canGenerate
   });
 
   return {
-    // User info
     userTier,
     isPro,
     isFree,
-    
-    // Usage stats
-    generationsToday: generationsThisMonth, // Keep old name for compatibility
+    generationsToday: generationsThisMonth,
     projectCount,
-    
-    // Permissions
     canGenerate,
     canCreateProject,
-    
-    // State
     loading,
-    error,
-    
-    // Actions
     incrementGeneration,
-    
-    // Limits info
     tierLimits: limits
   };
 }
