@@ -5,28 +5,30 @@ import { supabase } from '@/integrations/supabase/client';
 import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
 export function useFeatureGate() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userTier: authTier, loading: authLoading } = useAuth();
   
-  const [userTier, setUserTier] = useState<UserTier>('free');
   const [generationsThisMonth, setGenerationsThisMonth] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
 
+  const userTier = (authTier || 'free') as UserTier;
   const limits = TIER_LIMITS[userTier];
 
   useEffect(() => {
-    if (!user?.id) {
+    if (authLoading) {
+      console.log('⏳ useFeatureGate: Waiting for auth...');
+      return;
+    }
+
+    if (!user) {
       console.log('⚠️ useFeatureGate: No user found');
       setDataLoading(false);
-      setGenerationsThisMonth(0);
-      setProjectCount(0);
-      setUserTier('free');
       return;
     }
 
     console.log('✅ useFeatureGate: Auth ready, user ID:', user.id);
     fetchGenerationData();
-  }, [user?.id]);
+  }, [user, authLoading]);
 
   async function fetchGenerationData() {
     if (!user?.id) {
@@ -37,11 +39,12 @@ export function useFeatureGate() {
     try {
       console.log('🔍 useFeatureGate: Fetching profile for user:', user.id);
 
+      // ✅ FIX: Use .maybeSingle() instead of .single() to avoid 406 errors
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, user_tier, generations_this_month, last_generation_reset')
         .eq('id', user.id)
-        .maybeSingle();
+        .maybeSingle(); // ← This prevents 406 errors
 
       if (profileError) {
         console.error('❌ useFeatureGate: Profile query error:', profileError);
@@ -52,13 +55,10 @@ export function useFeatureGate() {
 
       if (!profile) {
         console.warn('⚠️ useFeatureGate: No profile found, using defaults');
-        setUserTier('free');
         setGenerationsThisMonth(0);
         setDataLoading(false);
         return;
       }
-
-      setUserTier(profile.user_tier as UserTier || 'free');
 
       console.log('✅ useFeatureGate: Profile loaded:', {
         user_tier: profile.user_tier,
@@ -66,10 +66,9 @@ export function useFeatureGate() {
         last_reset: profile.last_generation_reset
       });
 
+      // Check if we need to reset for new month
       const currentMonth = new Date().toISOString().slice(0, 7);
       const lastResetMonth = profile.last_generation_reset || currentMonth;
-
-      let effectiveGenerations = profile.generations_this_month || 0;
 
       if (lastResetMonth !== currentMonth) {
         console.log('🔄 useFeatureGate: New month detected, resetting count');
@@ -86,12 +85,12 @@ export function useFeatureGate() {
           console.error('⚠️ useFeatureGate: Reset error:', updateError);
         }
 
-        effectiveGenerations = 0;
         setGenerationsThisMonth(0);
       } else {
-        setGenerationsThisMonth(effectiveGenerations);
+        setGenerationsThisMonth(profile.generations_this_month || 0);
       }
 
+      // Fetch project count
       const { count, error: countError } = await supabase
         .from('websites')
         .select('*', { count: 'exact', head: true })
@@ -104,8 +103,8 @@ export function useFeatureGate() {
       }
 
       console.log('✅ useFeatureGate: Data loaded successfully:', {
-        tier: profile.user_tier || 'free',
-        generations: effectiveGenerations,
+        tier: userTier,
+        generations: profile.generations_this_month || 0,
         limit: limits.monthlyGenerations,
         projects: count || 0
       });
@@ -151,6 +150,7 @@ export function useFeatureGate() {
   const isPro = userTier === 'pro';
   const isFree = userTier === 'free';
   
+  // Allow generation if loading OR under limit
   const canGenerate = loading ? true : generationsThisMonth < limits.monthlyGenerations;
   const canCreateProject = true;
 
