@@ -30,14 +30,16 @@ export const useUsageTracking = (userId: string | undefined) => {
       setLoading(false);
       return;
     }
+
     try {
-      // ✅ FIX: Use existing /api/profile endpoint instead
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('❌ No session');
+      // ✅ FIX: Always refresh session to get valid token
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        console.error('❌ Session refresh failed:', sessionError);
         setLoading(false);
         return;
       }
+
       // ✅ Call /api/profile which exists in your Server.js
       const response = await fetch('https://original-lbxv.onrender.com/api/profile', {
         method: 'GET',
@@ -46,9 +48,10 @@ export const useUsageTracking = (userId: string | undefined) => {
           'Authorization': `Bearer ${session.access_token}`
         }
       });
+
       if (!response.ok) {
         console.error('❌ Failed to fetch profile:', response.statusText);
-       
+      
         // Fallback to conservative limits
         setUsage({
           generationsUsed: 0,
@@ -59,7 +62,9 @@ export const useUsageTracking = (userId: string | undefined) => {
         setLoading(false);
         return;
       }
+
       const result = await response.json();
+
       if (result.success && result.data) {
         // ✅ FIX: Your backend returns these exact field names
         const profile = result.data.profile;
@@ -70,6 +75,7 @@ export const useUsageTracking = (userId: string | undefined) => {
           monthYear: profile.current_month || new Date().toISOString().slice(0, 7),
           canGenerate: (profile.remaining_generations || 0) > 0
         });
+
         console.log('✅ Usage updated from /api/profile:', {
           used: profile.generations_this_month,
           limit: profile.monthly_limit,
@@ -78,7 +84,7 @@ export const useUsageTracking = (userId: string | undefined) => {
         });
       } else {
         console.error('❌ Profile data error');
-       
+      
         // Fallback
         setUsage({
           generationsUsed: 0,
@@ -89,7 +95,7 @@ export const useUsageTracking = (userId: string | undefined) => {
       }
     } catch (error) {
       console.error('❌ Error fetching usage:', error);
-     
+    
       // Fallback
       setUsage({
         generationsUsed: 0,
@@ -111,6 +117,7 @@ export const useUsageTracking = (userId: string | undefined) => {
   // ✅ CHANGE 7: Removed free-tier skip logic (already applied: only checks !userId)
   const incrementUsage = async () => {
     if (!userId) return false;
+
     try {
       // ✅ Optimistically update local state
       setUsage(prev => ({
@@ -118,15 +125,17 @@ export const useUsageTracking = (userId: string | undefined) => {
         generationsUsed: prev.generationsUsed + 1,
         canGenerate: prev.generationsUsed + 1 < prev.generationsLimit
       }));
+
       // ✅ Refetch from server to get authoritative count
       // This handles race conditions and ensures consistency
       setTimeout(() => {
         fetchUsage();
       }, 500);
+
       return true;
     } catch (error) {
       console.error('Error in incrementUsage:', error);
-     
+    
       // Refetch on error to get accurate state
       fetchUsage();
       return false;
@@ -139,16 +148,19 @@ export const useUsageTracking = (userId: string | undefined) => {
   // Automatically refetch when month changes
   useEffect(() => {
     if (!userId) return;
+
     fetchUsage();
+
     // Check for month change every minute
     const monthCheckInterval = setInterval(() => {
       const currentMonth = new Date().toISOString().slice(0, 7);
-     
+    
       if (usage.monthYear !== currentMonth) {
         console.log('📅 Month changed, refetching usage...');
         fetchUsage();
       }
     }, 60000); // 1 minute
+
     return () => clearInterval(monthCheckInterval);
   }, [userId, usage.monthYear]);
 
@@ -158,9 +170,11 @@ export const useUsageTracking = (userId: string | undefined) => {
   // Poll server every 30 seconds to catch updates
   useEffect(() => {
     if (!userId) return;
+
     const pollInterval = setInterval(() => {
       fetchUsage();
     }, 30000); // 30 seconds
+
     return () => clearInterval(pollInterval);
   }, [userId]);
 
@@ -170,14 +184,16 @@ export const useUsageTracking = (userId: string | undefined) => {
   // Refetch when user returns to tab
   useEffect(() => {
     if (!userId) return;
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('👁️ Tab visible, refetching usage...');
         fetchUsage();
       }
     };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-   
+  
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -189,14 +205,16 @@ export const useUsageTracking = (userId: string | undefined) => {
   // Listen for updates from other tabs
   useEffect(() => {
     if (!userId) return;
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'usage_updated') {
         console.log('🔄 Usage updated in another tab, refetching...');
         fetchUsage();
       }
     };
+
     window.addEventListener('storage', handleStorageChange);
-   
+  
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
