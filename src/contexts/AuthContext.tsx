@@ -1,4 +1,3 @@
-<DOCUMENT filename="AuthContext.tsx">
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
@@ -63,23 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initializeAuth = async () => {
     try {
       setLoading(true);
-      
-      // Try to get current session
-      let { data: { session: currentSession }, error } = await supabase.auth.getSession();
-      
-      // If no session, try to refresh it
-      if (!currentSession && !error) {
-        console.log('⚠️ No session found, attempting refresh...');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshData?.session) {
-          currentSession = refreshData.session;
-          console.log('✅ Session refreshed successfully');
-        } else {
-          console.log('ℹ️ No active session after refresh attempt');
-        }
-      }
-      
+      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
       if (error) {
         console.error('❌ Session error:', error);
         setUser(null);
@@ -87,11 +70,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserTier('free');
         return;
       }
-      
       if (currentSession?.user) {
         console.log('✅ Session found, verifying tier...');
+       
         setUser(currentSession.user);
         setSession(currentSession);
+       
         await fetchUserTier(currentSession.user.id);
       } else {
         console.log('ℹ️ No active session');
@@ -257,4 +241,3 @@ export function notifyTierUpdate() {
     console.warn('⚠️ Failed to notify other tabs:', err);
   }
 }
-</DOCUMENT>
