@@ -43,7 +43,7 @@ import { SavedWebsite, STORAGE_KEY, MAX_WEBSITES } from "@/types/website";
 import JSZip from "jszip";
 import { useAuth } from '@/contexts/AuthContext';
 import { useUsageTracking, notifyUsageUpdate } from '@/hooks/use-usage-tracking';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { LoadingScreen } from '@/components/ui/spinner';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { UpgradeModal } from '@/components/UpgradeModal';
