@@ -1,7 +1,7 @@
 // src/hooks/useFeatureGate.ts
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
 export function useFeatureGate() {
