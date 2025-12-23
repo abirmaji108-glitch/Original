@@ -26,7 +26,7 @@ const PORT = process.env.PORT || 3000;
 async function fetchWithTimeout(url, options, timeoutMs = 60000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
- 
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -69,6 +69,7 @@ function sanitizePrompt(prompt) {
   if (typeof prompt !== 'string') {
     throw new Error('Prompt must be a string');
   }
+
   let sanitized = prompt
     .replace(/IGNORE\s+(ALL\s+)?PREVIOUS\s+INSTRUCTIONS?/gi, '')
     .replace(/SYSTEM\s*:/gi, '')
@@ -353,6 +354,7 @@ const generateLimiter = rateLimit({
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return false;
       }
+
       const token = authHeader.replace('Bearer ', '');
       const { data: { user } } = await supabase.auth.getUser(token);
       if (!user) return false;
@@ -562,12 +564,10 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           process.env.STRIPE_BASIC_PRICE_ID,
           process.env.STRIPE_BASIC_YEARLY_PRICE_ID
         ].filter(Boolean);
-
         const proPriceIds = [
           process.env.STRIPE_PRO_PRICE_ID,
           process.env.STRIPE_PRO_YEARLY_PRICE_ID
         ].filter(Boolean);
-
         const businessPriceIds = [
           process.env.STRIPE_BUSINESS_PRICE_ID,
           process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
@@ -837,7 +837,7 @@ app.get('/api/health', async (req, res) => {
       .from('profiles')
       .select('id')
       .limit(1);
-   
+  
     checks.database = error ? 'unhealthy' : 'healthy';
   } catch (err) {
     checks.database = 'unhealthy';
@@ -848,7 +848,7 @@ app.get('/api/health', async (req, res) => {
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 
+        headers: {
           'x-api-key': process.env.CLAUDE_API_KEY,
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json'
@@ -876,13 +876,12 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============================================
-// GENERATE ENDPOINT - COMPLETE WORKING VERSION
+// GENERATE ENDPOINT - COMPLETE FIXED VERSION
 // ============================================
-
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const startTime = Date.now();
   let userId = null;
- 
+  
   try {
     const { prompt } = req.body;
     const authHeader = req.headers.authorization;
@@ -925,6 +924,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        
         if (authError) {
           return res.status(401).json({
             success: false,
@@ -932,6 +932,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             code: 'INVALID_TOKEN'
           });
         }
+
         if (!user) {
           return res.status(401).json({
             success: false,
@@ -939,14 +940,15 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             code: 'NO_USER'
           });
         }
+
         userId = user.id;
-       
+      
         // ✅ FETCH USER PROFILE: Get tier and usage
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('user_tier, generations_this_month, last_generation_reset')
           .eq('id', userId)
-          .single();
+          .maybeSingle(); // ✅ Returns null instead of error
 
         if (profileError) {
           logger.error(`[${req.id}] Profile fetch error:`, profileError);
@@ -956,12 +958,35 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           });
         }
 
-        if (profile) {
+        // ✅ HANDLE MISSING PROFILE
+        if (!profile) {
+          logger.warn(`[${req.id}] No profile found for user ${userId}, creating default profile`);
+          
+          // Create profile if it doesn't exist
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              user_tier: 'free',
+              generations_this_month: 0,
+              last_generation_reset: currentMonth
+            });
+        
+          if (createError) {
+            logger.error(`[${req.id}] Failed to create profile:`, createError);
+          }
+        
+          // Use defaults
+          userTier = 'free';
+          generationsThisMonth = 0;
+        } else {
+          // ✅ EXISTING PROFILE - Extract data
           userTier = profile.user_tier || 'free';
-         
+        
           // ✅ CHECK IF MONTHLY RESET NEEDED
           if (profile.last_generation_reset !== currentMonth) {
-            // Reset generations for new month
+            logger.log(`[${req.id}] New month detected, resetting generation count`);
+            
             await supabase
               .from('profiles')
               .update({
@@ -969,65 +994,61 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
                 last_generation_reset: currentMonth
               })
               .eq('id', userId);
-           
+          
             generationsThisMonth = 0;
           } else {
             generationsThisMonth = profile.generations_this_month || 0;
           }
+        }
+        
+        // ✅ CHECK TIER LIMITS (applies to both new and existing profiles)
+        const tierLimits = {
+          'free': 5,
+          'basic': 100,
+          'pro': 500,
+          'business': 2000
+        };
+        const limit = tierLimits[userTier] || 5;
+        
+        // ✅ ENFORCE LIMITS
+        if (generationsThisMonth >= limit) {
+          // Log the limit hit
+          await logSecurityEvent({
+            user_id: userId,
+            event_type: 'generation_limit_reached',
+            actual_tier: userTier,
+            endpoint: '/api/generate',
+            ip_address: req.ip,
+            user_agent: req.get('user-agent'),
+            request_details: {
+              generations_used: generationsThisMonth,
+              limit: limit
+            }
+          });
 
-          // ✅ CHECK TIER LIMITS
-          const tierLimits = {
-            'free': 5,
-            'basic': 100,
-            'pro': 500,
-            'business': 2000
-          };
-          const limit = tierLimits[userTier] || 5;
-         
-          // ✅ ENFORCE LIMITS
-          if (generationsThisMonth >= limit) {
-            // Log the limit hit
-            await logSecurityEvent({
-              user_id: userId,
-              event_type: 'generation_limit_reached',
-              actual_tier: userTier,
-              endpoint: '/api/generate',
-              ip_address: req.ip,
-              user_agent: req.get('user-agent'),
-              request_details: {
-                generations_used: generationsThisMonth,
-                limit: limit
-              }
-            });
+          // Send warning email if not already sent this month
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email, full_name, warning_email_sent_at')
+            .eq('id', userId)
+            .single();
 
-            // Send warning email if not already sent
-            const { data: warningData } = await supabase
-              .from('profiles')
-              .select('warning_email_sent_at')
-              .eq('id', userId)
-              .single();
-
-            const warningSent = warningData?.warning_email_sent_at;
+          if (profileData) {
+            const warningSent = profileData.warning_email_sent_at;
             const warningSentDate = warningSent ? new Date(warningSent) : null;
             const now = new Date();
-           
+          
             // Send warning email only once per month
             if (!warningSent || (now - warningSentDate) > 30 * 24 * 60 * 60 * 1000) {
-              const { data: userData } = await supabase
-                .from('profiles')
-                .select('email, full_name')
-                .eq('id', userId)
-                .single();
-
-              if (userData?.email && isValidEmail(userData.email)) {
+              if (profileData.email && isValidEmail(profileData.email)) {
                 sendLimitWarningEmail(
-                  userData.email,
-                  userData.full_name || 'there',
+                  profileData.email,
+                  profileData.full_name || 'there',
                   userTier,
                   generationsThisMonth,
                   limit
                 ).catch(err => logger.error('⚠️ Failed to send warning email:', err));
-
+                
                 // Update warning email timestamp
                 await supabase
                   .from('profiles')
@@ -1035,16 +1056,17 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
                   .eq('id', userId);
               }
             }
-
-            return res.status(429).json({
-              success: false,
-              error: 'Monthly generation limit reached',
-              limit_reached: true,
-              message: `You've used ${generationsThisMonth} of ${limit} generations this month`,
-              upgradeUrl: '/pricing'
-            });
           }
+
+          return res.status(429).json({
+            success: false,
+            error: 'Monthly generation limit reached',
+            limit_reached: true,
+            message: `You've used ${generationsThisMonth} of ${limit} generations this month`,
+            upgradeUrl: '/pricing'
+          });
         }
+
       } catch (authError) {
         logger.error(`[${req.id}] Authentication error:`, authError);
         // Continue as free user if auth fails
@@ -1053,7 +1075,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       }
     }
 
-    // ✅ FIX #3: Tier-based prompt length limits
+    // ✅ TIER-BASED PROMPT LENGTH LIMITS
     const tierPromptLimits = {
       'free': 1000,
       'basic': 2000,
@@ -1061,7 +1083,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       'business': 10000
     };
     const maxLength = tierPromptLimits[userTier] || 1000;
-
+    
     if (sanitizedPrompt.length > maxLength) {
       return res.status(400).json({
         success: false,
@@ -1073,6 +1095,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     // ✅ RATE LIMITING: Additional per-IP check
     const ipLimitKey = `ip:${req.ip}`;
     const ipLimitResult = await checkRateLimit(ipLimitKey, 15, 60);
+    
     if (!ipLimitResult.allowed) {
       return res.status(429).json({
         success: false,
@@ -1081,7 +1104,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       });
     }
 
-    // ✅ STEP 1: Use Claude to generate COMPLETE HTML WEBSITE
+    // ✅ CALL CLAUDE API
     const apiUrl = 'https://api.anthropic.com/v1/messages';
     const headers = {
       'Content-Type': 'application/json',
@@ -1096,25 +1119,13 @@ CRITICAL RULES:
 3. Include <script src="https://cdn.tailwindcss.com"></script> for styling
 4. Make it mobile-responsive with modern design
 5. Add smooth animations and professional styling
+
 IMAGE RULES - VERY IMPORTANT:
-- Analyze the user's request carefully to understand the website type
 - Use Unsplash with SPECIFIC keywords matching the content
 - Format: https://source.unsplash.com/WIDTHxHEIGHT?keyword1,keyword2,keyword3
-EXAMPLES OF SMART IMAGE USAGE:
-- Photography site: ?photography,camera,professional
-- Restaurant: ?restaurant,food,dining,{cuisine-type}
-- Gym: ?fitness,gym,workout,{specialty}
-- E-commerce: ?product,shopping,{product-type}
-- Real estate: ?house,property,{location-type}
-- Travel: ?travel,destination,{place}
-ALWAYS:
 - Use 3-5 relevant keywords per image
-- Match keywords to the specific content (hero, product, team, etc.)
 - Use high-resolution dimensions (1920x1080 for heroes, 800x600 for content)
-- Add descriptive alt tags
-- Include realistic placeholder content
-- Use semantic HTML5 tags
-- Add proper accessibility (ARIA labels)`;
+- Add descriptive alt tags and semantic HTML5 tags`;
 
     const body = {
       model: 'claude-3-5-sonnet-20241022',
@@ -1126,7 +1137,6 @@ ALWAYS:
       }]
     };
 
-    // ✅ CALL CLAUDE API WITH RETRY
     let generatedCode;
     try {
       const response = await retryOperation(async () => {
@@ -1134,7 +1144,7 @@ ALWAYS:
           method: 'POST',
           headers,
           body: JSON.stringify(body)
-        }, 90000); // 90 second timeout
+        }, 90000);
       }, 3, 2000);
 
       if (!response.ok) {
@@ -1144,14 +1154,14 @@ ALWAYS:
 
       const data = await response.json();
       generatedCode = data.content[0].text.trim();
-     
-      // ✅ CLEAN UP MARKDOWN ARTIFACTS
+    
+      // Clean up markdown artifacts
       generatedCode = generatedCode
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-     
-      // ✅ VALIDATE HTML
+    
+      // Validate HTML
       if (!generatedCode.startsWith('<!DOCTYPE html>') && !generatedCode.startsWith('<html>')) {
         throw new Error('Invalid HTML generated - missing DOCTYPE');
       }
@@ -1179,10 +1189,10 @@ ALWAYS:
           logger.error(`⚠️ [${req.id}] Failed to update generation count:`, updateError);
         }
 
-        // ✅ LOG ANALYTICS
+        // Log analytics
         await logAnalytics(userId, generationsThisMonth, currentMonth);
 
-        // ✅ LOG SECURITY EVENT
+        // Log security event
         await logSecurityEvent({
           user_id: userId,
           event_type: 'website_generated',
@@ -1212,10 +1222,10 @@ ALWAYS:
 
     logger.log(`✅ [${req.id}] Website generated in ${generationTime}ms for user ${userId || 'anonymous'} (${userTier})`);
 
-    // ✅ STEP 2: Return the complete HTML website
+    // ✅ RETURN SUCCESS
     res.json({
       success: true,
-      htmlCode: generatedCode, // ✅ Complete website with embedded Unsplash images
+      htmlCode: generatedCode,
       usage: {
         used: generationsThisMonth + 1,
         limit: limit,
@@ -1224,6 +1234,7 @@ ALWAYS:
       tier: userTier,
       generationTime: `${generationTime}ms`
     });
+
   } catch (error) {
     logger.error(`❌ [${req.id}] Generation endpoint error:`, error);
     res.status(500).json({
@@ -1264,13 +1275,23 @@ app.get('/api/profile', async (req, res) => {
         subscription:subscriptions(*)
       `)
       .eq('id', user.id)
-      .single();
+      .maybeSingle(); // ✅ Returns null instead of throwing error
 
     if (profileError) {
       logger.error(`[${req.id}] Profile fetch error:`, profileError);
       return res.status(500).json({
         success: false,
         error: 'Failed to fetch profile'
+      });
+    }
+
+    // ✅ ADD THIS:
+    if (!profile) {
+      logger.warn(`[${req.id}] No profile found for user ${user.id}`);
+      return res.status(404).json({
+        success: false,
+        error: 'Profile not found',
+        message: 'Please complete your profile setup'
       });
     }
 
@@ -1299,11 +1320,11 @@ app.get('/api/profile', async (req, res) => {
       'pro': 50,
       'business': 200
     };
-   
+  
     if (profile.last_download_reset === currentMonth) {
       downloadsThisMonth = profile.downloads_this_month || 0;
     }
-   
+  
     const downloadLimit = downloadLimits[profile.user_tier] || 0;
     const remainingDownloads = Math.max(0, downloadLimit - downloadsThisMonth);
 
@@ -1327,13 +1348,13 @@ app.get('/api/profile', async (req, res) => {
         },
         profile: {
           ...profile,
-          generations_this_month: generationsThisMonth,  // ✅ Correct
-          remaining_generations: remaining,               // ✅ Correct
-          monthly_limit: limit,                           // ✅ Correct
+          generations_this_month: generationsThisMonth, // ✅ Correct
+          remaining_generations: remaining, // ✅ Correct
+          monthly_limit: limit, // ✅ Correct
           downloads_this_month: downloadsThisMonth,
           remaining_downloads: remainingDownloads,
           download_limit: downloadLimit,
-          current_month: currentMonth                     // ✅ Correct
+          current_month: currentMonth // ✅ Correct
         }
       }
     });
@@ -1353,7 +1374,7 @@ app.get('/api/profile', async (req, res) => {
 app.post('/api/track-download', downloadLimiter, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-   
+  
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1410,6 +1431,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
       'pro': 50,
       'business': 200
     };
+
     const limit = downloadLimits[userTier] || 0;
 
     if (userTier === 'free') {
@@ -1629,7 +1651,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
 
     // Create or get Stripe customer
     let customerId;
-   
+  
     // Check if user already has a Stripe customer ID
     const { data: profile } = await supabase
       .from('profiles')
@@ -1639,7 +1661,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
 
     if (profile?.stripe_customer_id) {
       customerId = profile.stripe_customer_id;
-     
+    
       // Verify customer still exists in Stripe
       try {
         await stripe.customers.retrieve(customerId);
@@ -1650,7 +1672,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
           metadata: { userId: user.id }
         });
         customerId = customer.id;
-       
+      
         // Update profile with new customer ID
         await supabase
           .from('profiles')
@@ -1664,7 +1686,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         metadata: { userId: user.id }
       });
       customerId = customer.id;
-     
+    
       // Save customer ID to profile
       await supabase
         .from('profiles')
@@ -1705,12 +1727,12 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     });
   } catch (error) {
     logger.error(`❌ [${req.id}] Checkout session error:`, error);
-   
+  
     // ✅ FIX #13: Don't expose Stripe errors to client
     const errorMessage = error.type === 'StripeError'
       ? 'Payment processing error'
       : 'Internal server error';
-   
+  
     res.status(500).json({
       success: false,
       error: errorMessage,
@@ -1812,7 +1834,7 @@ app.post('/api/cancel-subscription', async (req, res) => {
 app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
   try {
     const { key_type } = req.body;
-   
+  
     if (!['groq', 'stripe', 'all'].includes(key_type)) {
       return res.status(400).json({
         success: false,
@@ -1858,7 +1880,6 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('id, email, user_tier, created_at, stripe_customer_id');
-
     if (profilesError) throw profilesError;
 
     // ✅ FIX #25: Fetch download statistics
@@ -1883,7 +1904,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       const todayDownloads = downloadData.filter(d =>
         d.downloaded_at && d.downloaded_at.startsWith(today)
       ).length;
-     
+    
       const downloadsByTier = {
         basic: downloadData.filter(d => d.user_tier === 'basic').length,
         pro: downloadData.filter(d => d.user_tier === 'pro').length,
@@ -2052,11 +2073,9 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
       todayDownloads = downloadData.filter(d =>
         d.downloaded_at && d.downloaded_at.startsWith(today)
       ).length;
-
       weekDownloads = downloadData.filter(d =>
         d.downloaded_at && new Date(d.downloaded_at) >= weekAgo
       ).length;
-
       monthDownloads = downloadData.length;
     }
 
