@@ -1,3 +1,4 @@
+<DOCUMENT filename="Server (37).js">
 // server.js - Complete Express.js server with all bug fixes and logger integration
 import express from 'express';
 import cors from 'cors';
@@ -1108,49 +1109,97 @@ IMAGE RULES - VERY IMPORTANT:
   }
 });
 // ============================================
-// USER PROFILE ENDPOINT
+// USER PROFILE ENDPOINT - FIXED WITH PROPER ERROR HANDLING
 // ============================================
 app.get('/api/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
         error: 'Authentication required'
       });
     }
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
     if (authError || !user) {
+      logger.error(`[${req.id}] Auth error in profile endpoint:`, authError);
       return res.status(401).json({
         success: false,
         error: 'Invalid authentication'
       });
     }
+
+    // Fetch profile with minimal fields first
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select(`
-        *,
-        subscription:subscriptions(*)
-      `)
+      .select('id, user_tier, generations_this_month, last_generation_reset, downloads_this_month, last_download_reset, stripe_customer_id, email, full_name')
       .eq('id', user.id)
-      .maybeSingle(); // ✅ Returns null instead of throwing error
+      .maybeSingle();
+
     if (profileError) {
-      logger.error(`[${req.id}] Profile fetch error:`, profileError);
+      logger.error(`[${req.id}] Profile query error:`, profileError);
       return res.status(500).json({
         success: false,
-        error: 'Failed to fetch profile'
+        error: 'Database error',
+        message: profileError.message
       });
     }
-    // ✅ ADD THIS:
+
+    // ✅ FIX: Handle case when profile doesn't exist
     if (!profile) {
-      logger.warn(`[${req.id}] No profile found for user ${user.id}`);
-      return res.status(404).json({
-        success: false,
-        error: 'Profile not found',
-        message: 'Please complete your profile setup'
+      logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
+      
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      // Create default profile
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          user_tier: 'free',
+          generations_this_month: 0,
+          downloads_this_month: 0,
+          last_generation_reset: currentMonth,
+          last_download_reset: currentMonth
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        logger.error(`[${req.id}] Failed to create profile:`, createError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create profile'
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            created_at: user.created_at
+          },
+          profile: {
+            ...newProfile,
+            generations_this_month: 0,
+            remaining_generations: 5,
+            monthly_limit: 5,
+            downloads_this_month: 0,
+            remaining_downloads: 0,
+            download_limit: 0,
+            current_month: currentMonth
+          }
+        }
       });
     }
+
     // Calculate remaining generations
     const currentMonth = new Date().toISOString().slice(0, 7);
     const tierLimits = {
@@ -1159,37 +1208,28 @@ app.get('/api/profile', async (req, res) => {
       'pro': 500,
       'business': 2000
     };
-    let generationsThisMonth = 0;
-    if (profile.last_generation_reset === currentMonth) {
-      generationsThisMonth = profile.generations_this_month || 0;
-    }
-    const limit = tierLimits[profile.user_tier] || 5;
-    const remaining = Math.max(0, limit - generationsThisMonth);
-    // Calculate remaining downloads
-    let downloadsThisMonth = 0;
+
     const downloadLimits = {
       'free': 0,
       'basic': 10,
       'pro': 50,
       'business': 200
     };
- 
-    if (profile.last_download_reset === currentMonth) {
-      downloadsThisMonth = profile.downloads_this_month || 0;
-    }
- 
+
+    const limit = tierLimits[profile.user_tier] || 5;
     const downloadLimit = downloadLimits[profile.user_tier] || 0;
-    const remainingDownloads = Math.max(0, downloadLimit - downloadsThisMonth);
-    // ✅ CHANGE #6: ADD DEBUG LOGGING
-    logger.log(`📊 [${req.id}] Profile data for user ${user.id}:`, {
-      tier: profile.user_tier,
-      generations_used: generationsThisMonth,
-      limit: limit,
-      remaining: remaining,
-      current_month: currentMonth
-    });
-    // ✅ CHANGE #5: RESPONSE FORMAT IS ALREADY CORRECT
-    res.json({
+
+    const generationsThisMonth = profile.last_generation_reset === currentMonth 
+      ? (profile.generations_this_month || 0) 
+      : 0;
+
+    const downloadsThisMonth = profile.last_download_reset === currentMonth
+      ? (profile.downloads_this_month || 0)
+      : 0;
+
+    logger.log(`✅ [${req.id}] Profile fetched successfully for ${user.id}`);
+
+    return res.json({
       success: true,
       data: {
         user: {
@@ -1199,21 +1239,23 @@ app.get('/api/profile', async (req, res) => {
         },
         profile: {
           ...profile,
-          generations_this_month: generationsThisMonth, // ✅ Correct
-          remaining_generations: remaining, // ✅ Correct
-          monthly_limit: limit, // ✅ Correct
+          generations_this_month: generationsThisMonth,
+          remaining_generations: Math.max(0, limit - generationsThisMonth),
+          monthly_limit: limit,
           downloads_this_month: downloadsThisMonth,
-          remaining_downloads: remainingDownloads,
+          remaining_downloads: Math.max(0, downloadLimit - downloadsThisMonth),
           download_limit: downloadLimit,
-          current_month: currentMonth // ✅ Correct
+          current_month: currentMonth
         }
       }
     });
+
   } catch (error) {
     logger.error(`❌ [${req.id}] Profile endpoint error:`, error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
+      message: error.message
     });
   }
 });
@@ -1999,3 +2041,4 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 export default app;
+</DOCUMENT>
