@@ -6,7 +6,6 @@ import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
 export function useFeatureGate() {
   const { user, userTier: authTier, loading: authLoading } = useAuth();
- 
   const [generationsThisMonth, setGenerationsThisMonth] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
@@ -25,7 +24,7 @@ export function useFeatureGate() {
     }
     console.log('✅ useFeatureGate: Auth ready, user ID:', user.id);
     fetchGenerationData();
-  }, [user, authLoading]); // ✅ Keep as is - fetchGenerationData is stable
+  }, [user?.id, authLoading, fetchGenerationData]); // ✅ FIXED: Add all dependencies
 
   const fetchGenerationData = useCallback(async () => {
     if (!user?.id) {
@@ -62,7 +61,7 @@ export function useFeatureGate() {
       const lastResetMonth = profile.last_generation_reset || currentMonth;
       if (lastResetMonth !== currentMonth) {
         console.log('🔄 useFeatureGate: New month detected, resetting count');
-       
+      
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -108,7 +107,7 @@ export function useFeatureGate() {
     }
     try {
       const newCount = generationsThisMonth + 1;
-     
+    
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ generations_this_month: newCount })
@@ -129,7 +128,6 @@ export function useFeatureGate() {
   const loading = authLoading || dataLoading;
   const isPro = userTier === 'pro';
   const isFree = userTier === 'free';
- 
   // Allow generation if loading OR under limit
   const canGenerate = loading ? true : generationsThisMonth < limits.monthlyGenerations;
   const canCreateProject = true;
