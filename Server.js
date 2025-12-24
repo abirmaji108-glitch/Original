@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+// -*- coding: utf-8 -*-
 // server.js - Complete Express.js server with all bug fixes and logger integration
 import express from 'express';
 import cors from 'cors';
@@ -9,6 +11,15 @@ import rateLimit from 'express-rate-limit';
 import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
 // ✅ FIXED: Import default export from logger
 import logger from './utils/logger.js';
+
+// ADD THESE LINES:
+// Emoji constants to prevent encoding issues
+const E = {
+  CHECK: '✅', CROSS: '❌', WARN: '⚠️', CHART: '📊', LOCK: '🔒',
+  INBOX: '📥', SIREN: '🚨', REFRESH: '🔄', UP: '📈', LINK: '🔗',
+  CARD: '💳', STOP: '🛑', EMAIL: '📧', INFO: 'ℹ️', BLUE: '🔵'
+};
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -113,12 +124,12 @@ async function logAnalytics(userId, generationsThisMonth, currentMonth, retries 
           onConflict: 'id'
         });
       if (error) throw error;
-      logger.log(`📊 Analytics logged for user ${userId}`);
+      logger.log(`${E.CHART} Analytics logged for user ${userId}`);
       return true;
     } catch (error) {
       logger.log(`Analytics attempt ${attempt}/${retries} failed:`, error.message);
       if (attempt === retries) {
-        logger.error('❌ CRITICAL: Analytics logging completely failed', {
+        logger.error(`${E.CROSS} CRITICAL: Analytics logging completely failed`, {
           userId,
           generationsThisMonth,
           error: error.message,
@@ -202,10 +213,10 @@ async function logSecurityEvent({
         request_details,
         created_at: new Date().toISOString()
       });
-    logger.log(`🔒 Security event logged: ${event_type} for user ${user_id}`);
+    logger.log(`${E.LOCK} Security event logged: ${event_type} for user ${user_id}`);
   } catch (error) {
     // Don't fail the request if logging fails
-    logger.error('⚠️ Failed to log security event:', error);
+    logger.error(`${E.WARN} Failed to log security event:`, error);
   }
 }
 // ============================================
@@ -215,25 +226,25 @@ async function logSecurityEvent({
 const apiKey = process.env.CLAUDE_API_KEY;
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 if (!apiKey) {
-  logger.error('❌ ERROR: CLAUDE_API_KEY is not set in environment variables!');
+  logger.error(`${E.CROSS} ERROR: CLAUDE_API_KEY is not set in environment variables!`);
   process.exit(1);
 }
 // Initialize Supabase client
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!supabaseUrl || !supabaseServiceKey) {
-  logger.error('❌ ERROR: Supabase URL or Service Role Key not configured!');
+  logger.error(`${E.CROSS} ERROR: Supabase URL or Service Role Key not configured!`);
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-logger.log('✅ Supabase client initialized (backend service role)');
+logger.log(`${E.CHECK} Supabase client initialized (backend service role)`);
 // Initialize Stripe
 let stripe = null;
 if (stripeKey) {
   stripe = new Stripe(stripeKey);
-  logger.log('✅ Stripe initialized');
+  logger.log(`${E.CHECK} Stripe initialized`);
 } else {
-  logger.warn('⚠️ STRIPE_SECRET_KEY not configured - payment features disabled');
+  logger.warn(`${E.WARN} STRIPE_SECRET_KEY not configured - payment features disabled`);
 }
 // ✅ FIX: Validate all Stripe price IDs are configured at startup
 if (stripe) {
@@ -243,19 +254,19 @@ if (stripe) {
   ];
   const missingPriceIds = requiredPriceIds.filter(p => !p.value);
   if (missingPriceIds.length > 0) {
-    logger.error('❌ CRITICAL: Missing required Stripe price IDs:',
+    logger.error(`${E.CROSS} CRITICAL: Missing required Stripe price IDs:`,
       missingPriceIds.map(p => p.name).join(', ')
     );
-    logger.error('⚠️ Payments will fail! Please configure these in Render.com environment variables.');
+    logger.error(`${E.WARN} Payments will fail! Please configure these in Render.com environment variables.`);
   } else {
-    logger.log('✅ All required Stripe price IDs configured');
+    logger.log(`${E.CHECK} All required Stripe price IDs configured`);
   }
   // Optional: warn about missing yearly price IDs
   if (!process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
-    logger.warn('⚠️ STRIPE_BASIC_YEARLY_PRICE_ID not set - yearly Basic plan disabled');
+    logger.warn(`${E.WARN} STRIPE_BASIC_YEARLY_PRICE_ID not set - yearly Basic plan disabled`);
   }
   if (!process.env.STRIPE_PRO_YEARLY_PRICE_ID) {
-    logger.warn('⚠️ STRIPE_PRO_YEARLY_PRICE_ID not set - yearly Pro plan disabled');
+    logger.warn(`${E.WARN} STRIPE_PRO_YEARLY_PRICE_ID not set - yearly Pro plan disabled`);
   }
 }
 // ✅ FIX #20: Comprehensive environment variable validation
@@ -281,17 +292,17 @@ for (const { name, critical } of requiredEnvVars) {
   }
 }
 if (missingCritical.length > 0) {
-  logger.error('❌ CRITICAL: Missing required environment variables:');
+  logger.error(`${E.CROSS} CRITICAL: Missing required environment variables:`);
   missingCritical.forEach(name => logger.error(` - ${name}`));
   logger.error('Server cannot start without these variables!');
   process.exit(1);
 }
 if (missingOptional.length > 0) {
-  logger.warn('⚠️ WARNING: Missing optional environment variables:');
+  logger.warn(`${E.WARN} WARNING: Missing optional environment variables:`);
   missingOptional.forEach(name => logger.warn(` - ${name}`));
   logger.warn('Some features may not work correctly.');
 }
-logger.log('✅ All critical environment variables validated');
+logger.log(`${E.CHECK} All critical environment variables validated`);
 // ============================================
 // RATE LIMITING
 // ============================================
@@ -377,7 +388,7 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   req.id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   res.setHeader('X-Request-ID', req.id);
-  logger.log(`📥 [${req.id}] ${req.method} ${req.path}`);
+  logger.log(`${E.INBOX} [${req.id}] ${req.method} ${req.path}`);
   next();
 });
 app.use(cors());
@@ -406,7 +417,7 @@ async function requireAdmin(req, res, next) {
     }
     // Check if user email is in admin list
     if (!adminEmails.includes(data.user.email)) {
-      logger.warn(`🚨 Non-admin user attempted admin access: ${data.user.email}`);
+      logger.warn(`${E.SIREN} Non-admin user attempted admin access: ${data.user.email}`);
       await logSecurityEvent({
         user_id: data.user.id,
         event_type: 'admin_access_denied',
@@ -422,7 +433,7 @@ async function requireAdmin(req, res, next) {
     req.adminUser = data.user;
     next();
   } catch (err) {
-    logger.error('❌ Admin auth error:', err);
+    logger.error(`${E.CROSS} Admin auth error:`, err);
     return res.status(500).json({
       success: false,
       error: 'Authentication service error'
@@ -443,10 +454,10 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
     }
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    logger.error('❌ Webhook signature verification failed:', err.message);
+    logger.error(`${E.CROSS} Webhook signature verification failed:`, err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-  logger.log('✅ Verified webhook event:', event.type);
+  logger.log(`${E.CHECK} Verified webhook event:`, event.type);
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -469,7 +480,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const priceId = session.line_items?.data[0]?.price?.id;
         // ✅ FIX: Validate customer ID exists
         if (!customerId) {
-          logger.error('❌ No customer ID in session', {
+          logger.error(`${E.CROSS} No customer ID in session`, {
             sessionId: session.id,
             userId,
             timestamp: new Date().toISOString()
@@ -480,11 +491,11 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           });
         }
         if (!priceId) {
-          logger.error('❌ No price ID found in session');
+          logger.error(`${E.CROSS} No price ID found in session`);
           return res.status(400).json({ error: 'No price ID in session' });
         }
         if (!userId) {
-          logger.error('❌ No userId in session metadata');
+          logger.error(`${E.CROSS} No userId in session metadata`);
           return res.status(400).json({ error: 'No userId in session' });
         }
         // Determine tier from price ID with strict validation
@@ -511,7 +522,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         }
         // ✅ FIX: If no tier matched, this is an invalid/unknown price ID
         if (!tier) {
-          logger.error('❌ CRITICAL: Unknown price ID received in webhook', {
+          logger.error(`${E.CROSS} CRITICAL: Unknown price ID received in webhook`, {
             priceId,
             userId,
             sessionId: session.id,
@@ -537,11 +548,11 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             })
             .eq('id', userId);
           if (profileError) {
-            logger.error('❌ Profile update failed:', profileError);
+            logger.error(`${E.CROSS} Profile update failed:`, profileError);
             throw new Error(`Profile update failed: ${profileError.message}`);
           }
           profileUpdated = true;
-          logger.log('✅ Profile updated successfully');
+          logger.log(`${E.CHECK} Profile updated successfully`);
           // Step 2: Upsert subscription
           const { error: subError } = await supabase
             .from('subscriptions')
@@ -556,13 +567,13 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
               onConflict: 'stripe_subscription_id'
             });
           if (subError) {
-            logger.error('❌ Subscription upsert failed:', subError);
+            logger.error(`${E.CROSS} Subscription upsert failed:`, subError);
             throw new Error(`Subscription upsert failed: ${subError.message}`);
           }
           subscriptionUpdated = true;
-          logger.log('✅ Subscription created/updated successfully');
+          logger.log(`${E.CHECK} Subscription created/updated successfully`);
         } catch (error) {
-          logger.error('❌ CRITICAL: Database operation failed in webhook', {
+          logger.error(`${E.CROSS} CRITICAL: Database operation failed in webhook`, {
             error: error.message,
             profileUpdated,
             subscriptionUpdated,
@@ -572,20 +583,20 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           });
           // If profile updated but subscription failed, try to rollback
           if (profileUpdated && !subscriptionUpdated) {
-            logger.log('⚠️ Attempting rollback of profile tier...');
+            logger.log(`${E.WARN} Attempting rollback of profile tier...`);
             await supabase
               .from('profiles')
               .update({ user_tier: 'free' })
               .eq('id', userId)
-              .then(() => logger.log('✅ Rollback successful'))
-              .catch(err => logger.error('❌ Rollback failed:', err));
+              .then(() => logger.log(`${E.CHECK} Rollback successful`))
+              .catch(err => logger.error(`${E.CROSS} Rollback failed:`, err));
           }
           return res.status(500).json({
             error: 'Database operation failed',
             message: error.message
           });
         }
-        logger.log(`✅ Payment successful - User ${userId} upgraded to ${tier}`);
+        logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
         // ✅ FIX #11 & #12: Log successful upgrade
         await logSecurityEvent({
           user_id: userId,
@@ -609,7 +620,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             processed_at: new Date().toISOString()
           });
         if (trackError) {
-          logger.error('⚠️ Failed to track webhook idempotency:', trackError);
+          logger.error(`${E.WARN} Failed to track webhook idempotency:`, trackError);
           // Don't fail the request - tier already updated successfully
         }
         // ✅ FIX: Send welcome email asynchronously (non-blocking)
@@ -625,11 +636,11 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
                 userProfile.full_name || 'there',
                 tier
               )
-                .then(() => logger.log('📧 Welcome email sent successfully'))
-                .catch(err => logger.error('⚠️ Email sending failed (non-critical):', err));
+                .then(() => logger.log(`${E.EMAIL} Welcome email sent successfully`))
+                .catch(err => logger.error(`${E.WARN} Email sending failed (non-critical):`, err));
             }
           })
-          .catch(err => logger.error('⚠️ Failed to fetch user profile for email:', err));
+          .catch(err => logger.error(`${E.WARN} Failed to fetch user profile for email:`, err));
         break;
       }
       case 'customer.subscription.deleted': {
@@ -642,7 +653,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           .eq('stripe_customer_id', customerId)
           .single();
         if (profileError || !profile) {
-          logger.error('❌ Could not find user for canceled subscription', {
+          logger.error(`${E.CROSS} Could not find user for canceled subscription`, {
             customerId,
             error: profileError?.message
           });
@@ -657,13 +668,13 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           })
           .eq('id', profile.id);
         if (updateError) {
-          logger.error('❌ Failed to downgrade user after subscription cancellation', {
+          logger.error(`${E.CROSS} Failed to downgrade user after subscription cancellation`, {
             userId: profile.id,
             error: updateError.message
           });
           break;
         }
-        logger.log(`✅ User ${profile.id} downgraded to free after subscription cancellation`);
+        logger.log(`${E.CHECK} User ${profile.id} downgraded to free after subscription cancellation`);
         // Update subscription status
         await supabase
           .from('subscriptions')
@@ -704,16 +715,16 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
               updated_at: new Date().toISOString()
             })
             .eq('stripe_subscription_id', subscription.id);
-          logger.log(`✅ Subscription ${subscription.id} updated to status: ${subscription.status}`);
+          logger.log(`${E.CHECK} Subscription ${subscription.id} updated to status: ${subscription.status}`);
         }
         break;
       }
       default:
-        logger.log(`ℹ️ Unhandled event type: ${event.type}`);
+        logger.log(`${E.INFO} Unhandled event type: ${event.type}`);
     }
     res.json({ received: true });
   } catch (error) {
-    logger.error('❌ Webhook handler error:', error);
+    logger.error(`${E.CROSS} Webhook handler error:`, error);
     res.status(500).send('Internal server error');
   }
 });
@@ -810,7 +821,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-      
+     
         if (authError) {
           return res.status(401).json({
             success: false,
@@ -826,7 +837,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           });
         }
         userId = user.id;
-    
+   
         // ✅ FETCH USER PROFILE: Get tier and usage
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -843,7 +854,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         // ✅ HANDLE MISSING PROFILE
         if (!profile) {
           logger.warn(`[${req.id}] No profile found for user ${userId}, creating default profile`);
-        
+       
           // Create profile if it doesn't exist
           const { error: createError } = await supabase
             .from('profiles')
@@ -853,22 +864,22 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               generations_this_month: 0,
               last_generation_reset: currentMonth
             });
-      
+     
           if (createError) {
             logger.error(`[${req.id}] Failed to create profile:`, createError);
           }
-      
+     
           // Use defaults
           userTier = 'free';
           generationsThisMonth = 0;
         } else {
           // ✅ EXISTING PROFILE - Extract data
           userTier = profile.user_tier || 'free';
-      
+     
           // ✅ CHECK IF MONTHLY RESET NEEDED
           if (profile.last_generation_reset !== currentMonth) {
             logger.log(`[${req.id}] New month detected, resetting generation count`);
-          
+         
             await supabase
               .from('profiles')
               .update({
@@ -876,13 +887,13 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
                 last_generation_reset: currentMonth
               })
               .eq('id', userId);
-        
+       
             generationsThisMonth = 0;
           } else {
             generationsThisMonth = profile.generations_this_month || 0;
           }
         }
-      
+     
         // ✅ CHECK TIER LIMITS (applies to both new and existing profiles)
         const tierLimits = {
           'free': 5,
@@ -891,7 +902,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           'business': 2000
         };
         const limit = tierLimits[userTier] || 5;
-      
+     
         // ✅ ENFORCE LIMITS
         if (generationsThisMonth >= limit) {
           // Log the limit hit
@@ -917,7 +928,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             const warningSent = profileData.warning_email_sent_at;
             const warningSentDate = warningSent ? new Date(warningSent) : null;
             const now = new Date();
-        
+       
             // Send warning email only once per month
             if (!warningSent || (now - warningSentDate) > 30 * 24 * 60 * 60 * 1000) {
               if (profileData.email && isValidEmail(profileData.email)) {
@@ -927,8 +938,8 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
                   userTier,
                   generationsThisMonth,
                   limit
-                ).catch(err => logger.error('⚠️ Failed to send warning email:', err));
-              
+                ).catch(err => logger.error(`${E.WARN} Failed to send warning email:`, err));
+             
                 // Update warning email timestamp
                 await supabase
                   .from('profiles')
@@ -953,14 +964,15 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       }
     }
     // ✅ TIER-BASED PROMPT LENGTH LIMITS
+    // ✅ CHANGED: Increased free tier limit from 1000 to 2000 characters
     const tierPromptLimits = {
-      'free': 1000,
-      'basic': 2000,
+      'free': 2000,    // ✅ INCREASED FROM 1000 TO 2000
+      'basic': 3000,   // ✅ INCREASED FROM 2000 TO 3000
       'pro': 5000,
       'business': 10000
     };
-    const maxLength = tierPromptLimits[userTier] || 1000;
-  
+    const maxLength = tierPromptLimits[userTier] || 2000;
+ 
     if (sanitizedPrompt.length > maxLength) {
       return res.status(400).json({
         success: false,
@@ -971,7 +983,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     // ✅ RATE LIMITING: Additional per-IP check
     const ipLimitKey = `ip:${req.ip}`;
     const ipLimitResult = await checkRateLimit(ipLimitKey, 15, 60);
-  
+ 
     if (!ipLimitResult.allowed) {
       return res.status(429).json({
         success: false,
@@ -1023,19 +1035,19 @@ IMAGE RULES - VERY IMPORTANT:
       }
       const data = await response.json();
       generatedCode = data.content[0].text.trim();
-  
+ 
       // Clean up markdown artifacts
       generatedCode = generatedCode
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-  
+ 
       // Validate HTML
       if (!generatedCode.startsWith('<!DOCTYPE html>') && !generatedCode.startsWith('<html>')) {
         throw new Error('Invalid HTML generated - missing DOCTYPE');
       }
     } catch (error) {
-      logger.error(`❌ [${req.id}] Claude API error:`, error);
+      logger.error(`${E.CROSS} [${req.id}] Claude API error:`, error);
       return res.status(502).json({
         success: false,
         error: 'Website generation service unavailable',
@@ -1053,7 +1065,7 @@ IMAGE RULES - VERY IMPORTANT:
           })
           .eq('id', userId);
         if (updateError) {
-          logger.error(`⚠️ [${req.id}] Failed to update generation count:`, updateError);
+          logger.error(`${E.WARN} [${req.id}] Failed to update generation count:`, updateError);
         }
         // Log analytics
         await logAnalytics(userId, generationsThisMonth, currentMonth);
@@ -1071,7 +1083,7 @@ IMAGE RULES - VERY IMPORTANT:
           }
         });
       } catch (dbError) {
-        logger.error(`⚠️ [${req.id}] Database operation failed:`, dbError);
+        logger.error(`${E.WARN} [${req.id}] Database operation failed:`, dbError);
         // Don't fail the request - website was generated successfully
       }
     }
@@ -1083,7 +1095,7 @@ IMAGE RULES - VERY IMPORTANT:
       'business': 2000
     };
     const limit = tierLimits[userTier] || 5;
-    logger.log(`✅ [${req.id}] Website generated in ${generationTime}ms for user ${userId || 'anonymous'} (${userTier})`);
+    logger.log(`${E.CHECK} [${req.id}] Website generated in ${generationTime}ms for user ${userId || 'anonymous'} (${userTier})`);
     // ✅ RETURN SUCCESS
     res.json({
       success: true,
@@ -1097,7 +1109,7 @@ IMAGE RULES - VERY IMPORTANT:
       generationTime: `${generationTime}ms`
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Generation endpoint error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Generation endpoint error:`, error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -1111,7 +1123,7 @@ IMAGE RULES - VERY IMPORTANT:
 app.get('/api/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-   
+  
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1120,7 +1132,7 @@ app.get('/api/profile', async (req, res) => {
     }
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-   
+  
     if (authError || !user) {
       logger.error(`[${req.id}] Auth error in profile endpoint:`, authError);
       return res.status(401).json({
@@ -1145,9 +1157,9 @@ app.get('/api/profile', async (req, res) => {
     // ✅ FIX: Handle case when profile doesn't exist
     if (!profile) {
       logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
-     
+    
       const currentMonth = new Date().toISOString().slice(0, 7);
-     
+    
       // Create default profile
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
@@ -1212,7 +1224,7 @@ app.get('/api/profile', async (req, res) => {
     const downloadsThisMonth = profile.last_download_reset === currentMonth
       ? (profile.downloads_this_month || 0)
       : 0;
-    logger.log(`✅ [${req.id}] Profile fetched successfully for ${user.id}`);
+    logger.log(`${E.CHECK} [${req.id}] Profile fetched successfully for ${user.id}`);
     return res.json({
       success: true,
       data: {
@@ -1234,7 +1246,7 @@ app.get('/api/profile', async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Profile endpoint error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Profile endpoint error:`, error);
     return res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -1359,7 +1371,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         downloaded_at: new Date().toISOString(),
         user_tier: userTier
       });
-    logger.log(`✅ [${req.id}] Download tracked for user ${user.id} (${downloadsThisMonth + 1}/${limit})`);
+    logger.log(`${E.CHECK} [${req.id}] Download tracked for user ${user.id} (${downloadsThisMonth + 1}/${limit})`);
     // ✅ FIX #22: Log security event
     await logSecurityEvent({
       user_id: user.id,
@@ -1392,11 +1404,11 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
               limit,
               'downloads' // Specify this is for downloads
             )
-              .then(() => logger.log(`📧 [${req.id}] Download limit warning email sent`))
-              .catch(err => logger.error('⚠️ Failed to send warning email:', err));
+              .then(() => logger.log(`${E.EMAIL} [${req.id}] Download limit warning email sent`))
+              .catch(err => logger.error(`${E.WARN} Failed to send warning email:`, err));
           }
         })
-        .catch(err => logger.error('⚠️ Failed to fetch user for email:', err));
+        .catch(err => logger.error(`${E.WARN} Failed to fetch user for email:`, err));
     }
     res.json({
       success: true,
@@ -1406,7 +1418,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
       used: downloadsThisMonth + 1
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Download tracking error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Download tracking error:`, error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -1488,7 +1500,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         : process.env.STRIPE_BUSINESS_PRICE_ID;
     }
     if (!priceId) {
-      logger.error(`❌ [${req.id}] Missing price ID for ${tier} (${interval})`);
+      logger.error(`${E.CROSS} [${req.id}] Missing price ID for ${tier} (${interval})`);
       return res.status(500).json({
         success: false,
         error: 'Payment configuration error'
@@ -1504,7 +1516,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
       .single();
     if (profile?.stripe_customer_id) {
       customerId = profile.stripe_customer_id;
-  
+ 
       // Verify customer still exists in Stripe
       try {
         await stripe.customers.retrieve(customerId);
@@ -1515,7 +1527,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
           metadata: { userId: user.id }
         });
         customerId = customer.id;
-    
+   
         // Update profile with new customer ID
         await supabase
           .from('profiles')
@@ -1529,7 +1541,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         metadata: { userId: user.id }
       });
       customerId = customer.id;
-  
+ 
       // Save customer ID to profile
       await supabase
         .from('profiles')
@@ -1567,7 +1579,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
       url: session.url
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Checkout session error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Checkout session error:`, error);
     // ✅ FIX #13: Don't expose Stripe errors to client
     const errorMessage = error.type === 'StripeError'
       ? 'Payment processing error'
@@ -1648,7 +1660,7 @@ app.post('/api/cancel-subscription', async (req, res) => {
       cancelAt: canceledSubscription.current_period_end
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Cancel subscription error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Cancel subscription error:`, error);
     res.status(500).json({
       success: false,
       error: 'Failed to cancel subscription'
@@ -1668,7 +1680,7 @@ app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
         message: 'Valid types: groq, stripe, all'
       });
     }
-    logger.log(`🔄 [${req.id}] Reloading ${key_type} API keys by admin: ${req.adminUser.email}`);
+    logger.log(`${E.REFRESH} [${req.id}] Reloading ${key_type} API keys by admin: ${req.adminUser.email}`);
     // This is a placeholder - in production, implement proper key rotation
     // For now, just log the attempt
     await logSecurityEvent({
@@ -1683,7 +1695,7 @@ app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
       note: 'Restart server to apply new keys from environment variables'
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Key reload error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Key reload error:`, error);
     res.status(500).json({
       success: false,
       error: 'Failed to reload keys'
@@ -1695,7 +1707,7 @@ app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
 // ============================================
 app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
   try {
-    logger.log(`📊 [${req.id}] Admin stats requested by ${req.adminUser.email}`);
+    logger.log(`${E.CHART} [${req.id}] Admin stats requested by ${req.adminUser.email}`);
     // Fetch all profiles
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
@@ -1720,7 +1732,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       const todayDownloads = downloadData.filter(d =>
         d.downloaded_at && d.downloaded_at.startsWith(today)
       ).length;
-  
+ 
       const downloadsByTier = {
         basic: downloadData.filter(d => d.user_tier === 'basic').length,
         pro: downloadData.filter(d => d.user_tier === 'pro').length,
@@ -1759,7 +1771,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
           .select('stripe_subscription_id, status')
           .eq('status', 'active');
         if (subError) {
-          logger.warn(`⚠️ [${req.id}] Failed to fetch subscriptions:`, subError);
+          logger.warn(`${E.WARN} [${req.id}] Failed to fetch subscriptions:`, subError);
         } else {
           for (const sub of subscriptions || []) {
             try {
@@ -1789,12 +1801,12 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
                 }
               }
             } catch (stripeErr) {
-              logger.warn(`⚠️ [${req.id}] Failed to fetch Stripe subscription ${sub.stripe_subscription_id}:`, stripeErr.message);
+              logger.warn(`${E.WARN} [${req.id}] Failed to fetch Stripe subscription ${sub.stripe_subscription_id}:`, stripeErr.message);
             }
           }
         }
       } catch (err) {
-        logger.error(`❌ [${req.id}] Error fetching Stripe subscriptions:`, err);
+        logger.error(`${E.CROSS} [${req.id}] Error fetching Stripe subscriptions:`, err);
         // Fall back to estimated revenue if Stripe fails
         actualRevenue = (stats.basic * 9) + (stats.pro * 22) + (stats.business * 49);
       }
@@ -1825,7 +1837,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Admin stats error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Admin stats error:`, error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch admin stats'
@@ -1837,7 +1849,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
 // ============================================
 app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => {
   try {
-    logger.log(`📈 [${req.id}] Admin analytics requested by ${req.adminUser.email}`);
+    logger.log(`${E.UP} [${req.id}] Admin analytics requested by ${req.adminUser.email}`);
     // Fetch usage tracking data
     const { data: usageData, error: usageError } = await supabase
       .from('usage_tracking')
@@ -1963,7 +1975,7 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
       }
     });
   } catch (error) {
-    logger.error(`❌ [${req.id}] Admin analytics error:`, error);
+    logger.error(`${E.CROSS} [${req.id}] Admin analytics error:`, error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch analytics'
@@ -1999,23 +2011,22 @@ app.get('*', (req, res) => {
 // START SERVER
 // ============================================
 app.listen(PORT, () => {
-  logger.log(`✅ Server running on port ${PORT}`);
-  logger.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  logger.log(`🔒 Environment validation completed`);
+  logger.log(`${E.CHECK} Server running on port ${PORT}`);
+  logger.log(`${E.LINK} Health check: http://localhost:${PORT}/api/health`);
+  logger.log(`${E.LOCK} Environment validation completed`);
   if (stripe) {
-    logger.log(`💳 Stripe payments enabled`);
+    logger.log(`${E.CARD} Stripe payments enabled`);
   } else {
-    logger.log('⚠️ Stripe payments disabled - missing API key');
+    logger.log(`${E.WARN} Stripe payments disabled - missing API key`);
   }
 });
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
-  logger.log('🛑 Received SIGTERM, shutting down gracefully...');
+  logger.log(`${E.STOP} Received SIGTERM, shutting down gracefully...`);
   process.exit(0);
 });
 process.on('SIGINT', () => {
-  logger.log('🛑 Received SIGINT, shutting down gracefully...');
+  logger.log(`${E.STOP} Received SIGINT, shutting down gracefully...`);
   process.exit(0);
 });
 export default app;
-
