@@ -12,20 +12,7 @@ export function useFeatureGate() {
   const userTier = (authTier || 'free') as UserTier;
   const limits = TIER_LIMITS[userTier];
 
-  useEffect(() => {
-    if (authLoading) {
-      console.log('⏳ useFeatureGate: Waiting for auth...');
-      return;
-    }
-    if (!user) {
-      console.log('⚠️ useFeatureGate: No user found');
-      setDataLoading(false);
-      return;
-    }
-    console.log('✅ useFeatureGate: Auth ready, user ID:', user.id);
-    fetchGenerationData();
-  }, [user?.id, authLoading, fetchGenerationData]); // ✅ FIXED: Add all dependencies
-
+  // ✅ MOVE THIS FUNCTION UP - DECLARE BEFORE USE
   const fetchGenerationData = useCallback(async () => {
     if (!user?.id) {
       setDataLoading(false);
@@ -61,7 +48,7 @@ export function useFeatureGate() {
       const lastResetMonth = profile.last_generation_reset || currentMonth;
       if (lastResetMonth !== currentMonth) {
         console.log('🔄 useFeatureGate: New month detected, resetting count');
-      
+     
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -98,7 +85,22 @@ export function useFeatureGate() {
     } finally {
       setDataLoading(false);
     }
-  }, [user?.id, supabase]); // ← Add useCallback wrapper
+  }, [user?.id]); // ✅ FIXED: Removed supabase from dependencies
+
+  // ✅ NOW USE IT - After declaration
+  useEffect(() => {
+    if (authLoading) {
+      console.log('⏳ useFeatureGate: Waiting for auth...');
+      return;
+    }
+    if (!user) {
+      console.log('⚠️ useFeatureGate: No user found');
+      setDataLoading(false);
+      return;
+    }
+    console.log('✅ useFeatureGate: Auth ready, user ID:', user.id);
+    fetchGenerationData();
+  }, [user?.id, authLoading, fetchGenerationData]); // ✅ This is now safe
 
   async function incrementGeneration() {
     if (!user?.id) {
@@ -107,7 +109,7 @@ export function useFeatureGate() {
     }
     try {
       const newCount = generationsThisMonth + 1;
-    
+   
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ generations_this_month: newCount })
