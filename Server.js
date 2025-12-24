@@ -777,7 +777,8 @@ app.get('/api/health', async (req, res) => {
   });
 });
 // ============================================
-// GENERATE ENDPOINT - COMPLETE FIXED VERSION
+// EMERGENCY FAST /api/generate ENDPOINT
+// Replace the entire old endpoint with this
 // ============================================
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const startTime = Date.now();
@@ -785,329 +786,155 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   try {
     const { prompt } = req.body;
     const authHeader = req.headers.authorization;
-    // ✅ VALIDATION: Check prompt exists
-    if (!prompt) {
+    // Quick validation
+    if (!prompt || prompt.length < 50) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required field: prompt'
+        error: 'Prompt must be at least 50 characters'
       });
     }
-    // ✅ SANITIZATION: Clean the prompt
-    let sanitizedPrompt;
-    try {
-      sanitizedPrompt = sanitizePrompt(prompt);
-    } catch (error) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid prompt content',
-        message: error.message
-      });
-    }
-    // ✅ VALIDATION: Check prompt length
-    if (sanitizedPrompt.length < 50) {
-      return res.status(400).json({
-        success: false,
-        error: 'Prompt too short',
-        message: 'Please provide at least 50 characters'
-      });
-    }
-    // ✅ AUTHENTICATION & TIER CHECKING
+    // Sanitize prompt quickly
+    const sanitizedPrompt = prompt
+      .replace(/IGNORE\s+.*/gi, '')
+      .replace(/SYSTEM\s*:/gi, '')
+      .trim()
+      .slice(0, 5000); // Hard limit
     let userTier = 'free';
     let generationsThisMonth = 0;
-    let currentMonth = new Date().toISOString().slice(0, 7);
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Quick auth check
+    if (authHeader?.startsWith('Bearer ')) {
       try {
         const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-        if (authError) {
-          return res.status(401).json({
-            success: false,
-            error: 'Invalid authentication',
-            code: 'INVALID_TOKEN'
-          });
-        }
-        if (!user) {
-          return res.status(401).json({
-            success: false,
-            error: 'Authentication required',
-            code: 'NO_USER'
-          });
-        }
-        userId = user.id;
-  
-        // ✅ FETCH USER PROFILE: Get tier and usage
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('user_tier, generations_this_month, last_generation_reset')
-          .eq('id', userId)
-          .maybeSingle(); // ✅ Returns null instead of error
-        if (profileError) {
-          logger.error(`[${req.id}] Profile fetch error:`, profileError);
-          return res.status(500).json({
-            success: false,
-            error: 'Failed to fetch user profile'
-          });
-        }
-        // ✅ HANDLE MISSING PROFILE
-        if (!profile) {
-          logger.warn(`[${req.id}] No profile found for user ${userId}, creating default profile`);
-      
-          // Create profile if it doesn't exist
-          const { error: createError } = await supabase
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+       
+        if (!error && user) {
+          userId = user.id;
+         
+          // Get profile with timeout
+          const profilePromise = supabase
             .from('profiles')
-            .insert({
-              id: userId,
-              user_tier: 'free',
-              generations_this_month: 0,
-              last_generation_reset: currentMonth
-            });
-    
-          if (createError) {
-            logger.error(`[${req.id}] Failed to create profile:`, createError);
-          }
-    
-          // Use defaults
-          userTier = 'free';
-          generationsThisMonth = 0;
-        } else {
-          // ✅ EXISTING PROFILE - Extract data
-          userTier = profile.user_tier || 'free';
-    
-          // ✅ CHECK IF MONTHLY RESET NEEDED
-          if (profile.last_generation_reset !== currentMonth) {
-            logger.log(`[${req.id}] New month detected, resetting generation count`);
-        
-            await supabase
-              .from('profiles')
-              .update({
-                generations_this_month: 0,
-                last_generation_reset: currentMonth
-              })
-              .eq('id', userId);
-      
-            generationsThisMonth = 0;
-          } else {
-            generationsThisMonth = profile.generations_this_month || 0;
-          }
-        }
-    
-        // ✅ CHECK TIER LIMITS (applies to both new and existing profiles)
-        const tierLimits = {
-          'free': 2,
-          'basic': 10,
-          'pro': 50,
-          'business': 200
-        };
-        const limit = tierLimits[userTier] || 2;
-    
-        // ✅ ENFORCE LIMITS
-        if (generationsThisMonth >= limit) {
-          // Log the limit hit
-          await logSecurityEvent({
-            user_id: userId,
-            event_type: 'generation_limit_reached',
-            actual_tier: userTier,
-            endpoint: '/api/generate',
-            ip_address: req.ip,
-            user_agent: req.get('user-agent'),
-            request_details: {
-              generations_used: generationsThisMonth,
-              limit: limit
-            }
-          });
-          // Send warning email if not already sent this month
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('email, full_name, warning_email_sent_at')
+            .select('user_tier, generations_this_month, last_generation_reset')
             .eq('id', userId)
-            .single();
-          if (profileData) {
-            const warningSent = profileData.warning_email_sent_at;
-            const warningSentDate = warningSent ? new Date(warningSent) : null;
-            const now = new Date();
-      
-            // Send warning email only once per month
-            if (!warningSent || (now - warningSentDate) > 30 * 24 * 60 * 60 * 1000) {
-              if (profileData.email && isValidEmail(profileData.email)) {
-                sendLimitWarningEmail(
-                  profileData.email,
-                  profileData.full_name || 'there',
-                  userTier,
-                  generationsThisMonth,
-                  limit
-                ).catch(err => logger.error(`${E.WARN} Failed to send warning email:`, err));
-            
-                // Update warning email timestamp
-                await supabase
-                  .from('profiles')
-                  .update({ warning_email_sent_at: now.toISOString() })
-                  .eq('id', userId);
-              }
+            .maybeSingle();
+          const { data: profile } = await Promise.race([
+            profilePromise,
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Profile timeout')), 3000)
+            )
+          ]).catch(() => ({ data: null }));
+          if (profile) {
+            userTier = profile.user_tier || 'free';
+            const currentMonth = new Date().toISOString().slice(0, 7);
+           
+            if (profile.last_generation_reset === currentMonth) {
+              generationsThisMonth = profile.generations_this_month || 0;
+            }
+            // Check limits
+            const tierLimits = {
+              free: 2,
+              basic: 10,
+              pro: 50,
+              business: 200
+            };
+            const limit = tierLimits[userTier] || 2;
+            if (generationsThisMonth >= limit) {
+              return res.status(429).json({
+                success: false,
+                error: 'Monthly limit reached',
+                limit_reached: true,
+                used: generationsThisMonth,
+                limit
+              });
             }
           }
-          return res.status(429).json({
-            success: false,
-            error: 'Monthly generation limit reached',
-            limit_reached: true,
-            message: `You've used ${generationsThisMonth} of ${limit} generations this month`,
-            upgradeUrl: '/pricing'
-          });
         }
       } catch (authError) {
-        logger.error(`[${req.id}] Authentication error:`, authError);
-        // Continue as free user if auth fails
-        userTier = 'free';
-        generationsThisMonth = 0;
+        console.error('Auth error:', authError);
+        // Continue as free user
       }
     }
-    // ✅ TIER-BASED PROMPT LENGTH LIMITS
-    // ✅ CHANGED: Increased free tier limit from 1000 to 2000 characters
-    const tierPromptLimits = {
-      'free': 2000, // ✅ INCREASED FROM 1000 TO 2000
-      'basic': 3000, // ✅ INCREASED FROM 2000 TO 3000
-      'pro': 5000,
-      'business': 10000
-    };
-    const maxLength = tierPromptLimits[userTier] || 2000;
-    if (sanitizedPrompt.length > maxLength) {
-      return res.status(400).json({
-        success: false,
-        error: 'Prompt too long',
-        message: `${userTier.toUpperCase()} users can use up to ${maxLength} characters. Current: ${sanitizedPrompt.length}. Upgrade for longer prompts.`
-      });
-    }
-    // ✅ RATE LIMITING: Additional per-IP check
-    const ipLimitKey = `ip:${req.ip}`;
-    const ipLimitResult = await checkRateLimit(ipLimitKey, 15, 60);
-    if (!ipLimitResult.allowed) {
-      return res.status(429).json({
-        success: false,
-        error: 'Rate limit exceeded',
-        message: `Too many requests. Try again in ${ipLimitResult.resetIn} seconds`
-      });
-    }
-    // ✅ CALL CLAUDE API
-    const apiUrl = 'https://api.anthropic.com/v1/messages';
-    const headers = {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01'
-    };
-    const systemPrompt = `You are an expert web developer who creates beautiful, modern, responsive websites.
-CRITICAL RULES:
-1. Return ONLY complete HTML code starting with <!DOCTYPE html>
-2. NO explanations, NO markdown, NO code blocks, NO preambles
-3. Include <script src="https://cdn.tailwindcss.com"></script> for styling
-4. Make it mobile-responsive with modern design
-5. Add smooth animations and professional styling
-IMAGE RULES - VERY IMPORTANT:
-- Use Unsplash with SPECIFIC keywords matching the content
-- Format: https://source.unsplash.com/WIDTHxHEIGHT?keyword1,keyword2,keyword3
-- Use 3-5 relevant keywords per image
-- Use high-resolution dimensions (1920x1080 for heroes, 800x600 for content)
-- Add descriptive alt tags and semantic HTML5 tags`;
-    const body = {
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 8000,
-      system: systemPrompt,
-      messages: [{
-        role: 'user',
-        content: sanitizedPrompt
-      }]
-    };
-    let generatedCode;
+    // FAST CLAUDE API CALL with aggressive timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000); // 90 seconds max
     try {
-      const response = await retryOperation(async () => {
-        return await fetchWithTimeout(apiUrl, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body)
-        }, 90000);
-      }, 3, 2000);
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 6000,
+          system: 'You are a web developer. Return ONLY complete HTML code starting with <!DOCTYPE html>. Include <script src="https://cdn.tailwindcss.com"></script> for styling. NO explanations, NO markdown, NO code blocks.',
+          messages: [{
+            role: 'user',
+            content: sanitizedPrompt
+          }]
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Claude API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        const errorText = await response.text();
+        throw new Error(`API error ${response.status}: ${errorText}`);
       }
       const data = await response.json();
-      generatedCode = data.content[0].text.trim();
-      // Clean up markdown artifacts
-      generatedCode = generatedCode
+      let generatedCode = data.content[0].text.trim()
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // Validate HTML
-      if (!generatedCode.startsWith('<!DOCTYPE html>') && !generatedCode.startsWith('<html>')) {
-        throw new Error('Invalid HTML generated - missing DOCTYPE');
-      }
-    } catch (error) {
-      logger.error(`${E.CROSS} [${req.id}] Claude API error:`, error);
-      return res.status(502).json({
-        success: false,
-        error: 'Website generation service unavailable',
-        message: error.message
-      });
-    }
-    // ✅ UPDATE USER'S GENERATION COUNT
-    if (userId) {
-      try {
-        const { error: updateError } = await supabase
+      // Update usage async (don't block response)
+      if (userId) {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        supabase
           .from('profiles')
           .update({
             generations_this_month: generationsThisMonth + 1,
             last_generation_reset: currentMonth
           })
-          .eq('id', userId);
-        if (updateError) {
-          logger.error(`${E.WARN} [${req.id}] Failed to update generation count:`, updateError);
-        }
-        // Log analytics
-        await logAnalytics(userId, generationsThisMonth, currentMonth);
-        // Log security event
-        await logSecurityEvent({
-          user_id: userId,
-          event_type: 'website_generated',
-          actual_tier: userTier,
-          endpoint: '/api/generate',
-          ip_address: req.ip,
-          user_agent: req.get('user-agent'),
-          request_details: {
-            prompt_length: sanitizedPrompt.length,
-            generations_used: generationsThisMonth + 1
-          }
-        });
-      } catch (dbError) {
-        logger.error(`${E.WARN} [${req.id}] Database operation failed:`, dbError);
-        // Don't fail the request - website was generated successfully
+          .eq('id', userId)
+          .then(() => console.log('✅ Usage updated'))
+          .catch(err => console.error('⚠️ Usage update failed:', err));
       }
+      const tierLimits = {
+        free: 2,
+        basic: 10,
+        pro: 50,
+        business: 200
+      };
+      const limit = tierLimits[userTier] || 2;
+      console.log(`✅ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
+      return res.json({
+        success: true,
+        htmlCode: generatedCode,
+        usage: {
+          used: generationsThisMonth + 1,
+          limit,
+          remaining: limit - (generationsThisMonth + 1)
+        },
+        tier: userTier,
+        generationTime: `${Date.now() - startTime}ms`
+      });
+    } catch (apiError) {
+      clearTimeout(timeout);
+      console.error('Claude API error:', apiError);
+     
+      return res.status(502).json({
+        success: false,
+        error: 'AI service temporarily unavailable',
+        message: apiError.message.includes('aborted')
+          ? 'Request took too long - try a shorter prompt'
+          : 'Please try again in a moment'
+      });
     }
-    const generationTime = Date.now() - startTime;
-    const tierLimits = {
-      'free': 2,
-      'basic': 10,
-      'pro': 50,
-      'business': 200
-    };
-    const limit = tierLimits[userTier] || 2;
-    logger.log(`${E.CHECK} [${req.id}] Website generated in ${generationTime}ms for user ${userId || 'anonymous'} (${userTier})`);
-    // ✅ RETURN SUCCESS
-    res.json({
-      success: true,
-      htmlCode: generatedCode,
-      usage: {
-        used: generationsThisMonth + 1,
-        limit: limit,
-        remaining: limit - (generationsThisMonth + 1)
-      },
-      tier: userTier,
-      generationTime: `${generationTime}ms`
-    });
   } catch (error) {
-    logger.error(`${E.CROSS} [${req.id}] Generation endpoint error:`, error);
-    res.status(500).json({
+    console.error('Generation error:', error);
+    return res.status(500).json({
       success: false,
       error: 'Internal server error',
-      message: 'Please try again later'
+      message: error.message
     });
   }
 });
@@ -1117,7 +944,6 @@ IMAGE RULES - VERY IMPORTANT:
 app.get('/api/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
- 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1126,7 +952,6 @@ app.get('/api/profile', async (req, res) => {
     }
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
- 
     if (authError || !user) {
       logger.error(`[${req.id}] Auth error in profile endpoint:`, authError);
       return res.status(401).json({
@@ -1151,9 +976,9 @@ app.get('/api/profile', async (req, res) => {
     // ✅ FIX: Handle case when profile doesn't exist
     if (!profile) {
       logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
-   
+ 
       const currentMonth = new Date().toISOString().slice(0, 7);
-   
+ 
       // Create default profile
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
@@ -1520,7 +1345,6 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
           metadata: { userId: user.id }
         });
         customerId = customer.id;
-  
         // Update profile with new customer ID
         await supabase
           .from('profiles')
@@ -2000,7 +1824,6 @@ app.get('*', (req, res) => {
       ]
     });
   }
-  
   // For non-API routes, return 404
   res.status(404).send('Not Found');
 });
