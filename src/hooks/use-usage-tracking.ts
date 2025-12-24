@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+<DOCUMENT filename="use-usage-tracking (19).ts">
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { TIER_LIMITS, UserTier } from '@/config/tiers';
@@ -20,18 +21,49 @@ export const useUsageTracking = (userId: string | undefined) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // 🚨 CRITICAL: Prevent infinite loops
+  const fetchingRef = useRef(false);
+  const fetchCountRef = useRef(0);
+  const lastFetchRef = useRef(0);
+
   // ============================================
   // FIX #32, #33, #34: SERVER-VERIFIED USAGE
   // ============================================
   // Changed from direct Supabase queries to server endpoint
   // Server verifies tier from database (prevents client manipulation)
   const fetchUsage = async () => {
+    // 🚨 EMERGENCY BRAKE #1: Already fetching
+    if (fetchingRef.current) {
+      console.log('⏳ Already fetching usage, skipping...');
+      return;
+    }
+
+    // 🚨 EMERGENCY BRAKE #2: Rate limit (max 1 fetch per 5 seconds)
+    const now = Date.now();
+    if (now - lastFetchRef.current < 5000) {
+      console.log('🚫 Rate limited, skipping fetch...');
+      return;
+    }
+
+    // 🚨 EMERGENCY BRAKE #3: Max 5 attempts before stopping
+    if (fetchCountRef.current >= 5) {
+      console.error('❌ Max fetch attempts reached');
+      setLoading(false);
+      return;
+    }
+
     if (!userId) {
       setLoading(false);
       return;
     }
 
     try {
+      fetchingRef.current = true;
+      fetchCountRef.current++;
+      lastFetchRef.current = now;
+
+      console.log(`🔍 Fetching usage (attempt ${fetchCountRef.current})...`);
+
       // ✅ FIX: Always refresh session to get valid token
       const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
       if (sessionError || !session) {
@@ -104,6 +136,7 @@ export const useUsageTracking = (userId: string | undefined) => {
         canGenerate: true
       });
     } finally {
+      fetchingRef.current = false;
       setLoading(false);
     }
   };
@@ -149,9 +182,13 @@ export const useUsageTracking = (userId: string | undefined) => {
   useEffect(() => {
     if (!userId) return;
 
+    // Reset fetch count when userId changes
+    fetchCountRef.current = 0;
+    lastFetchRef.current = 0;
+    
     fetchUsage();
 
-    // Check for month change every minute
+    // Check for month change every 5 minutes (reduced frequency)
     const monthCheckInterval = setInterval(() => {
       const currentMonth = new Date().toISOString().slice(0, 7);
     
@@ -159,24 +196,24 @@ export const useUsageTracking = (userId: string | undefined) => {
         console.log('📅 Month changed, refetching usage...');
         fetchUsage();
       }
-    }, 60000); // 1 minute
+    }, 300000); // 5 minutes (reduced from 1 minute)
 
     return () => clearInterval(monthCheckInterval);
-  }, [userId, usage.monthYear]);
+  }, [userId]); // REMOVED usage.monthYear from dependencies
 
   // ============================================
-  // FIX #36: POLLING FOR REAL-TIME UPDATES
+  // FIX #36: POLLING FOR REAL-TIME UPDATES - DISABLED TO PREVENT INFINITE LOOPS
   // ============================================
-  // Poll server every 30 seconds to catch updates
-  useEffect(() => {
-    if (!userId) return;
-
-    const pollInterval = setInterval(() => {
-      fetchUsage();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(pollInterval);
-  }, [userId]);
+  // TEMPORARILY DISABLED - This was causing infinite API calls
+  // useEffect(() => {
+  //   if (!userId) return;
+  //
+  //   const pollInterval = setInterval(() => {
+  //     fetchUsage();
+  //   }, 30000); // 30 seconds
+  //
+  //   return () => clearInterval(pollInterval);
+  // }, [userId]);
 
   // ============================================
   // FIX #36: VISIBILITY-BASED REFETCH
@@ -242,3 +279,4 @@ export function notifyUsageUpdate() {
     console.warn('⚠️ Failed to notify other tabs:', err);
   }
 }
+</DOCUMENT>
