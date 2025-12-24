@@ -959,15 +959,8 @@ Generated on: ${new Date().toLocaleDateString()}
       return;
     }
 
-    // ✅ CHANGE 2: Empty input validation at TOP
-    if (!input || input.trim().length === 0) {
-      toast({
-        title: "Invalid Input",
-        description: "Please select a template or enter a description.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // ✅ FIX 1: REMOVED empty input validation from here (was line 305-315)
+    // It will be checked after sanitization
 
     // Frontend UX check only - real check is on backend
     if (!canGenerateMore) {
@@ -978,11 +971,21 @@ Generated on: ${new Date().toLocaleDateString()}
     // Sanitize input
     const sanitizedPrompt = sanitizeInput(input);
     
-    // Check minimum length (don't trim for length check)
+    // ✅ FIX 1: Check minimum length AFTER sanitization
     if (sanitizedPrompt.length < 50) {
       toast({
         title: "Description too short",
         description: `Please write at least 50 characters (currently ${sanitizedPrompt.length})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // ✅ FIX 1: Check empty input AFTER sanitization
+    if (!sanitizedPrompt || sanitizedPrompt.trim().length === 0) {
+      toast({
+        title: "Invalid Input",
+        description: "Please select a template or enter a description.",
         variant: "destructive",
       });
       return;
@@ -1715,10 +1718,15 @@ ${new Date().toLocaleDateString()}
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ✅ CHANGE 1: Fix Template Click Handler
+  // ✅ FIX 3: Fixed Template Click Handler
   const handleTemplateClick = (prompt: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setInput(prompt);
+    
+    // Wait for state to update, then trigger generation
+    setTimeout(() => {
+      handleGenerate();
+    }, 100);
   };
 
   const getAspectRatio = () => {
