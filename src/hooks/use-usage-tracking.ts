@@ -1,8 +1,6 @@
-<DOCUMENT filename="use-usage-tracking (19).ts">
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { TIER_LIMITS, UserTier } from '@/config/tiers';
 
 export interface UsageData {
   generationsUsed: number;
@@ -21,33 +19,24 @@ export const useUsageTracking = (userId: string | undefined) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // 🚨 CRITICAL: Prevent infinite loops
   const fetchingRef = useRef(false);
   const fetchCountRef = useRef(0);
   const lastFetchRef = useRef(0);
 
-  // ============================================
-  // FIX #32, #33, #34: SERVER-VERIFIED USAGE
-  // ============================================
-  // Changed from direct Supabase queries to server endpoint
-  // Server verifies tier from database (prevents client manipulation)
   const fetchUsage = async () => {
-    // 🚨 EMERGENCY BRAKE #1: Already fetching
     if (fetchingRef.current) {
-      console.log('⏳ Already fetching usage, skipping...');
+      console.log('Already fetching usage, skipping...');
       return;
     }
 
-    // 🚨 EMERGENCY BRAKE #2: Rate limit (max 1 fetch per 5 seconds)
     const now = Date.now();
     if (now - lastFetchRef.current < 5000) {
-      console.log('🚫 Rate limited, skipping fetch...');
+      console.log('Rate limited, skipping fetch...');
       return;
     }
 
-    // 🚨 EMERGENCY BRAKE #3: Max 5 attempts before stopping
     if (fetchCountRef.current >= 5) {
-      console.error('❌ Max fetch attempts reached');
+      console.error('Max fetch attempts reached');
       setLoading(false);
       return;
     }
@@ -62,17 +51,15 @@ export const useUsageTracking = (userId: string | undefined) => {
       fetchCountRef.current++;
       lastFetchRef.current = now;
 
-      console.log(`🔍 Fetching usage (attempt ${fetchCountRef.current})...`);
+      console.log(`Fetching usage (attempt ${fetchCountRef.current})...`);
 
-      // ✅ FIX: Always refresh session to get valid token
       const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
       if (sessionError || !session) {
-        console.error('❌ Session refresh failed:', sessionError);
+        console.error('Session refresh failed:', sessionError);
         setLoading(false);
         return;
       }
 
-      // ✅ Call /api/profile which exists in your Server.js
       const response = await fetch('https://original-lbxv.onrender.com/api/profile', {
         method: 'GET',
         headers: {
@@ -82,9 +69,7 @@ export const useUsageTracking = (userId: string | undefined) => {
       });
 
       if (!response.ok) {
-        console.error('❌ Failed to fetch profile:', response.statusText);
-      
-        // Fallback to conservative limits
+        console.error('Failed to fetch profile:', response.statusText);
         setUsage({
           generationsUsed: 0,
           generationsLimit: 2,
@@ -98,9 +83,7 @@ export const useUsageTracking = (userId: string | undefined) => {
       const result = await response.json();
 
       if (result.success && result.data) {
-        // ✅ FIX: Your backend returns these exact field names
         const profile = result.data.profile;
-        // Backend returns: generations_this_month, monthly_limit, remaining_generations, current_month
         setUsage({
           generationsUsed: profile.generations_this_month || 0,
           generationsLimit: profile.monthly_limit || 2,
@@ -108,16 +91,14 @@ export const useUsageTracking = (userId: string | undefined) => {
           canGenerate: (profile.remaining_generations || 0) > 0
         });
 
-        console.log('✅ Usage updated from /api/profile:', {
+        console.log('Usage updated from /api/profile:', {
           used: profile.generations_this_month,
           limit: profile.monthly_limit,
           remaining: profile.remaining_generations,
           canGenerate: (profile.remaining_generations || 0) > 0
         });
       } else {
-        console.error('❌ Profile data error');
-      
-        // Fallback
+        console.error('Profile data error');
         setUsage({
           generationsUsed: 0,
           generationsLimit: 2,
@@ -126,9 +107,7 @@ export const useUsageTracking = (userId: string | undefined) => {
         });
       }
     } catch (error) {
-      console.error('❌ Error fetching usage:', error);
-    
-      // Fallback
+      console.error('Error fetching usage:', error);
       setUsage({
         generationsUsed: 0,
         generationsLimit: 2,
@@ -141,26 +120,16 @@ export const useUsageTracking = (userId: string | undefined) => {
     }
   };
 
-  // ============================================
-  // KEEP incrementUsage FOR BACKWARD COMPATIBILITY
-  // ============================================
-  // Your Index.tsx calls this - keep it working
-  // Server already increments via atomic RPC in /api/generate
-  // This just updates local state optimistically
-  // ✅ CHANGE 7: Removed free-tier skip logic (already applied: only checks !userId)
   const incrementUsage = async () => {
     if (!userId) return false;
 
     try {
-      // ✅ Optimistically update local state
       setUsage(prev => ({
         ...prev,
         generationsUsed: prev.generationsUsed + 1,
         canGenerate: prev.generationsUsed + 1 < prev.generationsLimit
       }));
 
-      // ✅ Refetch from server to get authoritative count
-      // This handles race conditions and ensures consistency
       setTimeout(() => {
         fetchUsage();
       }, 500);
@@ -168,90 +137,56 @@ export const useUsageTracking = (userId: string | undefined) => {
       return true;
     } catch (error) {
       console.error('Error in incrementUsage:', error);
-    
-      // Refetch on error to get accurate state
       fetchUsage();
       return false;
     }
   };
 
-  // ============================================
-  // FIX #35: MONTHLY RESET DETECTION
-  // ============================================
-  // Automatically refetch when month changes
   useEffect(() => {
     if (!userId) return;
 
-    // Reset fetch count when userId changes
     fetchCountRef.current = 0;
     lastFetchRef.current = 0;
-    
     fetchUsage();
 
-    // Check for month change every 5 minutes (reduced frequency)
     const monthCheckInterval = setInterval(() => {
       const currentMonth = new Date().toISOString().slice(0, 7);
-    
       if (usage.monthYear !== currentMonth) {
-        console.log('📅 Month changed, refetching usage...');
+        console.log('Month changed, refetching usage...');
         fetchUsage();
       }
-    }, 300000); // 5 minutes (reduced from 1 minute)
+    }, 300000);
 
     return () => clearInterval(monthCheckInterval);
-  }, [userId]); // REMOVED usage.monthYear from dependencies
+  }, [userId]);
 
-  // ============================================
-  // FIX #36: POLLING FOR REAL-TIME UPDATES - DISABLED TO PREVENT INFINITE LOOPS
-  // ============================================
-  // TEMPORARILY DISABLED - This was causing infinite API calls
-  // useEffect(() => {
-  //   if (!userId) return;
-  //
-  //   const pollInterval = setInterval(() => {
-  //     fetchUsage();
-  //   }, 30000); // 30 seconds
-  //
-  //   return () => clearInterval(pollInterval);
-  // }, [userId]);
-
-  // ============================================
-  // FIX #36: VISIBILITY-BASED REFETCH
-  // ============================================
-  // Refetch when user returns to tab
   useEffect(() => {
     if (!userId) return;
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('👁️ Tab visible, refetching usage...');
+        console.log('Tab visible, refetching usage...');
         fetchUsage();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-  
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [userId]);
 
-  // ============================================
-  // FIX #36: CROSS-TAB SYNCHRONIZATION
-  // ============================================
-  // Listen for updates from other tabs
   useEffect(() => {
     if (!userId) return;
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'usage_updated') {
-        console.log('🔄 Usage updated in another tab, refetching...');
+        console.log('Usage updated in another tab, refetching...');
         fetchUsage();
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-  
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -265,18 +200,11 @@ export const useUsageTracking = (userId: string | undefined) => {
   };
 };
 
-// ============================================
-// HELPER: NOTIFY OTHER TABS OF UPDATES
-// ============================================
-// This is exported but NOT required for basic functionality
-// Index.tsx can call it optionally for cross-tab sync
-// ✅ CHANGE 8: Retained for Index.tsx post-success calls (no changes needed here)
 export function notifyUsageUpdate() {
   try {
     localStorage.setItem('usage_updated', Date.now().toString());
     localStorage.removeItem('usage_updated');
   } catch (err) {
-    console.warn('⚠️ Failed to notify other tabs:', err);
+    console.warn('Failed to notify other tabs:', err);
   }
 }
-</DOCUMENT>
