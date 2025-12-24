@@ -1,4 +1,3 @@
-<DOCUMENT filename="Server (37).js">
 // server.js - Complete Express.js server with all bug fixes and logger integration
 import express from 'express';
 import cors from 'cors';
