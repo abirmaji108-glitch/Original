@@ -734,7 +734,6 @@ app.get('/api/health', async (req, res) => {
       .from('profiles')
       .select('id')
       .limit(1);
- 
     checks.database = error ? 'unhealthy' : 'healthy';
   } catch (err) {
     checks.database = 'unhealthy';
@@ -775,7 +774,6 @@ app.get('/api/health', async (req, res) => {
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const startTime = Date.now();
   let userId = null;
- 
   try {
     const { prompt } = req.body;
     const authHeader = req.headers.authorization;
@@ -813,7 +811,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-       
+      
         if (authError) {
           return res.status(401).json({
             success: false,
@@ -829,7 +827,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           });
         }
         userId = user.id;
-     
+    
         // ✅ FETCH USER PROFILE: Get tier and usage
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -846,7 +844,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         // ✅ HANDLE MISSING PROFILE
         if (!profile) {
           logger.warn(`[${req.id}] No profile found for user ${userId}, creating default profile`);
-         
+        
           // Create profile if it doesn't exist
           const { error: createError } = await supabase
             .from('profiles')
@@ -856,22 +854,22 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               generations_this_month: 0,
               last_generation_reset: currentMonth
             });
-       
+      
           if (createError) {
             logger.error(`[${req.id}] Failed to create profile:`, createError);
           }
-       
+      
           // Use defaults
           userTier = 'free';
           generationsThisMonth = 0;
         } else {
           // ✅ EXISTING PROFILE - Extract data
           userTier = profile.user_tier || 'free';
-       
+      
           // ✅ CHECK IF MONTHLY RESET NEEDED
           if (profile.last_generation_reset !== currentMonth) {
             logger.log(`[${req.id}] New month detected, resetting generation count`);
-           
+          
             await supabase
               .from('profiles')
               .update({
@@ -879,13 +877,13 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
                 last_generation_reset: currentMonth
               })
               .eq('id', userId);
-         
+        
             generationsThisMonth = 0;
           } else {
             generationsThisMonth = profile.generations_this_month || 0;
           }
         }
-       
+      
         // ✅ CHECK TIER LIMITS (applies to both new and existing profiles)
         const tierLimits = {
           'free': 5,
@@ -894,7 +892,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           'business': 2000
         };
         const limit = tierLimits[userTier] || 5;
-       
+      
         // ✅ ENFORCE LIMITS
         if (generationsThisMonth >= limit) {
           // Log the limit hit
@@ -920,7 +918,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             const warningSent = profileData.warning_email_sent_at;
             const warningSentDate = warningSent ? new Date(warningSent) : null;
             const now = new Date();
-         
+        
             // Send warning email only once per month
             if (!warningSent || (now - warningSentDate) > 30 * 24 * 60 * 60 * 1000) {
               if (profileData.email && isValidEmail(profileData.email)) {
@@ -931,7 +929,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
                   generationsThisMonth,
                   limit
                 ).catch(err => logger.error('⚠️ Failed to send warning email:', err));
-               
+              
                 // Update warning email timestamp
                 await supabase
                   .from('profiles')
@@ -963,7 +961,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       'business': 10000
     };
     const maxLength = tierPromptLimits[userTier] || 1000;
-   
+  
     if (sanitizedPrompt.length > maxLength) {
       return res.status(400).json({
         success: false,
@@ -974,7 +972,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     // ✅ RATE LIMITING: Additional per-IP check
     const ipLimitKey = `ip:${req.ip}`;
     const ipLimitResult = await checkRateLimit(ipLimitKey, 15, 60);
-   
+  
     if (!ipLimitResult.allowed) {
       return res.status(429).json({
         success: false,
@@ -1026,13 +1024,13 @@ IMAGE RULES - VERY IMPORTANT:
       }
       const data = await response.json();
       generatedCode = data.content[0].text.trim();
-   
+  
       // Clean up markdown artifacts
       generatedCode = generatedCode
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-   
+  
       // Validate HTML
       if (!generatedCode.startsWith('<!DOCTYPE html>') && !generatedCode.startsWith('<html>')) {
         throw new Error('Invalid HTML generated - missing DOCTYPE');
@@ -1114,17 +1112,16 @@ IMAGE RULES - VERY IMPORTANT:
 app.get('/api/profile', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    
+   
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
         error: 'Authentication required'
       });
     }
-
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+   
     if (authError || !user) {
       logger.error(`[${req.id}] Auth error in profile endpoint:`, authError);
       return res.status(401).json({
@@ -1132,14 +1129,12 @@ app.get('/api/profile', async (req, res) => {
         error: 'Invalid authentication'
       });
     }
-
     // Fetch profile with minimal fields first
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, user_tier, generations_this_month, last_generation_reset, downloads_this_month, last_download_reset, stripe_customer_id, email, full_name')
       .eq('id', user.id)
       .maybeSingle();
-
     if (profileError) {
       logger.error(`[${req.id}] Profile query error:`, profileError);
       return res.status(500).json({
@@ -1148,13 +1143,12 @@ app.get('/api/profile', async (req, res) => {
         message: profileError.message
       });
     }
-
     // ✅ FIX: Handle case when profile doesn't exist
     if (!profile) {
       logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
-      
+     
       const currentMonth = new Date().toISOString().slice(0, 7);
-      
+     
       // Create default profile
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
@@ -1169,7 +1163,6 @@ app.get('/api/profile', async (req, res) => {
         })
         .select()
         .single();
-
       if (createError) {
         logger.error(`[${req.id}] Failed to create profile:`, createError);
         return res.status(500).json({
@@ -1177,7 +1170,6 @@ app.get('/api/profile', async (req, res) => {
           error: 'Failed to create profile'
         });
       }
-
       return res.json({
         success: true,
         data: {
@@ -1199,7 +1191,6 @@ app.get('/api/profile', async (req, res) => {
         }
       });
     }
-
     // Calculate remaining generations
     const currentMonth = new Date().toISOString().slice(0, 7);
     const tierLimits = {
@@ -1208,27 +1199,21 @@ app.get('/api/profile', async (req, res) => {
       'pro': 500,
       'business': 2000
     };
-
     const downloadLimits = {
       'free': 0,
       'basic': 10,
       'pro': 50,
       'business': 200
     };
-
     const limit = tierLimits[profile.user_tier] || 5;
     const downloadLimit = downloadLimits[profile.user_tier] || 0;
-
-    const generationsThisMonth = profile.last_generation_reset === currentMonth 
-      ? (profile.generations_this_month || 0) 
+    const generationsThisMonth = profile.last_generation_reset === currentMonth
+      ? (profile.generations_this_month || 0)
       : 0;
-
     const downloadsThisMonth = profile.last_download_reset === currentMonth
       ? (profile.downloads_this_month || 0)
       : 0;
-
     logger.log(`✅ [${req.id}] Profile fetched successfully for ${user.id}`);
-
     return res.json({
       success: true,
       data: {
@@ -1249,7 +1234,6 @@ app.get('/api/profile', async (req, res) => {
         }
       }
     });
-
   } catch (error) {
     logger.error(`❌ [${req.id}] Profile endpoint error:`, error);
     return res.status(500).json({
@@ -1265,7 +1249,6 @@ app.get('/api/profile', async (req, res) => {
 app.post('/api/track-download', downloadLimiter, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
- 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -1514,7 +1497,6 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     }
     // Create or get Stripe customer
     let customerId;
- 
     // Check if user already has a Stripe customer ID
     const { data: profile } = await supabase
       .from('profiles')
@@ -1523,7 +1505,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
       .single();
     if (profile?.stripe_customer_id) {
       customerId = profile.stripe_customer_id;
-   
+  
       // Verify customer still exists in Stripe
       try {
         await stripe.customers.retrieve(customerId);
@@ -1534,7 +1516,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
           metadata: { userId: user.id }
         });
         customerId = customer.id;
-     
+    
         // Update profile with new customer ID
         await supabase
           .from('profiles')
@@ -1548,7 +1530,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         metadata: { userId: user.id }
       });
       customerId = customer.id;
-   
+  
       // Save customer ID to profile
       await supabase
         .from('profiles')
@@ -1587,12 +1569,10 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     });
   } catch (error) {
     logger.error(`❌ [${req.id}] Checkout session error:`, error);
- 
     // ✅ FIX #13: Don't expose Stripe errors to client
     const errorMessage = error.type === 'StripeError'
       ? 'Payment processing error'
       : 'Internal server error';
- 
     res.status(500).json({
       success: false,
       error: errorMessage,
@@ -1682,7 +1662,6 @@ app.post('/api/cancel-subscription', async (req, res) => {
 app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
   try {
     const { key_type } = req.body;
- 
     if (!['groq', 'stripe', 'all'].includes(key_type)) {
       return res.status(400).json({
         success: false,
@@ -1742,7 +1721,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       const todayDownloads = downloadData.filter(d =>
         d.downloaded_at && d.downloaded_at.startsWith(today)
       ).length;
-   
+  
       const downloadsByTier = {
         basic: downloadData.filter(d => d.user_tier === 'basic').length,
         pro: downloadData.filter(d => d.user_tier === 'pro').length,
@@ -1996,7 +1975,6 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
 // SERVE STATIC FILES (React build)
 // ============================================
 app.use(express.static(path.join(__dirname, 'dist')));
-
 // ============================================
 // CATCH-ALL: 404 FOR UNKNOWN ROUTES (Frontend deployed separately)
 // ============================================
