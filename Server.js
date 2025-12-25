@@ -757,7 +757,7 @@ app.get('/api/health', async (req, res) => {
           'content-type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 10,
           messages: [{ role: 'user', content: 'test' }]
         })
@@ -865,7 +865,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 6000,
           system: 'You are a web developer. Return ONLY complete HTML code starting with <!DOCTYPE html>. Include <script src="https://cdn.tailwindcss.com"></script> for styling. NO explanations, NO markdown, NO code blocks.',
           messages: [{
