@@ -959,29 +959,26 @@ Generated on: ${new Date().toLocaleDateString()}
       return;
     }
 
-    // ✅ FIX 1: REMOVED empty input validation from here (was line 305-315)
-    // It will be checked after sanitization
+    // ✅ CHECK 1: Check length BEFORE sanitization (on raw input)
+    if (input.trim().length < 50) {
+      toast({
+        title: "Description too short",
+        description: `Please write at least 50 characters (currently ${input.trim().length})`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Frontend UX check only - real check is on backend
-if (!canGenerateMore) {
-  setShowUpgradeModal(true);
-  return;
-}
+    if (!canGenerateMore) {
+      setShowUpgradeModal(true);
+      return;
+    }
 
-// **NEW: Check length BEFORE sanitization (on raw input)**
-**if (input.trim().length < 50) {**
-**  toast({**
-**    title: "Description too short",**
-**    description: `Please write at least 50 characters (currently ${input.trim().length})`,**
-**    variant: "destructive",**
-**  });**
-**  return;**
-**}**
+    // Sanitize input
+    const sanitizedPrompt = sanitizeInput(input);
 
-// Sanitize input
-const sanitizedPrompt = sanitizeInput(input);
-
-    // ✅ FIX 1: Check empty input AFTER sanitization
+    // ✅ CHECK 2: Check empty input AFTER sanitization
     if (!sanitizedPrompt || sanitizedPrompt.trim().length === 0) {
       toast({
         title: "Invalid Input",
@@ -994,7 +991,7 @@ const sanitizedPrompt = sanitizeInput(input);
     // Now trim for API submission
     const trimmedPrompt = sanitizedPrompt.trim();
 
-    // ✅ FIX #2: Use tier-based validation
+    // ✅ CHECK 3: Check max length
     const tierMaxLengths = {
       free: 1000,
       basic: 2000,
@@ -1002,7 +999,6 @@ const sanitizedPrompt = sanitizeInput(input);
       business: 10000
     };
     
-    // ✅ FIX #2: Use trimmedPrompt for length check
     const maxLength = tierMaxLengths[tier] || 1000;
 
     if (trimmedPrompt.length > maxLength) {
