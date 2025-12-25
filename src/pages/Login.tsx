@@ -15,10 +15,10 @@ const Login = () => {
   const { toast } = useToast();
   const { signIn } = useAuth();
   const navigate = useNavigate();
- 
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-   
+
     // ✅ ADD VALIDATION
     if (!email || !password) {
       toast({
@@ -28,7 +28,7 @@ const Login = () => {
       });
       return;
     }
-   
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast({
         title: "Invalid Email",
@@ -37,16 +37,23 @@ const Login = () => {
       });
       return;
     }
-   
-    setLoading(true);
 
+    setLoading(true);
     try {
       await signIn(email, password);
+      
+      // ✅ FIX: Wait for session to be established
+      toast({
+        title: "Welcome Back!",
+        description: "Loading your account...",
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       navigate('/app');
     } catch (error) {
       console.error('Login error:', error);
     }
-
     setLoading(false);
   };
 
