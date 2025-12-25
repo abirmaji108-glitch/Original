@@ -49,7 +49,7 @@ const Signup = () => {
       });
       return;
     }
-   
+  
     if (!/[A-Z]/.test(password)) {
       toast({
         title: "Weak Password",
@@ -58,7 +58,7 @@ const Signup = () => {
       });
       return;
     }
-   
+  
     if (!/[0-9]/.test(password)) {
       toast({
         title: "Weak Password",
@@ -68,14 +68,22 @@ const Signup = () => {
       return;
     }
     setLoading(true);
-
     try {
       await signUp(email, password);
+      
+      // ✅ FIX: Wait for session to be established
+      toast({
+        title: "Account Created!",
+        description: "Setting up your account...",
+      });
+      
+      // Wait 2 seconds for session persistence
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       navigate('/app');
     } catch (error) {
       console.error('Signup error:', error);
     }
-
     setLoading(false);
   };
 
