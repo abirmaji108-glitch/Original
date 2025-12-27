@@ -19,7 +19,6 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✅ ADD VALIDATION
     if (!email || !password) {
       toast({
         title: "Missing Fields",
@@ -40,21 +39,25 @@ const Login = () => {
 
     setLoading(true);
     try {
+      // ✅ signIn now waits for session to persist internally
       await signIn(email, password);
       
-      // ✅ FIX: Wait for session to be established
+      // ✅ Show success message
       toast({
         title: "Welcome Back!",
-        description: "Loading your account...",
+        description: "Redirecting to dashboard...",
       });
       
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // ✅ Small delay to let state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       navigate('/app');
     } catch (error) {
       console.error('Login error:', error);
+      // Error toast already shown in AuthContext
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
