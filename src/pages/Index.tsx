@@ -960,20 +960,17 @@ Generated on: ${new Date().toLocaleDateString()}
     }
 
     // ✅ CHECK 1: Check length BEFORE sanitization (on raw input)
-    if (input.trim().length < 50) {
-      toast({
-        title: "Description too short",
-        description: `Please write at least 50 characters (currently ${input.trim().length})`,
-        variant: "destructive",
-      });
-      return;
-    }
+const currentInputLength = input.trim().length;
+console.log('🔍 Validation check:', { currentInputLength, inputPreview: input.substring(0, 100) });
 
-    // Frontend UX check only - real check is on backend
-    if (!canGenerateMore) {
-      setShowUpgradeModal(true);
-      return;
-    }
+if (currentInputLength < 50) {
+  toast({
+    title: "Description too short",
+    description: `Please write at least 50 characters (currently ${currentInputLength})`,
+    variant: "destructive",
+  });
+  return;
+}
 
     // Sanitize input
     const sanitizedPrompt = sanitizeInput(input);
@@ -1046,14 +1043,20 @@ Generated on: ${new Date().toLocaleDateString()}
 
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
-      const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
+const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
 ${trimmedPrompt}
+
 DESIGN STYLE: ${selectedStyle.toUpperCase()}
 ${styleInstruction}
 Apply this design style consistently throughout the website.
+
 REQUIREMENTS:
 - Complete HTML5 document starting with <!DOCTYPE html>
-- Use Tailwind CSS CDN: <script src="https://cdn.tailwindcss.com"></script>
+- Use Tailwind CSS CDN in HEAD: <script src="https://cdn.tailwindcss.com"></script>
+- CRITICAL: Add this in <head> section for proper rendering:
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+- Ensure ALL CSS loads BEFORE any content is rendered
 - Inline all CSS in <style> tags if needed beyond Tailwind
 - Inline all JavaScript in <script> tags
 - Mobile-first responsive design
@@ -1716,14 +1719,14 @@ ${new Date().toLocaleDateString()}
 
   // ✅ FIX 3: Fixed Template Click Handler
   const handleTemplateClick = (prompt: string) => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setInput(prompt);
-    
-    // Wait for state to update, then trigger generation
-    setTimeout(() => {
-      handleGenerate();
-    }, 100);
-  };
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setInput(prompt);
+  
+  // Wait longer for React state to fully update
+  setTimeout(() => {
+    handleGenerate();
+  }, 300);
+};
 
   const getAspectRatio = () => {
     switch (viewMode) {
@@ -2494,11 +2497,11 @@ ${new Date().toLocaleDateString()}
                   <div className="mb-4 border rounded-lg overflow-hidden">
                     <div className="bg-gray-100 px-4 py-2 font-semibold">Preview:</div>
                     <iframe
-                      srcDoc={sanitizedCode}
-                      className="w-full h-96 border-0"
-                      sandbox="allow-scripts allow-same-origin"
-                      title="Website Preview"
-                    />
+  srcDoc={sanitizedCode}
+  className="w-full h-96 border-0"
+  sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads"
+  title="Website Preview"
+/>
                   </div>
                   
                   <div className="relative mx-auto max-w-6xl">
@@ -2512,14 +2515,14 @@ ${new Date().toLocaleDateString()}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10 animate-fade-in"></div>
                       )}
                       <iframe
-                        srcDoc={sanitizedCode}
-                        className="w-full h-full border-0"
-                        style={{
-                          height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px'
-                        }}
-                        title="Generated Website Preview"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                      />
+  srcDoc={sanitizedCode}
+  className="w-full h-full border-0"
+  style={{
+    height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px'
+  }}
+  title="Generated Website Preview"
+  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-presentation allow-top-navigation-by-user-activation"
+/>
                     </div>
                     <div className="flex justify-center gap-3 mt-6">
                       <button className="zoom-control group" title="Zoom Out">
