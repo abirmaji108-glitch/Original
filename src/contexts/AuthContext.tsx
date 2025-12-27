@@ -26,23 +26,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchUserTier = async (userId: string) => {
     try {
       console.log(`🔍 Fetching tier for user ${userId}...`);
-
       // ✅ FIX: Query profiles table instead of user_tiers
       const { data, error } = await supabase
         .from('profiles')
         .select('user_tier')
         .eq('id', userId)
         .single();
-
       if (error) {
         console.error('❌ Failed to fetch user tier:', error);
         setUserTier('free');
         return;
       }
-
       const tier = data?.user_tier || 'free';
       setUserTier(tier);
-      
+     
       console.log(`✅ User tier verified from database: ${tier}`);
     } catch (error) {
       console.error('❌ Error fetching tier:', error);
@@ -72,10 +69,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (currentSession?.user) {
         console.log('✅ Session found, verifying tier...');
-       
+      
         setUser(currentSession.user);
         setSession(currentSession);
-       
+      
         await fetchUserTier(currentSession.user.id);
       } else {
         console.log('ℹ️ No active session');
@@ -105,25 +102,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message,
           variant: 'destructive',
         });
-        return;
+        throw error; // ✅ Throw error so Login.tsx knows it failed
       }
-      if (data.user) {
+      
+      if (data.user && data.session) {
+        // ✅ FIX: Wait for session to be persisted to localStorage
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // ✅ Verify session exists before updating state
+        const { data: { session: verifiedSession } } = await supabase.auth.getSession();
+        
+        if (!verifiedSession) {
+          console.error('❌ Session not persisted after login');
+          throw new Error('Session failed to persist');
+        }
+        
         setUser(data.user);
         setSession(data.session);
-       
         await fetchUserTier(data.user.id);
-        toast({
-          title: 'Welcome Back!',
-          description: 'Successfully signed in.',
-        });
+        
+        console.log('✅ Login successful, session persisted');
       }
     } catch (error) {
       console.error('❌ Sign in error:', error);
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred.',
+        title: 'Sign In Failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
         variant: 'destructive',
       });
+      throw error; // ✅ Propagate error to Login.tsx
     }
   };
 
@@ -139,26 +146,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message,
           variant: 'destructive',
         });
-        return;
+        throw error; // ✅ Throw error so Signup.tsx knows it failed
       }
-      if (data.user) {
+      
+      if (data.user && data.session) {
+        // ✅ FIX: Wait for session to be persisted to localStorage
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // ✅ Verify session exists before updating state
+        const { data: { session: verifiedSession } } = await supabase.auth.getSession();
+        
+        if (!verifiedSession) {
+          console.error('❌ Session not persisted after signup');
+          throw new Error('Session failed to persist');
+        }
+        
         setUser(data.user);
         setSession(data.session);
-       
-        // ✅ FIX: Create tier entry for new user
         await fetchUserTier(data.user.id);
-        toast({
-          title: 'Account Created!',
-          description: 'Welcome to Sento AI!',
-        });
+        
+        console.log('✅ Signup successful, session persisted');
       }
     } catch (error) {
       console.error('❌ Sign up error:', error);
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred.',
+        title: 'Sign Up Failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
         variant: 'destructive',
       });
+      throw error; // ✅ Propagate error to Signup.tsx
     }
   };
 
@@ -193,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ✅ FIX: Simplified auth listener - no infinite loops
   useEffect(() => {
     initializeAuth();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('🔔 Auth state changed:', event);
@@ -204,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Other events handled by signIn/signUp functions
       }
     );
+
     return () => {
       subscription.unsubscribe();
     };
@@ -225,11 +243,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
- 
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
- 
   return context;
 };
 
