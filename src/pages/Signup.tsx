@@ -49,7 +49,7 @@ const Signup = () => {
       });
       return;
     }
-  
+ 
     if (!/[A-Z]/.test(password)) {
       toast({
         title: "Weak Password",
@@ -58,7 +58,7 @@ const Signup = () => {
       });
       return;
     }
-  
+ 
     if (!/[0-9]/.test(password)) {
       toast({
         title: "Weak Password",
@@ -67,24 +67,28 @@ const Signup = () => {
       });
       return;
     }
+
     setLoading(true);
     try {
+      // ✅ signUp now waits for session to persist internally
       await signUp(email, password);
       
-      // ✅ FIX: Wait for session to be established
+      // ✅ Show success message
       toast({
         title: "Account Created!",
-        description: "Setting up your account...",
+        description: "Redirecting to dashboard...",
       });
       
-      // Wait 2 seconds for session persistence
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // ✅ Small delay to let state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       navigate('/app');
     } catch (error) {
       console.error('Signup error:', error);
+      // Error toast already shown in AuthContext
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
