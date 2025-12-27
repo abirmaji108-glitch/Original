@@ -47,12 +47,16 @@ const MyWebsites = () => {
       }
 
       // ✅ FIX: Query database filtered by user_id
-      const { data, error } = await supabase
-        .from('websites')
-        .select('*')
-        .eq('user_id', session.user.id)  // ✅ CRITICAL: Filter by user
-        .order('created_at', { ascending: false });
+      console.log('🔍 Current user ID:', session.user.id);
 
+const { data, error } = await supabase
+  .from('websites')
+  .select('*')
+  .eq('user_id', session.user.id)
+  .order('created_at', { ascending: false });
+
+console.log('📊 Loaded websites:', data?.length, 'websites');
+console.log('📊 User IDs in results:', data?.map(w => w.user_id));
       if (error) {
         console.error('Error loading websites:', error);
         showNotification("Failed to load websites");
