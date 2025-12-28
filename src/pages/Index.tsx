@@ -926,7 +926,9 @@ Generated on: ${new Date().toLocaleDateString()}
     return Array.from(tagSet);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (directPrompt?: string) => {
+  // Use directPrompt if provided, otherwise use input state
+  const actualInput = directPrompt || input;
     // Debug logging
     console.log('🔵 Generate called with input:', {
       inputLength: input.length,
@@ -960,8 +962,8 @@ Generated on: ${new Date().toLocaleDateString()}
     }
 
     // ✅ CHECK 1: Check length BEFORE sanitization (on raw input)
-const currentInputLength = input.trim().length;
-console.log('🔍 Validation check:', { currentInputLength, inputPreview: input.substring(0, 100) });
+const currentInputLength = actualInput.trim().length;
+console.log('🔍 Validation check:', { currentInputLength, inputPreview: actualInput.substring(0, 100) });
 
 if (currentInputLength < 50) {
   toast({
@@ -973,7 +975,8 @@ if (currentInputLength < 50) {
 }
 
     // Sanitize input
-    const sanitizedPrompt = sanitizeInput(input);
+    // Sanitize input
+const sanitizedPrompt = sanitizeInput(actualInput);
 
     // ✅ CHECK 2: Check empty input AFTER sanitization
     if (!sanitizedPrompt || sanitizedPrompt.trim().length === 0) {
@@ -1722,10 +1725,8 @@ ${new Date().toLocaleDateString()}
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setInput(prompt);
   
-  // Wait longer for React state to fully update
-  setTimeout(() => {
-    handleGenerate();
-  }, 300);
+  // Pass prompt directly to bypass state delay
+  handleGenerate(prompt);
 };
 
   const getAspectRatio = () => {
