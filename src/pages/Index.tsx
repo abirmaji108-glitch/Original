@@ -2127,7 +2127,7 @@ ${new Date().toLocaleDateString()}
                   <TemplateSelector
                     onSelectTemplate={(prompt) => {
                       setInput(prompt);
-                      handleGenerate();
+handleGenerate(prompt);
                     }}
                     userTier={tier}
                     isDarkMode={isDarkMode}
@@ -2207,7 +2207,7 @@ ${new Date().toLocaleDateString()}
                   {/* Generate Button */}
                   <div className="flex gap-4 pt-4">
                     <Button
-                      onClick={handleGenerate}
+                      onClick={() => handleGenerate()}
                       disabled={isGenerating || input.length < 50 || input.length > characterLimit}
                       className="group flex-1 relative bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-500 hover:via-pink-500 hover:to-blue-500 text-white font-bold h-14 rounded-xl shadow-glow transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 hover:shadow-[0_0_50px_rgba(168,85,247,0.6)] animate-gradient-shift overflow-hidden"
                       style={{ backgroundSize: '200% 200%' }}
