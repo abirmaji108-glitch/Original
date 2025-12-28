@@ -2537,7 +2537,7 @@ ${new Date().toLocaleDateString()}
                     <iframe
   srcDoc={sanitizedCode}
   className="w-full h-96 border-0"
-  sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads allow-top-navigation-by-user-activation"
+  sandbox="allow-scripts allow-same-origin"
   style={{ colorScheme: 'normal' }}
   title="Website Preview"
 />
@@ -2554,6 +2554,7 @@ ${new Date().toLocaleDateString()}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10 animate-fade-in"></div>
                       )}
                       <iframe
+  <iframe
   srcDoc={sanitizedCode}
   className="w-full h-full border-0"
   style={{
@@ -2561,7 +2562,7 @@ ${new Date().toLocaleDateString()}
     colorScheme: 'normal'
   }}
   title="Generated Website Preview"
-  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-presentation allow-top-navigation-by-user-activation allow-same-origin"
+  sandbox="allow-scripts allow-same-origin"
   loading="lazy"
 />
                     </div>
