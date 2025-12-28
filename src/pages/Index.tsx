@@ -2498,9 +2498,11 @@ ${new Date().toLocaleDateString()}
                   <div className="mb-4 border rounded-lg overflow-hidden">
                     <div className="bg-gray-100 px-4 py-2 font-semibold">Preview:</div>
                     <iframe
+  <iframe
   srcDoc={sanitizedCode}
   className="w-full h-96 border-0"
-  sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads"
+  sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads allow-top-navigation-by-user-activation"
+  style={{ colorScheme: 'normal' }}
   title="Website Preview"
 />
                   </div>
@@ -2519,10 +2521,12 @@ ${new Date().toLocaleDateString()}
   srcDoc={sanitizedCode}
   className="w-full h-full border-0"
   style={{
-    height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px'
+    height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px',
+    colorScheme: 'normal'
   }}
   title="Generated Website Preview"
-  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-presentation allow-top-navigation-by-user-activation"
+  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-presentation allow-top-navigation-by-user-activation allow-same-origin"
+  loading="lazy"
 />
                     </div>
                     <div className="flex justify-center gap-3 mt-6">
