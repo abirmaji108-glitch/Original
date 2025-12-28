@@ -254,16 +254,17 @@ const Index = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
   const [websiteHistory, setWebsiteHistory] = useState<Array<{
-    id: string;
-    name: string;
-    prompt: string;
-    html?: string;
-    timestamp: number;
-    tags: string[];
-    isFavorite: boolean;
-    notes: string;
-    thumbnail?: string;
-  }>>([]);
+  id: string;
+  name: string;
+  prompt: string;
+  html?: string;
+  timestamp: number;
+  tags: string[];
+  isFavorite: boolean;
+  notes: string;
+  thumbnail?: string;
+  userId?: string; // Add userId field
+}>>([]);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareLink, setShareLink] = useState("");
@@ -330,16 +331,23 @@ const Index = () => {
     feature: 'download'
   });
 
-  // Load history from localStorage on mount
-  useEffect(() => {
+  // Load history from localStorage on mount - FILTER BY USER
+useEffect(() => {
+  const loadUserHistory = () => {
     const saved = localStorage.getItem('websiteHistory');
-    if (saved) {
-      const history = JSON.parse(saved);
-      setWebsiteHistory(history);
+    if (saved && userId) {
+      const allHistory = JSON.parse(saved);
+      // Filter to only show current user's websites
+      const userHistory = allHistory.filter((site: any) => site.userId === userId);
+      setWebsiteHistory(userHistory);
       calculateAnalytics();
     }
-  }, []);
-
+  };
+  
+  if (userId) {
+    loadUserHistory();
+  }
+}, [userId]); // Trigger when userId changes
   useEffect(() => {
     calculateAnalytics();
   }, [websiteHistory]);
@@ -853,19 +861,34 @@ Generated on: ${new Date().toLocaleDateString()}
   };
 
   const saveProjectDetails = () => {
-    if (!editingProject) return;
-    const updatedHistory = websiteHistory.map(site =>
-      site.id === editingProject
-        ? {
-            ...site,
-            name: projectName.trim() || `Website ${websiteHistory.length}`,
-            tags: projectTags,
-            notes: projectNotes
-          }
-        : site
-    );
-    setWebsiteHistory(updatedHistory);
-    localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+  if (!editingProject) return;
+  
+  // Update in ALL history
+  const allHistory = JSON.parse(localStorage.getItem('websiteHistory') || '[]');
+  const updatedAllHistory = allHistory.map((site: any) =>
+    site.id === editingProject
+      ? {
+          ...site,
+          name: projectName.trim() || `Website ${websiteHistory.length}`,
+          tags: projectTags,
+          notes: projectNotes
+        }
+      : site
+  );
+  localStorage.setItem('websiteHistory', JSON.stringify(updatedAllHistory));
+  
+  // Update current user's view
+  const updatedUserHistory = websiteHistory.map(site =>
+    site.id === editingProject
+      ? {
+          ...site,
+          name: projectName.trim() || `Website ${websiteHistory.length}`,
+          tags: projectTags,
+          notes: projectNotes
+        }
+      : site
+  );
+  setWebsiteHistory(updatedUserHistory);
     setShowProjectModal(false);
     setEditingProject(null);
     setProjectName("");
@@ -874,12 +897,19 @@ Generated on: ${new Date().toLocaleDateString()}
   };
 
   const toggleFavorite = (id: string) => {
-    const updatedHistory = websiteHistory.map(site =>
-      site.id === id ? { ...site, isFavorite: !site.isFavorite } : site
-    );
-    setWebsiteHistory(updatedHistory);
-    localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-  };
+  // Update in ALL history
+  const allHistory = JSON.parse(localStorage.getItem('websiteHistory') || '[]');
+  const updatedAllHistory = allHistory.map((site: any) =>
+    site.id === id ? { ...site, isFavorite: !site.isFavorite } : site
+  );
+  localStorage.setItem('websiteHistory', JSON.stringify(updatedAllHistory));
+  
+  // Update current user's view
+  const updatedUserHistory = websiteHistory.map(site =>
+    site.id === id ? { ...site, isFavorite: !site.isFavorite } : site
+  );
+  setWebsiteHistory(updatedUserHistory);
+};
 
   const addTag = (tag: string) => {
     if (tag.trim() && !projectTags.includes(tag.trim())) {
@@ -1223,18 +1253,19 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       // ✅ ADD #14: Save generation to history
       await saveToHistory(userId, prompt, htmlCode);
 
-      // Save to history
-      const newWebsite = {
-        id: Date.now().toString(),
-        name: `Website ${websiteHistory.length + 1}`,
-        prompt: prompt,
-        html: htmlCode,
-        timestamp: Date.now(),
-        tags: [],
-        isFavorite: false,
-        notes: "",
-        thumbnail: ""
-      };
+      // Save to history WITH userId
+const newWebsite = {
+  id: Date.now().toString(),
+  name: `Website ${websiteHistory.length + 1}`,
+  prompt: prompt,
+  html: htmlCode,
+  timestamp: Date.now(),
+  tags: [],
+  isFavorite: false,
+  notes: "",
+  thumbnail: "",
+  userId: userId || user?.id // Add current user's ID
+};
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
@@ -1527,20 +1558,25 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       await saveToHistory(userId, lastPrompt, htmlCode);
 
       const newWebsite = {
-        id: Date.now().toString(),
-        name: `Website ${websiteHistory.length + 1}`,
-        prompt: lastPrompt,
-        html: htmlCode,
-        timestamp: Date.now(),
-        tags: [],
-        isFavorite: false,
-        notes: "",
-        thumbnail: ""
-      };
-      const updatedHistory = [newWebsite, ...websiteHistory];
-      setWebsiteHistory(updatedHistory);
-      localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
+  id: Date.now().toString(),
+  name: `Website ${websiteHistory.length + 1}`,
+  prompt: lastPrompt,
+  html: htmlCode,
+  timestamp: Date.now(),
+  tags: [],
+  isFavorite: false,
+  notes: "",
+  thumbnail: "",
+  userId: userId || user?.id // Add current user's ID
+};
+      // Merge with ALL history (including other users), then save
+const allHistory = JSON.parse(localStorage.getItem('websiteHistory') || '[]');
+const updatedAllHistory = [newWebsite, ...allHistory];
+localStorage.setItem('websiteHistory', JSON.stringify(updatedAllHistory));
 
+// But only show current user's history
+const currentUserHistory = [newWebsite, ...websiteHistory];
+setWebsiteHistory(currentUserHistory);
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
 
@@ -1615,11 +1651,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
   };
 
   const handleDelete = (id: string) => {
-    const updatedHistory = websiteHistory.filter(site => site.id !== id);
-    setWebsiteHistory(updatedHistory);
-    localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
-  };
-
+  // Remove from ALL history
+  const allHistory = JSON.parse(localStorage.getItem('websiteHistory') || '[]');
+  const updatedAllHistory = allHistory.filter((site: any) => site.id !== id);
+  localStorage.setItem('websiteHistory', JSON.stringify(updatedAllHistory));
+  
+  // Update current user's view
+  const updatedUserHistory = websiteHistory.filter(site => site.id !== id);
+  setWebsiteHistory(updatedUserHistory);
+};
   const handleLoadWebsite = (html: string) => {
     setGeneratedCode(html);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1724,11 +1764,8 @@ ${new Date().toLocaleDateString()}
   const handleTemplateClick = (prompt: string) => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setInput(prompt);
-  
-  // Pass prompt directly to bypass state delay
-  handleGenerate(prompt);
+  // Don't auto-generate - let user review and edit the prompt first
 };
-
   const getAspectRatio = () => {
     switch (viewMode) {
       case "tablet":
@@ -2125,13 +2162,13 @@ ${new Date().toLocaleDateString()}
                   <div className="absolute inset-0 -z-10 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-blue-500/20 rounded-2xl blur-xl animate-pulse-glow"></div>
                   
                   <TemplateSelector
-                    onSelectTemplate={(prompt) => {
-                      setInput(prompt);
-handleGenerate(prompt);
-                    }}
-                    userTier={tier}
-                    isDarkMode={isDarkMode}
-                  />
+  onSelectTemplate={(prompt) => {
+    setInput(prompt);
+    // Let user review the prompt before generating
+  }}
+  userTier={tier}
+  isDarkMode={isDarkMode}
+/>
 
                   {/* Style Selector */}
                   <div className="space-y-3">
