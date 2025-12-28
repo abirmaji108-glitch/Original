@@ -138,11 +138,13 @@ const sanitizeHTML = (html: string): string => {
     ],
     ALLOWED_ATTR: [
       'href', 'src', 'alt', 'title', 'class', 'id', 'style',
-      'type', 'name', 'value', 'placeholder', 'target', 'rel'
+      'type', 'name', 'value', 'placeholder', 'target', 'rel',
+      'charset', 'content', 'viewport' // ✅ ADD THESE
     ],
     ALLOW_DATA_ATTR: true,
-    ADD_TAGS: ['script'],
-    ADD_ATTR: ['onclick', 'onload'],
+    ADD_TAGS: ['script'], // ✅ CRITICAL: Allows Tailwind CDN
+    ADD_ATTR: ['src'], // ✅ CRITICAL: Allows script src attribute
+    KEEP_CONTENT: true, // ✅ NEW: Prevents DOMPurify from removing script content
   });
 };
 
