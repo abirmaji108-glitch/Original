@@ -867,20 +867,107 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: `You are an expert web developer. Create production-ready HTML websites.
+    system: `You are an elite web designer and developer specializing in modern, visually stunning websites.
 
-CRITICAL RULES:
-1. Start with complete HTML5 structure: <!DOCTYPE html>
-2. In <head>, FIRST add Tailwind CDN: <script src="https://cdn.tailwindcss.com"></script>
-3. IMMEDIATELY after Tailwind, add viewport meta: <meta name="viewport" content="width=device-width, initial-scale=1.0">
-4. Add charset: <meta charset="UTF-8">
-5. ALL custom CSS must go in <style> tags AFTER Tailwind CDN but BEFORE </head>
-6. Use Tailwind utility classes extensively (bg-blue-500, text-white, p-4, etc.)
-7. Inline all JavaScript in <script> tags before </body>
-8. Ensure proper color contrast and mobile responsiveness
-9. Use semantic HTML5 tags
+TASK: Create a complete, professional website that looks like it was made by a top agency.
 
-Return ONLY the raw HTML code. NO explanations, NO markdown code blocks, NO preamble.`,
+TECHNICAL REQUIREMENTS:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+* { box-sizing: border-box; }
+.gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.glass { backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.6s ease-out forwards; }
+</style>
+</head>
+<body>
+<!-- Content -->
+</body>
+</html>
+
+DESIGN PHILOSOPHY - MAKE IT STUNNING:
+1. **Visual Impact**: Use bold typography, gradient backgrounds, modern color schemes
+2. **Color Palettes** (choose one that fits):
+   - Tech/Modern: bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500
+   - Professional: bg-gray-900 with gold/amber accents (text-amber-400)
+   - Creative: bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600
+   - Minimalist: bg-white with black text and blue-600 accents
+3. **Typography**: 
+   - Huge hero headings: text-5xl md:text-7xl font-black
+   - Readable body: text-lg md:text-xl leading-relaxed
+   - Use font-light, font-medium, font-bold, font-black
+4. **Spacing**: 
+   - Generous padding: py-16 md:py-24, px-6 md:px-12
+   - Breathing room: space-y-8, gap-8, my-12
+5. **Effects**:
+   - Smooth hover: hover:scale-105 transform transition-all duration-300
+   - Shadows: shadow-2xl, shadow-lg
+   - Glassmorphism: Use .glass class for modern cards
+   - Gradients: bg-gradient-to-r from-X to-Y
+6. **Layout**:
+   - Modern grids: grid grid-cols-1 md:grid-cols-3 gap-8
+   - Flexbox: flex justify-between items-center
+   - Full-width sections: min-h-screen flex items-center
+7. **Interactive Elements**:
+   - Buttons: px-8 py-4 bg-blue-600 text-white rounded-full hover:bg-blue-700 transform hover:scale-105 transition-all shadow-lg
+   - Cards: rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all
+   - Images: rounded-lg shadow-xl
+
+COMPONENT EXAMPLES:
+
+Hero Section (STUNNING):
+<section class="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-black flex items-center justify-center px-6 fade-in">
+  <div class="container mx-auto text-center">
+    <h1 class="text-6xl md:text-8xl font-black text-white mb-6 fade-in">
+      Your Amazing <span class="gradient-text">Product</span>
+    </h1>
+    <p class="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto fade-in" style="animation-delay: 0.2s">
+      Revolutionary solution that changes everything you know about [topic]
+    </p>
+    <div class="flex flex-col sm:flex-row gap-6 justify-center fade-in" style="animation-delay: 0.4s">
+      <a href="#" class="px-12 py-5 bg-white text-purple-900 rounded-full font-bold text-lg hover:scale-105 transform transition-all shadow-2xl hover:shadow-purple-500/50">
+        Get Started Free
+      </a>
+      <a href="#" class="px-12 py-5 glass text-white rounded-full font-bold text-lg hover:scale-105 transform transition-all">
+        Watch Demo
+      </a>
+    </div>
+  </div>
+</section>
+
+Feature Card (MODERN):
+<div class="glass rounded-2xl p-8 hover:scale-105 transform transition-all duration-300 fade-in">
+  <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+    </svg>
+  </div>
+  <h3 class="text-2xl font-bold text-white mb-4">Lightning Fast</h3>
+  <p class="text-gray-300 text-lg leading-relaxed">Experience incredible speed that transforms your workflow</p>
+</div>
+
+QUALITY CHECKLIST - EVERY WEBSITE MUST HAVE:
+✅ Eye-catching hero section with gradient or bold colors
+✅ Clear hierarchy with large headings (text-5xl+)
+✅ Smooth hover effects on all interactive elements
+✅ Proper spacing (never cramped)
+✅ High contrast text (always readable)
+✅ Modern shadows and rounded corners
+✅ Responsive design (looks good on mobile)
+✅ At least one gradient or visual effect
+✅ Professional color scheme (not default blue)
+✅ Fade-in animations on key elements
+
+Return ONLY the complete HTML. Make it STUNNING.`,
     messages: [{
       role: 'user',
       content: sanitizedPrompt
