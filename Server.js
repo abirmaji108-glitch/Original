@@ -858,21 +858,34 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     const timeout = setTimeout(() => controller.abort(), 90000); // 90 seconds max
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 6000,
-          system: 'You are a web developer. Return ONLY complete HTML code starting with <!DOCTYPE html>. Include <script src="https://cdn.tailwindcss.com"></script> for styling. NO explanations, NO markdown, NO code blocks.',
-          messages: [{
-            role: 'user',
-            content: sanitizedPrompt
-          }]
-        }),
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': process.env.CLAUDE_API_KEY,
+    'anthropic-version': '2023-06-01'
+  },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 6000,
+    system: `You are an expert web developer. Create production-ready HTML websites.
+
+CRITICAL RULES:
+1. Start with complete HTML5 structure: <!DOCTYPE html>
+2. In <head>, FIRST add Tailwind CDN: <script src="https://cdn.tailwindcss.com"></script>
+3. IMMEDIATELY after Tailwind, add viewport meta: <meta name="viewport" content="width=device-width, initial-scale=1.0">
+4. Add charset: <meta charset="UTF-8">
+5. ALL custom CSS must go in <style> tags AFTER Tailwind CDN but BEFORE </head>
+6. Use Tailwind utility classes extensively (bg-blue-500, text-white, p-4, etc.)
+7. Inline all JavaScript in <script> tags before </body>
+8. Ensure proper color contrast and mobile responsiveness
+9. Use semantic HTML5 tags
+
+Return ONLY the raw HTML code. NO explanations, NO markdown code blocks, NO preamble.`,
+    messages: [{
+      role: 'user',
+      content: sanitizedPrompt
+    }]
+  }),
         signal: controller.signal
       });
       clearTimeout(timeout);
