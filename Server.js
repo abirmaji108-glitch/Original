@@ -885,7 +885,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
    ❌ NEVER: Dark background with dark text
    ❌ NEVER: Light background with light text
 
-MANDATORY HTML STRUCTURE:
+MANDATORY HTML STRUCTURE (MUST FOLLOW EXACTLY):
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -893,11 +893,29 @@ MANDATORY HTML STRUCTURE:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fallback styles in case Tailwind fails to load */
+        body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        * { box-sizing: border-box; }
+    </style>
 </head>
 <body class="bg-white text-gray-900">
     <!-- Content here -->
 </body>
 </html>
+
+CRITICAL RULES FOR COLORS (NEVER VIOLATE):
+1. ✅ ALWAYS use these exact color combinations:
+   - Light sections: bg-white OR bg-gray-50 with text-gray-900
+   - Dark sections: bg-gray-900 OR bg-black with text-white
+   - Colored sections: bg-blue-600 with text-white, bg-purple-600 with text-white
+   
+2. ❌ NEVER use these combinations:
+   - bg-gray-800 with text-gray-600 (too dark)
+   - bg-purple-900 with text-purple-300 (unreadable)
+   - bg-blue-900 with text-blue-400 (low contrast)
+   - Any dark background with dark text
+   - Any light background with light text
 
 DESIGN REQUIREMENTS:
 
