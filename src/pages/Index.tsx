@@ -139,12 +139,16 @@ const sanitizeHTML = (html: string): string => {
     ALLOWED_ATTR: [
       'href', 'src', 'alt', 'title', 'class', 'id', 'style',
       'type', 'name', 'value', 'placeholder', 'target', 'rel',
-      'charset', 'content', 'viewport' // ✅ ADD THESE
+      'charset', 'content', 'viewport', 'http-equiv'
     ],
     ALLOW_DATA_ATTR: true,
-    ADD_TAGS: ['script'], // ✅ CRITICAL: Allows Tailwind CDN
-    ADD_ATTR: ['src'], // ✅ CRITICAL: Allows script src attribute
-    KEEP_CONTENT: true, // ✅ NEW: Prevents DOMPurify from removing script content
+    ADD_TAGS: ['script', 'style'],
+    ADD_ATTR: ['src', 'type'],
+    KEEP_CONTENT: true,
+    FORCE_BODY: false,
+    WHOLE_DOCUMENT: true,
+    ALLOW_UNKNOWN_PROTOCOLS: false,
+    SAFE_FOR_TEMPLATES: false
   });
 };
 
@@ -1242,10 +1246,15 @@ Return ONLY the complete HTML code. No explanations, no markdown, no code blocks
       let htmlCode = data.htmlCode;
       
       // ✅ FIX #8: Sanitize generated code before storing
-      const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
-        ALLOWED_TAGS: ['html', 'head', 'body', 'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'style', 'script', 'meta', 'title', 'link'],
-        ALLOWED_ATTR: ['class', 'id', 'href', 'src', 'alt', 'style', 'type', 'rel', 'charset', 'name', 'content']
-      });
+const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
+  ALLOWED_TAGS: ['html', 'head', 'body', 'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'style', 'script', 'meta', 'title', 'link', 'section', 'article', 'header', 'footer', 'nav', 'button', 'input', 'form', 'ul', 'ol', 'li'],
+  ALLOWED_ATTR: ['class', 'id', 'href', 'src', 'alt', 'style', 'type', 'rel', 'charset', 'name', 'content', 'viewport', 'http-equiv', 'target', 'placeholder'],
+  ALLOW_DATA_ATTR: true,
+  ADD_TAGS: ['script', 'style'],
+  KEEP_CONTENT: true,
+  WHOLE_DOCUMENT: true,
+  FORCE_BODY: false
+});
 
       htmlCode = sanitizedCode;
 
@@ -1546,10 +1555,15 @@ const newWebsite = {
       let htmlCode = data.htmlCode;
       
       // ✅ FIX #8: Sanitize generated code before storing
-      const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
-        ALLOWED_TAGS: ['html', 'head', 'body', 'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'style', 'script', 'meta', 'title', 'link'],
-        ALLOWED_ATTR: ['class', 'id', 'href', 'src', 'alt', 'style', 'type', 'rel', 'charset', 'name', 'content']
-      });
+const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
+  ALLOWED_TAGS: ['html', 'head', 'body', 'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'style', 'script', 'meta', 'title', 'link', 'section', 'article', 'header', 'footer', 'nav', 'button', 'input', 'form', 'ul', 'ol', 'li'],
+  ALLOWED_ATTR: ['class', 'id', 'href', 'src', 'alt', 'style', 'type', 'rel', 'charset', 'name', 'content', 'viewport', 'http-equiv', 'target', 'placeholder'],
+  ALLOW_DATA_ATTR: true,
+  ADD_TAGS: ['script', 'style'],
+  KEEP_CONTENT: true,
+  WHOLE_DOCUMENT: true,
+  FORCE_BODY: false
+});
 
       htmlCode = sanitizedCode;
 
