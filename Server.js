@@ -806,10 +806,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
-       
+      
         if (!error && user) {
           userId = user.id;
-         
+        
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
@@ -825,18 +825,16 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-           
+          
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
            // ✅ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
 const TESTING_MODE = true; // ⚠️ SET TO FALSE AFTER TESTING
 const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
-
 // Check if user is admin
 const { data: { user: authUser } } = await supabase.auth.getUser(token);
 const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
-
 // Check limits (skip for admins in testing mode)
 const tierLimits = {
   free: 2,
@@ -845,7 +843,6 @@ const tierLimits = {
   business: 200
 };
 const limit = tierLimits[userTier] || 2;
-
 if (!TESTING_MODE || !isAdmin) {
   // Normal limit enforcement for non-admins
   if (generationsThisMonth >= limit) {
@@ -882,25 +879,11 @@ if (!TESTING_MODE || !isAdmin) {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: `You are a professional web designer. Your ONLY job is to create beautiful, readable websites.
+    system: `You are an expert web designer. Generate ONLY complete, working HTML code.
 
-🚨 CRITICAL COLOR RULES - NEVER VIOLATE:
-1. Light backgrounds MUST use dark text:
-   - bg-white or bg-gray-50 → text-gray-900 or text-black
-   - bg-blue-50 → text-gray-900
-   
-2. Dark backgrounds MUST use light text:
-   - bg-gray-900 or bg-black → text-white or text-gray-100
-   - bg-blue-900 → text-white
+CRITICAL RULES (NEVER VIOLATE):
 
-3. FORBIDDEN COMBINATIONS (will cause unreadable text):
-   ❌ NEVER: bg-purple-900 with text-purple-300
-   ❌ NEVER: bg-blue-900 with text-blue-300
-   ❌ NEVER: bg-gray-800 with text-gray-600
-   ❌ NEVER: Dark background with dark text
-   ❌ NEVER: Light background with light text
-
-MANDATORY HTML STRUCTURE (MUST FOLLOW EXACTLY):
+1. STRUCTURE (MANDATORY):
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -908,109 +891,86 @@ MANDATORY HTML STRUCTURE (MUST FOLLOW EXACTLY):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Fallback styles in case Tailwind fails to load */
-        body { margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-        * { box-sizing: border-box; }
-    </style>
 </head>
-<body class="bg-white text-gray-900">
-    <!-- Content here -->
+<body class="bg-white">
+    <!-- ALL CONTENT HERE -->
 </body>
 </html>
 
-CRITICAL RULES FOR COLORS (NEVER VIOLATE):
-1. ✅ ALWAYS use these exact color combinations:
-   - Light sections: bg-white OR bg-gray-50 with text-gray-900
-   - Dark sections: bg-gray-900 OR bg-black with text-white
-   - Colored sections: bg-blue-600 with text-white, bg-purple-600 with text-white
-   
-2. ❌ NEVER use these combinations:
-   - bg-gray-800 with text-gray-600 (too dark)
-   - bg-purple-900 with text-purple-300 (unreadable)
-   - bg-blue-900 with text-blue-400 (low contrast)
-   - Any dark background with dark text
-   - Any light background with light text
+2. HERO SECTION (FIRST SECTION - MANDATORY):
+- MUST use vibrant gradient background
+- Example: class="bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600"
+- Text MUST be white: class="text-white"
+- Heading MUST be HUGE: class="text-6xl md:text-8xl font-bold"
+- MUST include 2 buttons with contrasting colors
 
-DESIGN REQUIREMENTS:
+3. COLOR RULES (STRICT):
+✅ GOOD COMBINATIONS:
+- bg-gradient-to-r from-purple-600 to-blue-600 + text-white
+- bg-gradient-to-r from-pink-500 to-orange-500 + text-white  
+- bg-white + text-gray-900
+- bg-gray-900 + text-white
 
-1. HERO SECTION (MUST BE STUNNING):
-   - Use: bg-gradient-to-r from-blue-600 to-purple-600 with text-white
-   - Heading: text-6xl font-bold text-white
-   - Subtext: text-xl text-gray-100
-   - Button: bg-white text-blue-600 hover:bg-gray-100
+❌ FORBIDDEN (WILL CAUSE FAILURE):
+- bg-gray-800 + text-gray-600
+- bg-purple-900 + text-purple-300
+- Any dark bg + dark text
+- Any light bg + light text
 
-2. CONTENT SECTIONS (MUST ALTERNATE):
-   - Section 1: bg-white text-gray-900
-   - Section 2: bg-gray-50 text-gray-900
-   - Section 3: bg-white text-gray-900
-   - Dark section (optional): bg-gray-900 text-white
+4. IMAGES (MANDATORY):
+- Hero: https://source.unsplash.com/1920x1080?{topic}
+- Cards: https://source.unsplash.com/800x600?{topic}
+- Team: https://source.unsplash.com/400x400?portrait,professional
+- Replace {topic} with RELEVANT keywords from user's description
 
-3. CARDS (MUST BE READABLE):
-   - On light bg: bg-white text-gray-900 border border-gray-200
-   - On dark bg: bg-gray-800 text-white border border-gray-700
+5. LAYOUT REQUIREMENTS:
+- Hero section: FULL height with gradient background
+- Content sections: Alternate bg-white and bg-gray-50
+- Cards: White background with shadows
+- Spacing: py-24 for sections, py-16 for smaller sections
+- ALL text must be readable (proper contrast)
 
-4. BUTTONS (HIGH CONTRAST):
-   - Primary: bg-blue-600 text-white hover:bg-blue-700
-   - Secondary: bg-gray-200 text-gray-900 hover:bg-gray-300
+6. TYPOGRAPHY:
+- Main heading: text-6xl md:text-8xl font-bold
+- Section headings: text-4xl md:text-5xl font-bold  
+- Body text: text-lg leading-relaxed
+- Button text: text-xl font-bold
 
-5. SPACING (MUST BE GENEROUS):
-   - Sections: py-16 md:py-24
-   - Containers: px-6 md:px-12
-   - Headings: mb-6 or mb-8
-   - Paragraphs: mb-4
+EXAMPLE (FOLLOW THIS PATTERN):
 
-6. TYPOGRAPHY (MUST BE LARGE):
-   - Main heading: text-5xl md:text-6xl font-bold
-   - Section headings: text-3xl md:text-4xl font-bold
-   - Body text: text-lg leading-relaxed
-
-EXAMPLE OF PERFECT CODE:
-
-<section class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-24">
+<section class="min-h-screen bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600 flex items-center justify-center text-white py-24">
     <div class="max-w-7xl mx-auto px-6 text-center">
-        <h1 class="text-6xl font-bold mb-6">Your Amazing Product</h1>
-        <p class="text-xl text-gray-100 mb-8 max-w-2xl mx-auto">
+        <h1 class="text-6xl md:text-8xl font-bold mb-6">
+            Your Amazing Product
+        </h1>
+        <p class="text-2xl mb-8 text-white/90 max-w-3xl mx-auto">
             Transform your business with our cutting-edge solution
         </p>
-        <button class="bg-white text-blue-600 px-8 py-4 rounded-lg font-bold hover:bg-gray-100 transition-all">
-            Get Started Free
-        </button>
+        <div class="flex gap-4 justify-center">
+            <button class="bg-white text-purple-600 px-8 py-4 rounded-xl text-xl font-bold hover:bg-gray-100">
+                Get Started
+            </button>
+            <button class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-white/10">
+                Learn More
+            </button>
+        </div>
     </div>
 </section>
 
-<section class="bg-white text-gray-900 py-24">
+<section class="bg-white py-24">
     <div class="max-w-7xl mx-auto px-6">
-        <h2 class="text-4xl font-bold text-center mb-12">Features</h2>
+        <h2 class="text-5xl font-bold text-center mb-16 text-gray-900">Features</h2>
         <div class="grid md:grid-cols-3 gap-8">
-            <div class="bg-white border border-gray-200 p-8 rounded-xl shadow-lg">
-                <h3 class="text-2xl font-bold mb-4 text-gray-900">Fast</h3>
-                <p class="text-gray-700">Lightning-fast performance for your needs</p>
-            </div>
-            <div class="bg-white border border-gray-200 p-8 rounded-xl shadow-lg">
-                <h3 class="text-2xl font-bold mb-4 text-gray-900">Secure</h3>
-                <p class="text-gray-700">Bank-level security for your data</p>
-            </div>
-            <div class="bg-white border border-gray-200 p-8 rounded-xl shadow-lg">
-                <h3 class="text-2xl font-bold mb-4 text-gray-900">Reliable</h3>
-                <p class="text-gray-700">99.9% uptime guarantee</p>
+            <div class="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-xl">
+                <img src="https://source.unsplash.com/800x600?technology" alt="Feature" class="w-full h-48 object-cover rounded-xl mb-6">
+                <h3 class="text-2xl font-bold mb-4 text-gray-900">Fast Performance</h3>
+                <p class="text-gray-700 text-lg">Lightning-fast speed for your needs</p>
             </div>
         </div>
     </div>
 </section>
 
-FINAL CHECKLIST - MUST HAVE ALL:
-✅ Hero section with gradient background and white text
-✅ At least 3 content sections with alternating backgrounds
-✅ All text is readable (proper contrast)
-✅ Large headings (text-4xl or bigger)
-✅ Generous spacing (py-16 or more on sections)
-✅ Modern shadows and borders
-✅ Responsive design (md: breakpoints)
-✅ Professional color scheme
-✅ Clean, organized layout
-
-Return ONLY complete HTML. NO explanations. NO markdown. Just raw HTML starting with <!DOCTYPE html>.`,
+Return ONLY the HTML. No explanations. No markdown. Just <!DOCTYPE html>...`,
     messages: [{
       role: 'user',
       content: sanitizedPrompt
@@ -1063,7 +1023,7 @@ Return ONLY complete HTML. NO explanations. NO markdown. Just raw HTML starting 
     } catch (apiError) {
       clearTimeout(timeout);
       console.error('Claude API error:', apiError);
-     
+    
       return res.status(502).json({
         success: false,
         error: 'AI service temporarily unavailable',
@@ -1119,9 +1079,7 @@ app.get('/api/profile', async (req, res) => {
     // ✅ FIX: Handle case when profile doesn't exist
     if (!profile) {
       logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
- 
       const currentMonth = new Date().toISOString().slice(0, 7);
- 
       // Create default profile
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
