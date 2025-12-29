@@ -806,10 +806,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
-      
+     
         if (!error && user) {
           userId = user.id;
-        
+       
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
@@ -825,7 +825,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-          
+         
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
@@ -879,7 +879,7 @@ if (!TESTING_MODE || !isAdmin) {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: `You are an expert web designer. Generate ONLY complete, working HTML code.
+    system: `You are an expert web designer. Generate ONLY complete, working HTML code with INLINE CSS.
 
 CRITICAL RULES (NEVER VIOLATE):
 
@@ -890,85 +890,151 @@ CRITICAL RULES (NEVER VIOLATE):
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        
+        /* Gradient backgrounds */
+        .hero-gradient { background: linear-gradient(to right, #9333ea, #ec4899, #2563eb); }
+        .hero-gradient-alt { background: linear-gradient(to right, #d97706, #ea580c, #dc2626); }
+        
+        /* Layout */
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+        .section { padding: 6rem 0; }
+        .min-h-screen { min-height: 100vh; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-4 { gap: 1rem; }
+        .gap-8 { gap: 2rem; }
+        
+        /* Grid */
+        .grid { display: grid; }
+        .grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        
+        /* Text */
+        .text-white { color: white; }
+        .text-gray-900 { color: #111827; }
+        .text-gray-700 { color: #374151; }
+        .text-center { text-align: center; }
+        .text-6xl { font-size: 3.75rem; line-height: 1; }
+        .text-5xl { font-size: 3rem; line-height: 1; }
+        .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+        .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .font-bold { font-weight: 700; }
+        
+        /* Spacing */
+        .p-8 { padding: 2rem; }
+        .py-24 { padding-top: 6rem; padding-bottom: 6rem; }
+        .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mb-8 { margin-bottom: 2rem; }
+        .mb-16 { margin-bottom: 4rem; }
+        
+        /* Backgrounds */
+        .bg-white { background-color: white; }
+        .bg-gray-50 { background-color: #f9fafb; }
+        .bg-gray-900 { background-color: #111827; }
+        
+        /* Borders & Shadows */
+        .rounded-xl { border-radius: 0.75rem; }
+        .rounded-2xl { border-radius: 1rem; }
+        .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .border-2 { border-width: 2px; }
+        .border-gray-200 { border-color: #e5e7eb; }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background-color: white;
+            color: #9333ea;
+        }
+        .btn-primary:hover {
+            background-color: #f3f4f6;
+            transform: scale(1.05);
+        }
+        .btn-secondary {
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Images */
+        img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 0.75rem;
+        }
+        
+        /* Responsive */
+        @media (min-width: 768px) {
+            .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+            .text-6xl { font-size: 6rem; }
+            .text-5xl { font-size: 4rem; }
+        }
+    </style>
 </head>
-<body class="bg-white">
+<body>
     <!-- ALL CONTENT HERE -->
 </body>
 </html>
 
 2. HERO SECTION (FIRST SECTION - MANDATORY):
-- MUST use vibrant gradient background
-- Example: class="bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600"
-- Text MUST be white: class="text-white"
-- Heading MUST be HUGE: class="text-6xl md:text-8xl font-bold"
-- MUST include 2 buttons with contrasting colors
-
-3. COLOR RULES (STRICT):
-✅ GOOD COMBINATIONS:
-- bg-gradient-to-r from-purple-600 to-blue-600 + text-white
-- bg-gradient-to-r from-pink-500 to-orange-500 + text-white  
-- bg-white + text-gray-900
-- bg-gray-900 + text-white
-
-❌ FORBIDDEN (WILL CAUSE FAILURE):
-- bg-gray-800 + text-gray-600
-- bg-purple-900 + text-purple-300
-- Any dark bg + dark text
-- Any light bg + light text
-
-4. IMAGES (MANDATORY):
-- Hero: https://source.unsplash.com/1920x1080?{topic}
-- Cards: https://source.unsplash.com/800x600?{topic}
-- Team: https://source.unsplash.com/400x400?portrait,professional
-- Replace {topic} with RELEVANT keywords from user's description
-
-5. LAYOUT REQUIREMENTS:
-- Hero section: FULL height with gradient background
-- Content sections: Alternate bg-white and bg-gray-50
-- Cards: White background with shadows
-- Spacing: py-24 for sections, py-16 for smaller sections
-- ALL text must be readable (proper contrast)
-
-6. TYPOGRAPHY:
-- Main heading: text-6xl md:text-8xl font-bold
-- Section headings: text-4xl md:text-5xl font-bold  
-- Body text: text-lg leading-relaxed
-- Button text: text-xl font-bold
-
-EXAMPLE (FOLLOW THIS PATTERN):
-
-<section class="min-h-screen bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600 flex items-center justify-center text-white py-24">
-    <div class="max-w-7xl mx-auto px-6 text-center">
-        <h1 class="text-6xl md:text-8xl font-bold mb-6">
+<section class="hero-gradient min-h-screen flex items-center justify-center text-white section">
+    <div class="container text-center">
+        <h1 class="text-6xl font-bold mb-6">
             Your Amazing Product
         </h1>
-        <p class="text-2xl mb-8 text-white/90 max-w-3xl mx-auto">
+        <p class="text-2xl mb-8">
             Transform your business with our cutting-edge solution
         </p>
         <div class="flex gap-4 justify-center">
-            <button class="bg-white text-purple-600 px-8 py-4 rounded-xl text-xl font-bold hover:bg-gray-100">
-                Get Started
-            </button>
-            <button class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl text-xl font-bold hover:bg-white/10">
-                Learn More
-            </button>
+            <button class="btn btn-primary">Get Started</button>
+            <button class="btn btn-secondary">Learn More</button>
         </div>
     </div>
 </section>
 
-<section class="bg-white py-24">
-    <div class="max-w-7xl mx-auto px-6">
+3. CONTENT SECTIONS:
+<section class="bg-white section">
+    <div class="container">
         <h2 class="text-5xl font-bold text-center mb-16 text-gray-900">Features</h2>
-        <div class="grid md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 grid-cols-3 gap-8">
             <div class="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-xl">
-                <img src="https://source.unsplash.com/800x600?technology" alt="Feature" class="w-full h-48 object-cover rounded-xl mb-6">
+                <img src="https://source.unsplash.com/800x600?technology" alt="Feature">
                 <h3 class="text-2xl font-bold mb-4 text-gray-900">Fast Performance</h3>
                 <p class="text-gray-700 text-lg">Lightning-fast speed for your needs</p>
             </div>
         </div>
     </div>
 </section>
+
+4. MANDATORY RULES:
+- Use .hero-gradient for first section
+- Alternate .bg-white and .bg-gray-50 for content sections
+- ALL text must be readable (.text-white on gradients, .text-gray-900 on white)
+- Use .shadow-xl on cards
+- Include 2 buttons in hero section
+- Use Unsplash images: https://source.unsplash.com/800x600?{topic}
 
 Return ONLY the HTML. No explanations. No markdown. Just <!DOCTYPE html>...`,
     messages: [{
@@ -1023,7 +1089,7 @@ Return ONLY the HTML. No explanations. No markdown. Just <!DOCTYPE html>...`,
     } catch (apiError) {
       clearTimeout(timeout);
       console.error('Claude API error:', apiError);
-    
+   
       return res.status(502).json({
         success: false,
         error: 'AI service temporarily unavailable',
