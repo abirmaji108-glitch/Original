@@ -2570,10 +2570,9 @@ ${new Date().toLocaleDateString()}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10 animate-fade-in"></div>
                       )}
                       <iframe
-  srcDoc={sanitizedCode}
-  className="w-full h-full border-0"
   style={{
-    height: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '600px',
+    minHeight: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '800px',
+    height: '100%',
     colorScheme: 'normal'
   }}
   title="Generated Website Preview"
