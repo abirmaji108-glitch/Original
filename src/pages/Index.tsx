@@ -2551,7 +2551,6 @@ ${new Date().toLocaleDateString()}
                   <div className="mb-4 border rounded-lg overflow-hidden">
                     <div className="bg-gray-100 px-4 py-2 font-semibold">Preview:</div>
                     <iframe
-  <iframe
   srcDoc={sanitizedCode}
   className="w-full border-0"
   sandbox="allow-scripts allow-same-origin"
