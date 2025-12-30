@@ -878,7 +878,7 @@ if (!TESTING_MODE || !isAdmin) {
   },
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 9000, // ✅ Reduced from 6000 - saves 33% cost per generation
+    max_tokens: 4000, // ✅ Reduced from 6000 - saves 33% cost per generation
     system: `You are an ELITE web designer creating STUNNING, MODERN websites that WOW users.
 
 🎯 DESIGN PHILOSOPHY:
