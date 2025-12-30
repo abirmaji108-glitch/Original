@@ -806,10 +806,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
-  
+     
         if (!error && user) {
           userId = user.id;
-    
+       
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
@@ -825,7 +825,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-      
+         
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
@@ -878,331 +878,165 @@ if (!TESTING_MODE || !isAdmin) {
   },
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 4000, // ✅ Reduced from 6000 - saves 33% cost per generation
-    system: `You are an ELITE web designer creating STUNNING, MODERN websites that WOW users.
+    max_tokens: 6000,
+    system: `You are an expert web designer. Generate ONLY complete, working HTML code with INLINE CSS.
 
-🎯 DESIGN PHILOSOPHY:
-- Make it BEAUTIFUL first, functional second
-- Use BOLD colors and gradients
-- Add PLAYFUL elements (emojis, animations)
-- Create VISUAL HIERARCHY with size/color
-- Make it feel PREMIUM and POLISHED
+CRITICAL RULES (NEVER VIOLATE):
 
-🎨 MANDATORY STRUCTURE:
+1. STRUCTURE (MANDATORY):
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Website</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { 
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; 
-  line-height: 1.6; 
-  overflow-x: hidden;
-}
-
-/* ✨ VIBRANT GRADIENTS */
-.hero-gradient { 
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  position: relative;
-  overflow: hidden;
-}
-.hero-gradient::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-  animation: rotate 20s linear infinite;
-}
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.gradient-blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-.gradient-purple { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
-.gradient-orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-.gradient-green { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
-.gradient-pink { background: linear-gradient(135deg, #ff6b9d 0%, #c06c84 100%); }
-.gradient-sunset { background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 50%, #a960ee 100%); }
-
-/* 🎪 GLASSMORPHISM */
-.glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.glass-dark {
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 📐 LAYOUT */
-.container { max-width: 1280px; margin: 0 auto; padding: 0 2rem; }
-.section { padding: 6rem 0; position: relative; }
-.grid { display: grid; gap: 2rem; }
-.grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-.grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-.flex { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.flex-center { display: flex; align-items: center; justify-content: center; }
-.min-h-screen { min-height: 100vh; }
-
-/* 🎨 TYPOGRAPHY */
-.text-white { color: #fff; }
-.text-gray { color: #374151; }
-.text-center { text-align: center; }
-.text-6xl { 
-  font-size: 4rem; 
-  line-height: 1; 
-  font-weight: 900; 
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.text-4xl { font-size: 2.5rem; line-height: 1.2; font-weight: 800; }
-.text-3xl { font-size: 2rem; line-height: 1.3; font-weight: 700; }
-.text-2xl { font-size: 1.75rem; line-height: 1.4; font-weight: 600; }
-.text-xl { font-size: 1.5rem; line-height: 1.75; font-weight: 500; }
-
-/* 🎯 EMOJI DECORATIONS */
-.emoji-float {
-  font-size: 4rem;
-  position: absolute;
-  animation: float 6s ease-in-out infinite;
-  opacity: 0.3;
-  filter: drop-shadow(0 0 20px rgba(255,255,255,0.3));
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-30px) rotate(10deg); }
-}
-
-/* 💎 SPACING */
-.p-8 { padding: 2.5rem; }
-.py-20 { padding-top: 6rem; padding-bottom: 6rem; }
-.mb-8 { margin-bottom: 2.5rem; }
-.mb-16 { margin-bottom: 4rem; }
-
-/* 🎴 PREMIUM CARDS */
-.card {
-  background: #fff;
-  border-radius: 24px;
-  padding: 2.5rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 2px solid transparent;
-  position: relative;
-  overflow: hidden;
-}
-.card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 100%);
-  opacity: 0;
-  transition: opacity 0.4s;
-}
-.card:hover::before {
-  opacity: 1;
-}
-.card:hover {
-  transform: translateY(-12px) scale(1.02);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
-  border-color: rgba(102, 126, 234, 0.3);
-}
-
-/* 🚀 STUNNING BUTTONS */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1.25rem 3rem;
-  border-radius: 16px;
-  font-weight: 700;
-  font-size: 1.125rem;
-  cursor: pointer;
-  border: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-decoration: none;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-}
-.btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.2) 100%);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-.btn:hover::before {
-  opacity: 1;
-}
-.btn-primary {
-  background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-  color: #667eea;
-}
-.btn-primary:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
-}
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-}
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 20px 60px rgba(255, 255, 255, 0.3);
-}
-
-/* 🖼️ BEAUTIFUL IMAGES */
-img {
-  width: 100%;
-  height: auto;
-  border-radius: 16px;
-  object-fit: cover;
-  transition: transform 0.4s;
-}
-.card:hover img {
-  transform: scale(1.05);
-}
-
-/* ✨ MAGICAL ANIMATIONS */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
-}
-.animate-fade-up {
-  animation: fadeUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  opacity: 0;
-}
-.animate-fade-in {
-  animation: fadeIn 1s ease-out forwards;
-}
-.animate-scale-in {
-  animation: scaleIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-/* 🎯 STAGGER DELAYS */
-.card:nth-child(1) { animation-delay: 0.1s; }
-.card:nth-child(2) { animation-delay: 0.2s; }
-.card:nth-child(3) { animation-delay: 0.3s; }
-.card:nth-child(4) { animation-delay: 0.4s; }
-.card:nth-child(5) { animation-delay: 0.5s; }
-.card:nth-child(6) { animation-delay: 0.6s; }
-
-/* 📱 MOBILE RESPONSIVE */
-@media (max-width: 768px) {
-  .text-6xl { font-size: 2.5rem; }
-  .text-4xl { font-size: 1.875rem; }
-  .text-3xl { font-size: 1.5rem; }
-  .section { padding: 4rem 0; }
-  .container { padding: 0 1.5rem; }
-  .card { padding: 2rem; }
-  .btn { padding: 1rem 2rem; font-size: 1rem; }
-  .emoji-float { font-size: 2rem; }
-}
-
-/* 🌈 BACKGROUND PATTERNS */
-.pattern-dots {
-  background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-.pattern-grid {
-  background-image: 
-    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
-  background-size: 50px 50px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        
+        /* Gradient backgrounds */
+        .hero-gradient { background: linear-gradient(to right, #9333ea, #ec4899, #2563eb); }
+        .hero-gradient-alt { background: linear-gradient(to right, #d97706, #ea580c, #dc2626); }
+        
+        /* Layout */
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+        .section { padding: 6rem 0; }
+        .min-h-screen { min-height: 100vh; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-4 { gap: 1rem; }
+        .gap-8 { gap: 2rem; }
+        
+        /* Grid */
+        .grid { display: grid; }
+        .grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+        
+        /* Text */
+        .text-white { color: white; }
+        .text-gray-900 { color: #111827; }
+        .text-gray-700 { color: #374151; }
+        .text-center { text-align: center; }
+        .text-6xl { font-size: 3.75rem; line-height: 1; }
+        .text-5xl { font-size: 3rem; line-height: 1; }
+        .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
+        .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .font-bold { font-weight: 700; }
+        
+        /* Spacing */
+        .p-8 { padding: 2rem; }
+        .py-24 { padding-top: 6rem; padding-bottom: 6rem; }
+        .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mb-8 { margin-bottom: 2rem; }
+        .mb-16 { margin-bottom: 4rem; }
+        
+        /* Backgrounds */
+        .bg-white { background-color: white; }
+        .bg-gray-50 { background-color: #f9fafb; }
+        .bg-gray-900 { background-color: #111827; }
+        
+        /* Borders & Shadows */
+        .rounded-xl { border-radius: 0.75rem; }
+        .rounded-2xl { border-radius: 1rem; }
+        .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .border-2 { border-width: 2px; }
+        .border-gray-200 { border-color: #e5e7eb; }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background-color: white;
+            color: #9333ea;
+        }
+        .btn-primary:hover {
+            background-color: #f3f4f6;
+            transform: scale(1.05);
+        }
+        .btn-secondary {
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Images */
+        img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            border-radius: 0.75rem;
+        }
+        
+        /* Responsive */
+        @media (min-width: 768px) {
+            .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+            .text-6xl { font-size: 6rem; }
+            .text-5xl { font-size: 4rem; }
+        }
+    </style>
 </head>
 <body>
-<!-- CONTENT HERE -->
+    <!-- ALL CONTENT HERE -->
 </body>
 </html>
 
-🎪 HERO SECTION (ALWAYS FIRST):
-<section class="hero-gradient min-h-screen flex-center text-white section pattern-dots">
-  <!-- ADD 3-4 FLOATING EMOJIS RELATED TO TOPIC -->
-  <span class="emoji-float" style="top: 10%; left: 10%;">✨</span>
-  <span class="emoji-float" style="top: 20%; right: 15%; animation-delay: 2s;">🚀</span>
-  <span class="emoji-float" style="bottom: 15%; left: 20%; animation-delay: 4s;">💎</span>
-  
-  <div class="container text-center animate-fade-up">
-    <h1 class="text-6xl mb-8">Your Stunning Headline Here</h1>
-    <p class="text-2xl mb-8" style="opacity: 0.95;">Compelling subheadline that converts visitors</p>
-    <div class="flex" style="justify-content: center;">
-      <button class="btn btn-primary">🚀 Get Started</button>
-      <button class="btn btn-secondary">💡 Learn More</button>
+2. HERO SECTION (FIRST SECTION - MANDATORY):
+<section class="hero-gradient min-h-screen flex items-center justify-center text-white section">
+    <div class="container text-center">
+        <h1 class="text-6xl font-bold mb-6">
+            Your Amazing Product
+        </h1>
+        <p class="text-2xl mb-8">
+            Transform your business with our cutting-edge solution
+        </p>
+        <div class="flex gap-4 justify-center">
+            <button class="btn btn-primary">Get Started</button>
+            <button class="btn btn-secondary">Learn More</button>
+        </div>
     </div>
-  </div>
 </section>
 
-🎨 CONTENT SECTIONS (3-6 REQUIRED):
-<section class="section" style="background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);">
-  <div class="container">
-    <h2 class="text-4xl text-center mb-16 text-gray animate-fade-in">✨ Amazing Features</h2>
-    <div class="grid grid-3">
-      <div class="card animate-fade-up">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">🎯</div>
-        <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=600&fit=crop" alt="Feature" style="height: 220px; margin-bottom: 1.5rem;">
-        <h3 class="text-2xl mb-8 text-gray">Feature Title</h3>
-        <p class="text-gray" style="opacity: 0.8;">Clear benefit description that explains value and builds trust</p>
-      </div>
-      <!-- REPEAT 3-6 CARDS WITH DIFFERENT EMOJIS AND IMAGES -->
+3. CONTENT SECTIONS:
+<section class="bg-white section">
+    <div class="container">
+        <h2 class="text-5xl font-bold text-center mb-16 text-gray-900">Features</h2>
+        <div class="grid grid-cols-1 grid-cols-3 gap-8">
+            <div class="bg-white border-2 border-gray-200 rounded-2xl p-8 shadow-xl">
+                <img src="https://source.unsplash.com/800x600?technology" alt="Feature">
+                <h3 class="text-2xl font-bold mb-4 text-gray-900">Fast Performance</h3>
+                <p class="text-gray-700 text-lg">Lightning-fast speed for your needs</p>
+            </div>
+        </div>
     </div>
-  </div>
 </section>
 
-🖼️ IMAGES (MANDATORY):
-- Hero backgrounds: https://images.unsplash.com/photo-{id}?w=1920&h=1080&fit=crop
-- Card images: https://images.unsplash.com/photo-{id}?w=800&h=600&fit=crop
-- Use SPECIFIC Unsplash IDs matching content
-- Topics: technology, business, fitness, food, fashion, nature, workspace
+4. MANDATORY RULES:
+- Use .hero-gradient for first section
+- Alternate .bg-white and .bg-gray-50 for content sections
+- ALL text must be readable (.text-white on gradients, .text-gray-900 on white)
+- Use .shadow-xl on cards
+- Include 2 buttons in hero section
+- Use Unsplash images: https://source.unsplash.com/800x600?{topic}
 
-✅ REQUIREMENTS:
-1. ALWAYS start with hero-gradient section with floating emojis
-2. Use .animate-fade-up on ALL cards (stagger delays included)
-3. Add relevant emoji (single emoji) before each card title
-4. Use gradient backgrounds: hero-gradient, gradient-blue, gradient-purple, etc.
-5. Alternate white and gradient section backgrounds
-6. Include .glass or .glass-dark for special sections
-7. ALL images must load from Unsplash with real photo IDs
-8. Add .pattern-dots or .pattern-grid to hero/sections
-9. Use btn-primary and btn-secondary with emojis
-10. Mobile-responsive (breakpoints included)
-
-🚫 NEVER:
-- Don't use plain solid colors for hero
-- Don't skip floating emoji decorations
-- Don't use boring button text (add emojis)
-- Don't forget hover animations
-- Don't use generic placeholder images
-
-Return ONLY the complete HTML. No markdown. No explanations. Start with <!DOCTYPE html>`,
+Return ONLY the HTML. No explanations. No markdown. Just <!DOCTYPE html>...`,
     messages: [{
       role: 'user',
       content: sanitizedPrompt
@@ -1255,6 +1089,7 @@ Return ONLY the complete HTML. No markdown. No explanations. Start with <!DOCTYP
     } catch (apiError) {
       clearTimeout(timeout);
       console.error('Claude API error:', apiError);
+   
       return res.status(502).json({
         success: false,
         error: 'AI service temporarily unavailable',
