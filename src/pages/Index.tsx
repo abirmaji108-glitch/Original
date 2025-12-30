@@ -1082,37 +1082,21 @@ const sanitizedPrompt = sanitizeInput(actualInput);
 
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
-const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
-${trimmedPrompt}
 
-DESIGN STYLE: ${selectedStyle.toUpperCase()}
-${styleInstruction}
-Apply this design style consistently throughout the website.
+// ✅ OPTIMIZED: Let AI expand on backend, keep frontend clean
+const prompt = `${trimmedPrompt}
 
-REQUIREMENTS:
-- Complete HTML5 document starting with <!DOCTYPE html>
-- Use Tailwind CSS CDN in HEAD: <script src="https://cdn.tailwindcss.com"></script>
-- CRITICAL: Add this in <head> section for proper rendering:
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta charset="UTF-8">
-- Ensure ALL CSS loads BEFORE any content is rendered
-- Inline all CSS in <style> tags if needed beyond Tailwind
-- Inline all JavaScript in <script> tags
-- Mobile-first responsive design
-- Modern, professional design with smooth animations
-- Use SPECIFIC placeholder images from Unsplash based on the website content:
-  * For hero sections: https://source.unsplash.com/1920x1080?{main-topic}
-  * For team/people: https://source.unsplash.com/800x800?portrait,professional
-  * For products: https://source.unsplash.com/800x600?{product-type}
-  * For backgrounds: https://source.unsplash.com/1920x1080?{theme},abstract
-  * Replace {keywords} with SPECIFIC terms from the description (e.g., "fitness" for gym, "food" for restaurant)
-- IMPORTANT: Use different, relevant Unsplash keywords for each image based on its context
-- Include realistic placeholder text and content
-- Professional color scheme matching the description
-- Proper semantic HTML5 tags
-- Accessibility features (alt tags, ARIA labels)
-Return ONLY the complete HTML code. No explanations, no markdown, no code blocks - just the raw HTML starting with <!DOCTYPE html>`;
+Style: ${selectedStyle.toUpperCase()} - ${styleInstruction}
 
+🎨 MUST INCLUDE:
+1. Hero with gradient + floating emojis (3-4 relevant to topic)
+2. 3-6 feature cards with emoji icons + Unsplash images
+3. Glassmorphism buttons with emoji + strong shadows
+4. Staggered card animations (fade-up with delays)
+5. Pattern overlay (dots/grid) on hero
+6. Vibrant color gradients throughout
+
+Make it STUNNING and PLAYFUL like a premium SaaS landing page!`;
       setLastPrompt(prompt);
       
       // ✅ FIXED: Get auth token with more lenient session handling
