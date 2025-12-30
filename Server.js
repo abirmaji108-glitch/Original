@@ -1012,14 +1012,52 @@ if (!TESTING_MODE || !isAdmin) {
 </html>
 
 🖼️ IMAGE RULES (CRITICAL):
-- ALWAYS use Unsplash with SPECIFIC, RELEVANT search terms
-- Format: https://source.unsplash.com/WIDTHxHEIGHT?SPECIFIC_SEARCH_TERM
-- Examples:
-  * Hero: https://source.unsplash.com/1920x1080?luxury,resort,beach
-  * Rooms: https://source.unsplash.com/800x600?hotel,suite,bedroom,luxury
-  * Dining: https://source.unsplash.com/800x600?restaurant,fine,dining,food
-  * Spa: https://source.unsplash.com/800x600?spa,wellness,massage
-- NEVER use generic "resort" - be SPECIFIC (e.g., "resort,oceanview,tropical")
+- Use high-quality placeholder services that ALWAYS work
+- PRIMARY: Picsum Photos - https://picsum.photos/WIDTH/HEIGHT
+- SECONDARY: Lorem Picsum with blur effect - https://picsum.photos/WIDTH/HEIGHT?blur=2
+- GRAYSCALE option: https://picsum.photos/WIDTH/HEIGHT?grayscale
+
+IMAGE SIZING GUIDE:
+- Hero sections: https://picsum.photos/1920/1080
+- Feature cards: https://picsum.photos/800/600
+- Thumbnails: https://picsum.photos/400/400
+- Profile images: https://picsum.photos/200/200
+- Full-width banners: https://picsum.photos/1600/400
+
+LAYOUT PATTERNS WITH IMAGES:
+1. Hero with background:
+<section class="hero-gradient-blue min-h-screen flex items-center justify-center relative">
+    <div class="absolute inset-0 opacity-30">
+        <img src="https://picsum.photos/1920/1080" class="w-full h-full object-cover" alt="Hero Background">
+    </div>
+    <div class="container mx-auto px-6 text-center relative z-10 fade-in text-white">
+        <h1 class="text-6xl font-bold mb-6">Your Headline Here</h1>
+        <p class="text-2xl mb-8">Engaging subheadline</p>
+    </div>
+</section>
+
+2. Feature cards with images:
+<div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
+    <img src="https://picsum.photos/800/600" alt="Feature" class="w-full h-64 object-cover">
+    <div class="p-6">
+        <h3 class="text-2xl font-bold mb-3">Feature Title</h3>
+        <p class="text-gray-600 mb-4">Feature description text</p>
+        <a href="#" class="btn btn-primary">Learn More</a>
+    </div>
+</div>
+
+3. Image grid gallery:
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <img src="https://picsum.photos/600/400" class="rounded-xl hover-lift" alt="Gallery 1">
+    <img src="https://picsum.photos/600/400" class="rounded-xl hover-lift" alt="Gallery 2">
+    <img src="https://picsum.photos/600/400" class="rounded-xl hover-lift" alt="Gallery 3">
+</div>
+
+IMPORTANT: 
+- EVERY section should have at least ONE image
+- Use different sizes for variety
+- Images MUST load reliably - Picsum ALWAYS works
+- Add object-cover class to prevent distortion
 
 🎨 LAYOUT PATTERNS:
 
