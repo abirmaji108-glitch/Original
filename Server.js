@@ -1101,7 +1101,7 @@ IMPORTANT:
 
 3. CARDS (WITH IMAGES):
 <div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
-    <img src="https://source.unsplash.com/800x600?[specific_term]" alt="Description" class="w-full h-64 object-cover">
+    <img src="https://picsum.photos/800/600?random=1" alt="Description" class="w-full h-64 object-cover">
     <div class="p-6">
         <h3 class="text-2xl font-bold mb-3">[Card Title]</h3>
         <p class="text-gray-600 mb-4">[Card description]</p>
@@ -1114,7 +1114,7 @@ IMPORTANT:
 ✅ Navigation bar (if multi-page feel needed)
 ✅ At least 4-6 content sections
 ✅ Every section has proper spacing (py-24)
-✅ Images load from Unsplash with specific terms
+✅ Images load from Picsum Photos - reliable and always works
 ✅ Hover effects on cards
 ✅ Mobile responsive (Tailwind handles this)
 ✅ Proper color contrast (dark text on light bg, light text on dark bg)
