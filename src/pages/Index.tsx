@@ -2571,7 +2571,7 @@ ${new Date().toLocaleDateString()}
                 </div>
               ) : (
                 <>
-                  {/* ✅ ADD #11: Preview iframe before showing download button */}
+                  {/* ✅ FIXED: Preview iframe with no split screen */}
                   <div className="mb-4 border rounded-lg overflow-hidden">
                     <div className="bg-gray-100 px-4 py-2 font-semibold">Preview:</div>
                     <iframe
@@ -2580,25 +2580,12 @@ ${new Date().toLocaleDateString()}
   sandbox="allow-scripts allow-same-origin"
   style={{
     width: '100%',
-    height: 'auto',
+    height: '100vh',
     minHeight: '800px',
     border: 'none',
     display: 'block',
-    colorScheme: 'normal'
-  }}
-  onLoad={(e) => {
-    // Auto-resize iframe to content height
-    const iframe = e.currentTarget;
-    try {
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (iframeDoc) {
-        const height = iframeDoc.documentElement.scrollHeight;
-        iframe.style.height = `${height}px`;
-      }
-    } catch (err) {
-      // Fallback for cross-origin restrictions
-      iframe.style.height = '100vh';
-    }
+    colorScheme: 'light',
+    backgroundColor: 'white'
   }}
   title="Website Preview"
 />
