@@ -391,24 +391,48 @@ useEffect(() => {
     }
   }, [isDarkMode]);
 
-  // Get authenticated user ID
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      setIsLoadingProfile(true);
-      try {
-        if (user?.id) {
-          setUserId(user.id);
-          // ✅ ADD #7: Load download count
-          await refreshDownloadCount();
-        }
-      } finally {
-        setIsLoadingProfile(false);
+  // Get authenticated user ID - OPTIMIZED VERSION
+useEffect(() => {
+  const loadUserProfile = async () => {
+    setIsLoadingProfile(true);
+    try {
+      if (user?.id) {
+        setUserId(user.id);
+        
+        // ✅ FIX: Load data in parallel (faster)
+        await Promise.all([
+          refreshDownloadCount(),
+          refreshUsage() // Refresh usage stats immediately
+        ]);
+      }
+    } catch (error) {
+      console.error('Profile load error:', error);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+  
+  loadUserProfile();
+}, [user]);
+
+// ✅ FIX: Load projects immediately when userId is set
+useEffect(() => {
+  if (userId) {
+    const loadProjects = () => {
+      const saved = localStorage.getItem('websiteHistory');
+      if (saved) {
+        const allHistory = JSON.parse(saved);
+        // Filter to only show current user's websites
+        const userHistory = allHistory.filter((site: any) => site.userId === userId);
+        setWebsiteHistory(userHistory);
+        calculateAnalytics();
       }
     };
     
-    loadUserProfile();
-  }, [user]);
-
+    // Load immediately
+    loadProjects();
+  }
+}, [userId]);
   // ✅ ADD #7: Function to refresh download count after successful download
   const refreshDownloadCount = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -2555,10 +2579,26 @@ ${new Date().toLocaleDateString()}
   className="w-full border-0"
   sandbox="allow-scripts allow-same-origin"
   style={{
-    height: '100vh',
-    minHeight: '600px',
-    maxHeight: 'none',
+    width: '100%',
+    height: 'auto',
+    minHeight: '800px',
+    border: 'none',
+    display: 'block',
     colorScheme: 'normal'
+  }}
+  onLoad={(e) => {
+    // Auto-resize iframe to content height
+    const iframe = e.currentTarget;
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (iframeDoc) {
+        const height = iframeDoc.documentElement.scrollHeight;
+        iframe.style.height = `${height}px`;
+      }
+    } catch (err) {
+      // Fallback for cross-origin restrictions
+      iframe.style.height = '100vh';
+    }
   }}
   title="Website Preview"
 />
