@@ -2571,7 +2571,7 @@ ${new Date().toLocaleDateString()}
                 </div>
               ) : (
                 <>
-                  {/* ✅ FIXED: Preview iframe with no split screen */}
+                  {/* ✅ FIXED: Single preview iframe - no split */}
                   <div className="mb-4 border rounded-lg overflow-hidden">
                     <div className="bg-gray-100 px-4 py-2 font-semibold">Preview:</div>
                     <iframe
@@ -2590,27 +2590,6 @@ ${new Date().toLocaleDateString()}
   title="Website Preview"
 />
                   </div>
-                  
-                  <div className="relative mx-auto max-w-6xl">
-                    <div className={`
-                      ${viewMode === 'desktop' ? 'device-frame-desktop max-w-5xl' : ''}
-                      ${viewMode === 'tablet' ? 'device-frame-tablet max-w-2xl' : ''}
-                      ${viewMode === 'mobile' ? 'device-frame-mobile max-w-sm' : ''}
-                      mx-auto overflow-hidden bg-black/90 transition-all duration-700 animate-fade-in-up transform hover:scale-[1.02] device-frame-3d
-                    `}>
-                      {viewMode === 'mobile' && (
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-black rounded-b-3xl z-10 animate-fade-in"></div>
-                      )}
-                      <iframe
-  style={{
-    minHeight: viewMode === 'mobile' ? '667px' : viewMode === 'tablet' ? '1024px' : '800px',
-    height: '100%',
-    colorScheme: 'normal'
-  }}
-  title="Generated Website Preview"
-  sandbox="allow-scripts allow-same-origin"
-  loading="lazy"
-/>
                     </div>
                     <div className="flex justify-center gap-3 mt-6">
                       <button className="zoom-control group" title="Zoom Out">
