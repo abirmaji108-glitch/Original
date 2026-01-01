@@ -2589,7 +2589,6 @@ ${new Date().toLocaleDateString()}
     }}
     title="Website Preview"
   />
-</div>
                   <div className="flex justify-center gap-3 mt-6">
                       <button className="zoom-control group" title="Zoom Out">
                         <ZoomOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
