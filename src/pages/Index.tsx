@@ -2572,24 +2572,26 @@ ${new Date().toLocaleDateString()}
               ) : (
                 <>
                   {/* ✅ FIXED: Single preview iframe - no split */}
-<div className="mb-4 border rounded-lg overflow-hidden">
-  <div className="bg-gray-100 px-4 py-2 font-semibold">Preview:</div>
-  <iframe
-    srcDoc={sanitizedCode}
-    className="w-full border-0"
-    sandbox="allow-scripts allow-same-origin"
-    style={{
-      width: '100%',
-      height: '100vh',
-      minHeight: '800px',
-      border: 'none',
-      display: 'block',
-      colorScheme: 'light',
-      backgroundColor: 'white'
-    }}
-    title="Website Preview"
-  />
-  <div className="flex justify-center gap-3 mt-6">
+                  <div className="mb-4 border rounded-lg overflow-hidden">
+                    <div className="bg-gray-100 px-4 py-2 font-semibold">Preview:</div>
+                    <iframe
+  srcDoc={sanitizedCode}
+  className="w-full border-0"
+  sandbox="allow-scripts allow-same-origin"
+  style={{
+    width: '100%',
+    height: '100vh',
+    minHeight: '800px',
+    border: 'none',
+    display: 'block',
+    colorScheme: 'light',
+    backgroundColor: 'white'
+  }}
+  title="Website Preview"
+/>
+                  </div>
+                    </div>
+                    <div className="flex justify-center gap-3 mt-6">
                       <button className="zoom-control group" title="Zoom Out">
                         <ZoomOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       </button>
@@ -3080,14 +3082,11 @@ ${new Date().toLocaleDateString()}
           75% { transform: scale(1.2) rotate(10deg); }
         }
 
-        button:active [class*="animate-pulse-glow"] {
+        button:active .animate-pulse-glow {
           animation: favorite-bounce 0.5s ease-in-out;
         }
-      `}
-      </style>
-      </div>
-    </main>
-  </div>
+      `}</style>
+    </div>
   );
 };
 
