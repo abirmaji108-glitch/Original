@@ -3085,10 +3085,10 @@ ${new Date().toLocaleDateString()}
         }
           `}
       </style>
-        </div>
-      </main>
+      </div>
+    </main>
   </div>
-    );
+);
 };
 
 export default Index;
