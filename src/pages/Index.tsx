@@ -3086,7 +3086,9 @@ ${new Date().toLocaleDateString()}
         }
       `}</style>
     </div>
-  );
+  </main>
+</div>
+);
 };
 
 export default Index;
