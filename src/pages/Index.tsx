@@ -1973,12 +1973,43 @@ ${new Date().toLocaleDateString()}
       />
 
       {/* Enhanced Animated Background Gradient */}
-      <div className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${isDarkMode ? 'bg-gradient-to-br from-purple-900/30 via-gray-900 to-indigo-900/30' : 'bg-gradient-to-br from-blue-900/20 via-gray-50 to-purple-900/20'}`}>
-        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/20 via-transparent to-transparent animate-pulse' : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/20 via-transparent to-transparent animate-pulse'}`}></div>
-        <div className={`absolute inset-0 ${isDarkMode ? 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-blue-600/15 via-transparent to-transparent' : 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-400/15 via-transparent to-transparent'}`} style={{ animationDelay: '1s' }}></div>
-        <div className={`absolute top-20 left-20 w-72 h-72 ${isDarkMode ? 'bg-purple-500/10' : 'bg-blue-400/10'} rounded-full blur-3xl animate-float-slow`}></div>
-        <div className={`absolute bottom-20 right-20 w-96 h-96 ${isDarkMode ? 'bg-blue-500/10' : 'bg-purple-400/10'} rounded-full blur-3xl animate-float-slower`}></div>
-      </div>
+<div
+  className={`fixed inset-0 transition-colors duration-300 pointer-events-none ${
+    isDarkMode
+      ? 'bg-gradient-to-br from-purple-900/30 via-gray-900 to-indigo-900/30'
+      : 'bg-gradient-to-br from-blue-900/20 via-gray-50 to-purple-900/20'
+  }`}
+>
+  <div
+    className={`absolute inset-0 ${
+      isDarkMode
+        ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-600/20 via-transparent to-transparent animate-pulse'
+        : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-400/20 via-transparent to-transparent animate-pulse'
+    }`}
+  ></div>
+
+  <div
+    className={`absolute inset-0 ${
+      isDarkMode
+        ? 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-blue-600/15 via-transparent to-transparent'
+        : 'bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-400/15 via-transparent to-transparent'
+    }`}
+    style={{ animationDelay: '1s' }}
+  ></div>
+
+  <div
+    className={`absolute top-20 left-20 w-72 h-72 ${
+      isDarkMode ? 'bg-purple-500/10' : 'bg-blue-400/10'
+    } rounded-full blur-3xl animate-float-slow`}
+  ></div>
+
+  <div
+    className={`absolute bottom-20 right-20 w-96 h-96 ${
+      isDarkMode ? 'bg-blue-500/10' : 'bg-purple-400/10'
+    } rounded-full blur-3xl animate-float-slower`}
+  ></div>
+</div>
+
 
       {/* Navigation */}
       <nav className={`glass-nav fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${isDarkMode ? 'bg-black/40 backdrop-blur-md border-b-white/10' : 'bg-white/80 backdrop-blur-md border-b-gray-200'}`}>
