@@ -3085,6 +3085,9 @@ ${new Date().toLocaleDateString()}
           animation: favorite-bounce 0.5s ease-in-out;
         }
       `}</style>
+        </div>
+      </main>
+      </div>
     </div>
   );
 };
