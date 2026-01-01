@@ -3085,7 +3085,6 @@ ${new Date().toLocaleDateString()}
         }
          `}
       </style>
-        </div>
       </div>
     </main>
   </div>
