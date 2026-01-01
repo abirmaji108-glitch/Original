@@ -2621,20 +2621,21 @@ ${new Date().toLocaleDateString()}
     title="Website Preview"
   />
   <div className="flex justify-center gap-3 mt-6">
-                      <button className="zoom-control group" title="Zoom Out">
-                        <ZoomOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      </button>
-                      <button className="zoom-control group" title="Reset Zoom">
-                        <span className="text-sm font-bold group-hover:scale-110 transition-transform">100%</span>
-                      </button>
-                      <button className="zoom-control group" title="Zoom In">
-                        <ZoomIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      </button>
-                      <button className="zoom-control group" onClick={handleOpenFullScreen} title="Full Screen">
-                        <Maximize2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
+    <button className="zoom-control group" title="Zoom Out">
+      <ZoomOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
+    </button>
+    <button className="zoom-control group" title="Reset Zoom">
+      <span className="text-sm font-bold group-hover:scale-110 transition-transform">100%</span>
+    </button>
+    <button className="zoom-control group" title="Zoom In">
+      <ZoomIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
+    </button>
+    <button className="zoom-control group" onClick={handleOpenFullScreen} title="Full Screen">
+      <Maximize2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+    </button>
+  </div>
+</div>
+</div>
                 </>
               )}
 
