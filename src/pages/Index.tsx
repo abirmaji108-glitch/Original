@@ -3083,8 +3083,9 @@ ${new Date().toLocaleDateString()}
         button:active [class*="animate-pulse-glow"] {
           animation: favorite-bounce 0.5s ease-in-out;
         }
-          `}
+         `}
       </style>
+        </div>
       </div>
     </main>
   </div>
