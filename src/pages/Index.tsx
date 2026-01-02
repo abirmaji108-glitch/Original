@@ -2728,7 +2728,7 @@ ${new Date().toLocaleDateString()}
             )}
           </div>
         )}
-
+      )}
         {websiteHistory.length > 0 && (
           <div className="mt-12">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
