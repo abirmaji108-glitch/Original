@@ -1124,13 +1124,22 @@ REQUIREMENTS:
 - Inline all JavaScript in <script> tags
 - Mobile-first responsive design
 - Modern, professional design with smooth animations
-- Use SPECIFIC placeholder images from Unsplash based on the website content:
-  * For hero sections: https://source.unsplash.com/1920x1080?{main-topic}
-  * For team/people: https://source.unsplash.com/800x800?portrait,professional
-  * For products: https://source.unsplash.com/800x600?{product-type}
-  * For backgrounds: https://source.unsplash.com/1920x1080?{theme},abstract
-  * Replace {keywords} with SPECIFIC terms from the description (e.g., "fitness" for gym, "food" for restaurant)
-- IMPORTANT: Use different, relevant Unsplash keywords for each image based on its context
+- 🖼️ IMAGE RULES (CRITICAL - IMAGES MUST LOAD):
+  * PRIMARY SOURCE: Picsum Photos (100% reliable, always works)
+  * Hero sections: https://picsum.photos/1920/1080
+  * Feature cards: https://picsum.photos/800/600
+  * Team photos: https://picsum.photos/400/400
+  * Product images: https://picsum.photos/600/600
+  * Thumbnails: https://picsum.photos/300/300
+  * Background images: https://picsum.photos/1600/900
+  
+- IMPORTANT: 
+  * Use DIFFERENT image IDs by adding "?random=1", "?random=2", etc.
+  * Example: <img src="https://picsum.photos/800/600?random=1" alt="Feature 1">
+  * Example: <img src="https://picsum.photos/800/600?random=2" alt="Feature 2">
+  * This ensures variety - each image will be DIFFERENT
+  * Picsum Photos provides high-quality professional photos
+  * Images load instantly with no rate limits or API keys needed
 - Include realistic placeholder text and content
 - Professional color scheme matching the description
 - Proper semantic HTML5 tags
