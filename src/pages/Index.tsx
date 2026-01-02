@@ -2728,7 +2728,7 @@ ${new Date().toLocaleDateString()}
             )}
           </div>
         )}
-      )}
+      
 
       {websiteHistory.length > 0 && (
           <div className="mt-12">
