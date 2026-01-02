@@ -3106,7 +3106,7 @@ ${new Date().toLocaleDateString()}
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-                @keyframes favorite-bounce {
+                        @keyframes favorite-bounce {
           0%, 100% { transform: scale(1) rotate(0deg); }
           25% { transform: scale(1.2) rotate(-10deg); }
           75% { transform: scale(1.2) rotate(10deg); }
@@ -3115,12 +3115,9 @@ ${new Date().toLocaleDateString()}
         button:active [class*="animate-pulse-glow"] {
           animation: favorite-bounce 0.5s ease-in-out;
         }
-       
-       `}</style>
-      </div>
-    </main>
-  </div>
-);
+      `}</style>
+    </div>
+  );
 };
 
 export default Index;
