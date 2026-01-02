@@ -2635,7 +2635,8 @@ ${new Date().toLocaleDateString()}
     </button>
   </div>
 </div>
-              
+                </>
+              )}
 
               <div className="flex flex-wrap gap-3 justify-center">
                 <Button onClick={handleCopy} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transition-all shadow-lg hover:shadow-xl">
