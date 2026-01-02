@@ -2723,16 +2723,16 @@ ${new Date().toLocaleDateString()}
                         <div key={i} className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.1}s` }}></div>
                       ))}
                     </div>
-                  </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+        )}
 
-          {websiteHistory.length > 0 && (
-            <div className="mt-12">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                <h2 className={`text-2xl font-bold transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+        {websiteHistory.length > 0 && (
+          <div className="mt-12">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <h2 className={`text-2xl font-bold transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   📂 My Projects ({getFilteredProjects().length})
                 </h2>
                 <div className="flex flex-wrap gap-3">
