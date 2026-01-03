@@ -1206,53 +1206,11 @@ Real Estate:
 □ Are there ANY placeholders like [KEYWORD] in my HTML?
 
 If you answered NO to any of these, STOP and fix it before generating HTML.
-1. HERO SECTION (FIRST SECTION - ALWAYS):
-<section class="hero-gradient-[color] min-h-screen flex items-center justify-center text-white">
-    <div class="container mx-auto px-6 text-center fade-in">
-        <h1 class="text-6xl font-bold mb-6">[Compelling Headline]</h1>
-        <p class="text-2xl mb-8">[Engaging subheadline]</p>
-        <div class="flex gap-4 justify-center">
-            <a href="#" class="btn btn-primary">Primary CTA</a>
-            <a href="#" class="btn btn-secondary">Secondary CTA</a>
-        </div>
-    </div>
-</section>
+REMEMBER: You MUST extract keywords from the user's prompt and use them in EVERY image URL!
 
-2. CONTENT SECTIONS (ALTERNATE BACKGROUNDS):
-<section class="py-24 bg-white">
-    <div class="container mx-auto px-6">
-        <h2 class="text-5xl font-bold text-center mb-16 text-gray-900">[Section Title]</h2>
-        <div class="grid-auto">
-            <!-- Cards with images -->
-        </div>
-    </div>
-</section>
-
-<section class="py-24 bg-gray-50">
-    <!-- Next section -->
-</section>
-
-3. CARDS (WITH IMAGES):
-<div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
-    <img src="https://picsum.photos/800/600?random=1" alt="Description" class="w-full h-64 object-cover">
-    <div class="p-6">
-        <h3 class="text-2xl font-bold mb-3">[Card Title]</h3>
-        <p class="text-gray-600 mb-4">[Card description]</p>
-        <a href="#" class="btn btn-primary">Learn More</a>
-    </div>
-</div>
-
-🎯 QUALITY CHECKLIST:
-✅ Hero section with gradient background
-✅ Navigation bar (if multi-page feel needed)
-✅ At least 4-6 content sections
-✅ Every section has proper spacing (py-24)
-✅ Images load from Picsum Photos - reliable and always works
-✅ Hover effects on cards
-✅ Mobile responsive (Tailwind handles this)
-✅ Proper color contrast (dark text on light bg, light text on dark bg)
-✅ Call-to-action buttons in hero
-✅ Footer with contact info
+For a GYM website, use: gym, fitness, workout, exercise
+For a RESTAURANT, use: restaurant, food, dining, cuisine  
+For a WEDDING, use: wedding, couple, love, ceremony
 
 Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
     messages: [{
