@@ -1223,7 +1223,7 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
       clearTimeout(timeout);
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
+        throw new Error('API error: ' + response.status);
       }
       const data = await response.json();
       let generatedCode = data.content[0].text.trim()
