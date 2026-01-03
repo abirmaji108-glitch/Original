@@ -1023,125 +1023,189 @@ img[src] {
 </body>
 </html>
 
-🖼️ INTELLIGENT IMAGE SYSTEM - CRITICAL INSTRUCTIONS:
+🖼️ CRITICAL IMAGE SYSTEM - MANDATORY KEYWORD EXTRACTION:
 
-YOU MUST ANALYZE THE USER'S PROMPT AND EXTRACT KEYWORDS BEFORE GENERATING HTML.
+⚠️ ABSOLUTE REQUIREMENT: You MUST read the user's prompt, identify the website topic, and extract specific keywords BEFORE writing any HTML code.
 
-**KEYWORD EXTRACTION RULES:**
-1. Read the user's prompt carefully
-2. Identify 3-5 main topics/themes
-3. Convert them into search keywords
-4. Use THOSE EXACT KEYWORDS in image URLs
+**STEP-BY-STEP MANDATORY PROCESS:**
 
-**EXAMPLES OF CORRECT KEYWORD EXTRACTION:**
+STEP 1: READ the user's exact prompt word-by-word
+STEP 2: IDENTIFY the main topic (wedding/restaurant/gym/fastfood/etc)
+STEP 3: WRITE DOWN 3-5 specific keywords related to that topic
+STEP 4: USE those exact keywords in EVERY image URL
+STEP 5: NEVER use placeholder text like [KEYWORD] or [EXTRACT_KEYWORDS]
 
-Example 1 - Wedding Website:
+**CRITICAL RULE: THE KEYWORDS MUST BE ACTUAL WORDS, NOT PLACEHOLDERS!**
+
+❌ WRONG (PLACEHOLDER - DO NOT DO THIS):
+<img src="https://source.unsplash.com/1920x1080/?[EXTRACT_KEYWORDS_FROM_PROMPT]">
+
+✅ CORRECT (ACTUAL KEYWORDS):
+<img src="https://source.unsplash.com/1920x1080/?fastfood,burger,fries">
+
+**MANDATORY EXAMPLES - STUDY THESE CAREFULLY:**
+
+═══════════════════════════════════════════════════════════════
+
+EXAMPLE 1 - WEDDING WEBSITE:
+═══════════════════════════════════════════════════════════════
 User prompt: "Create a wedding website for Emma and James"
-✅ CORRECT keywords to extract: wedding, couple, love, ceremony, romantic
-✅ CORRECT hero image URL: https://source.unsplash.com/1920x1080/?wedding,couple,love
-✅ CORRECT gallery URLs: 
-   - https://source.unsplash.com/800x600/?wedding,ceremony
-   - https://source.unsplash.com/800x600/?couple,romantic
-   - https://source.unsplash.com/800x600/?wedding,celebration
 
-Example 2 - Restaurant Website:
-User prompt: "Create a restaurant website for Mario's Italian Kitchen"
-✅ CORRECT keywords: restaurant, italian, food, dining, pasta
-✅ CORRECT hero image URL: https://source.unsplash.com/1920x1080/?restaurant,italian,food
-✅ CORRECT menu image: https://source.unsplash.com/800x600/?pasta,italian,cuisine
+STEP 1: Topic identified = WEDDING
+STEP 2: Keywords extracted = wedding, couple, love, ceremony, bride, groom
+STEP 3: Build URLs with THESE EXACT WORDS:
 
-Example 3 - Gym Website:
-User prompt: "Modern fitness gym website"
-✅ CORRECT keywords: gym, fitness, workout, training, exercise
-✅ CORRECT hero image URL: https://source.unsplash.com/1920x1080/?gym,fitness,workout
-✅ CORRECT feature images: 
-   - https://source.unsplash.com/800x600/?gym,equipment
-   - https://source.unsplash.com/800x600/?fitness,training
+Hero section:
+<img src="https://source.unsplash.com/1920x1080/?wedding,couple,love"
+     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
+     alt="Wedding celebration"
+     class="w-full h-full object-cover">
 
-**HOW TO IMPLEMENT:**
+Gallery images:
+<img src="https://source.unsplash.com/800x600/?wedding,ceremony"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';">
+<img src="https://source.unsplash.com/800x600/?bride,groom"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';">
+<img src="https://source.unsplash.com/800x600/?wedding,reception"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
 
-Step 1: READ the user's actual prompt
-Step 2: IDENTIFY the main topic (wedding/restaurant/gym/portfolio/etc)
-Step 3: EXTRACT 3-5 relevant keywords
-Step 4: BUILD image URLs using THOSE EXACT keywords
+═══════════════════════════════════════════════════════════════
 
-**CORRECT IMAGE URL FORMAT:**
+EXAMPLE 2 - FAST FOOD RESTAURANT:
+═══════════════════════════════════════════════════════════════
+User prompt: "Create a fast food restaurant website selling burgers and fries"
 
-For hero section:
-<img 
-    src="https://source.unsplash.com/1920x1080/?KEYWORD1,KEYWORD2,KEYWORD3" 
-    onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
-    alt="[Descriptive alt text]"
-    class="w-full h-full object-cover"
->
+STEP 1: Topic identified = FAST FOOD RESTAURANT
+STEP 2: Keywords extracted = fastfood, burger, fries, restaurant, food
+STEP 3: Build URLs with THESE EXACT WORDS:
 
-For feature cards:
-<img 
-    src="https://source.unsplash.com/800x600/?KEYWORD1,KEYWORD2" 
-    onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';"
-    alt="[Descriptive alt text]"
-    class="w-full h-64 object-cover"
->
+Hero section:
+<img src="https://source.unsplash.com/1920x1080/?fastfood,burger,fries"
+     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
+     alt="Delicious fast food"
+     class="w-full h-full object-cover">
 
-For gallery (use related but different keywords):
-<img 
-    src="https://source.unsplash.com/600x400/?KEYWORD_VARIANT1" 
-    onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=3';"
-    class="rounded-xl hover-lift"
-    alt="Gallery Image"
->
+Menu item cards:
+<img src="https://source.unsplash.com/800x600/?burger,cheese"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';"
+     alt="Cheeseburger"
+     class="w-full h-64 object-cover">
+<img src="https://source.unsplash.com/800x600/?fries,food"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';"
+     alt="French fries"
+     class="w-full h-64 object-cover">
+<img src="https://source.unsplash.com/800x600/?pizza,fastfood"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';"
+     alt="Pizza"
+     class="w-full h-64 object-cover">
 
-**COMMON TOPICS AND THEIR KEYWORDS:**
+═══════════════════════════════════════════════════════════════
+
+EXAMPLE 3 - GYM/FITNESS WEBSITE:
+═══════════════════════════════════════════════════════════════
+User prompt: "Modern gym website with workout classes"
+
+STEP 1: Topic identified = GYM/FITNESS
+STEP 2: Keywords extracted = gym, fitness, workout, exercise, training
+STEP 3: Build URLs with THESE EXACT WORDS:
+
+Hero section:
+<img src="https://source.unsplash.com/1920x1080/?gym,fitness,workout"
+     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
+     alt="Modern gym facility"
+     class="w-full h-full object-cover">
+
+Feature cards:
+<img src="https://source.unsplash.com/800x600/?gym,equipment"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';">
+<img src="https://source.unsplash.com/800x600/?fitness,training"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';">
+<img src="https://source.unsplash.com/800x600/?workout,exercise"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
+
+═══════════════════════════════════════════════════════════════
+
+EXAMPLE 4 - ITALIAN RESTAURANT:
+═══════════════════════════════════════════════════════════════
+User prompt: "Italian restaurant website"
+
+STEP 1: Topic identified = ITALIAN RESTAURANT
+STEP 2: Keywords extracted = italian, restaurant, pasta, pizza, food
+STEP 3: Build URLs with THESE EXACT WORDS:
+
+Hero section:
+<img src="https://source.unsplash.com/1920x1080/?italian,restaurant,food"
+     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';">
+
+Menu items:
+<img src="https://source.unsplash.com/800x600/?pasta,italian"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';">
+<img src="https://source.unsplash.com/800x600/?pizza,italian"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';">
+<img src="https://source.unsplash.com/800x600/?lasagna,food"
+     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
+
+═══════════════════════════════════════════════════════════════
+
+**KEYWORD REFERENCE TABLE - USE THESE FOR COMMON TOPICS:**
+
+Fast Food:
+- Primary: fastfood, burger, fries, food
+- Menu items: burger, fries, pizza, sandwich, hotdog, chicken
 
 Wedding/Event:
-- Primary: wedding, couple, love, ceremony, romantic
-- Secondary: celebration, bride, groom, marriage, reception
+- Primary: wedding, couple, love, ceremony
+- Variations: bride, groom, reception, celebration, romantic
 
-Restaurant:
+Restaurant (General):
 - Primary: restaurant, food, dining, cuisine
-- Secondary: chef, meal, cooking, interior, dish
+- Variations: chef, meal, dish, cooking, interior
 
 Gym/Fitness:
-- Primary: gym, fitness, workout, training
-- Secondary: exercise, athlete, equipment, health, sports
+- Primary: gym, fitness, workout, exercise
+- Variations: training, equipment, athlete, health, sports
 
-Portfolio:
+Portfolio/Creative:
 - Primary: design, portfolio, creative, workspace
-- Secondary: project, professional, art, studio, work
+- Variations: art, professional, studio, project, work
 
-E-commerce:
+E-commerce/Shop:
 - Primary: ecommerce, shopping, products, store
-- Secondary: retail, shop, online, purchase, fashion
+- Variations: retail, fashion, online, shop, purchase
+
+Technology/Startup:
+- Primary: technology, software, innovation
+- Variations: coding, digital, tech, computer, startup
 
 Real Estate:
 - Primary: realestate, property, house, home
-- Secondary: architecture, interior, modern, luxury, apartment
+- Variations: architecture, interior, modern, luxury
 
-Technology/Startup:
-- Primary: technology, software, innovation, startup
-- Secondary: coding, digital, tech, computer, development
-
-**CRITICAL RULES:**
-1. NEVER use placeholder text like [EXTRACT_KEYWORDS] in actual HTML
-2. NEVER use generic keywords - always be specific to the topic
-3. ALWAYS include fallback with onerror handler
-4. Use different random numbers (1,2,3,4,5...) for Picsum fallbacks
-5. Every image must have descriptive alt text
-
-**SIZE GUIDE:**
+**IMAGE SIZE GUIDE:**
 - Hero sections: 1920x1080
-- Feature cards: 800x600
-- Team/Profile photos: 400x400
+- Feature/Menu cards: 800x600
+- Team photos: 400x400
 - Product images: 600x600
-- Gallery thumbnails: 600x400
+- Gallery thumbs: 600x400
 - Banners: 1600x400
 
-IMPORTANT: The AI MUST extract real keywords from the user's prompt and use them in the actual HTML code. NO placeholders should appear in the final HTML.
-- Images MUST match the website topic
-- Always include onerror fallback for reliability
-- Use different random seeds for variety in fallbacks
-- Add object-cover class to prevent distortion
+**CRITICAL RULES - MEMORIZE THESE:**
+1. ✅ USE REAL WORDS: fastfood, burger, pizza (CORRECT)
+2. ❌ NEVER USE PLACEHOLDERS: [KEYWORD], [EXTRACT_KEYWORDS] (WRONG)
+3. ✅ KEYWORDS MUST MATCH TOPIC: Fast food website → fastfood, burger, fries
+4. ❌ DON'T USE GENERIC WORDS: nature, landscape, building (TOO VAGUE)
+5. ✅ ALWAYS ADD FALLBACK: onerror="this.onerror=null; this.src='https://picsum.photos/...'"
+6. ✅ USE DIFFERENT RANDOM NUMBERS: random=1, random=2, random=3, etc.
 
+**FINAL CHECK BEFORE GENERATING HTML:**
+□ Did I read the user's prompt?
+□ Did I identify the website topic?
+□ Did I extract 3-5 specific keywords?
+□ Did I write those keywords down?
+□ Am I using THOSE EXACT KEYWORDS in image URLs?
+□ Are there ANY placeholders like [KEYWORD] in my HTML?
+
+If you answered NO to any of these, STOP and fix it before generating HTML.
 1. HERO SECTION (FIRST SECTION - ALWAYS):
 <section class="hero-gradient-[color] min-h-screen flex items-center justify-center text-white">
     <div class="container mx-auto px-6 text-center fade-in">
