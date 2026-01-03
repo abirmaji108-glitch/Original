@@ -1242,12 +1242,62 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
     </div>
 </div>
 
+**CRITICAL IMAGE DIRECTIVE - OVERRIDES ALL OTHER INSTRUCTIONS:**
+
+STOP using random images. STOP using picsum.photos. Use ONLY these FIXED Unsplash URLs:
+
+FOR WEDDING/ROMANTIC WEBSITES:
+• Hero/Large: https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080&q=80
+• Couple/Portrait: https://images.unsplash.com/photo-1511988617509-a57c8a288659?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Rings/Detail: https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Ceremony: https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Celebration: https://images.unsplash.com/photo-1546436836-649c1ee9b9cc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+
+FOR FOOD/RESTAURANT WEBSITES:
+• Hero Food: https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080&q=80
+• Burger: https://images.unsplash.com/photo-1551782450-a2132b4ba21d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Pizza: https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Restaurant Interior: https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Chefs: https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+
+FOR GYM/FITNESS WEBSITES:
+• Gym Hero: https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080&q=80
+• Workout: https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Weights: https://images.unsplash.com/photo-1534367507877-0edd93bd013b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Yoga: https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+• Cardio: https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+
+**IMPORTANT RULES:**
+1. DO NOT use picsum.photos
+2. DO NOT use random=1, random=2, etc.
+3. DO NOT use placeholder keywords
+4. ALWAYS use these FIXED URLs above
+5. Match the website type to the correct category
+6. Use different URLs for different images (don't repeat same URL)
+
+**IMAGE TEMPLATE - COPY THIS EXACTLY:**
+<div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
+    <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80" 
+         alt="Beautiful wedding couple" 
+         class="w-full h-64 object-cover">
+    <div class="p-6">
+        <h3 class="text-2xl font-bold mb-3">Card Title</h3>
+        <p class="text-gray-600 mb-4">Card description</p>
+        <a href="#" class="btn btn-primary">Learn More</a>
+    </div>
+</div>
+
+**ABSOLUTE REQUIREMENT:** 
+When user asks for "wedding website", use WEDDING images.
+When user asks for "restaurant website", use FOOD images.
+When user asks for "gym website", use FITNESS images.
+
 ðŸŽ¯ QUALITY CHECKLIST:
 âœ… Hero section with gradient background
 âœ… Navigation bar (if multi-page feel needed)
 âœ… At least 4-6 content sections
 âœ… Every section has proper spacing (py-24)
-âœ… Images load from Picsum Photos - reliable and always works
+âœ… Images load from Unsplash with FIXED wedding/food/gym URLs - always relevant
 âœ… Hover effects on cards
 âœ… Mobile responsive (Tailwind handles this)
 âœ… Proper color contrast (dark text on light bg, light text on dark bg)
@@ -1255,7 +1305,6 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
 âœ… Footer with contact info
 
 Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...`,
-    messages: [{
       role: 'user',
       content: sanitizedPrompt
     }]
