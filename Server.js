@@ -9,14 +9,14 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
-// ✅ FIXED: Import default export from logger
+// âœ… FIXED: Import default export from logger
 import logger from './utils/logger.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
-  CHECK: '✅', CROSS: '❌', WARN: '⚠️', CHART: '📊', LOCK: '🔒',
-  INBOX: '📥', SIREN: '🚨', REFRESH: '🔄', UP: '📈', LINK: '🔗',
-  CARD: '💳', STOP: '🛑', EMAIL: '📧', INFO: 'ℹ️', BLUE: '🔵'
+  CHECK: 'âœ…', CROSS: 'âŒ', WARN: 'âš ï¸', CHART: 'ðŸ“Š', LOCK: 'ðŸ”’',
+  INBOX: 'ðŸ“¥', SIREN: 'ðŸš¨', REFRESH: 'ðŸ”„', UP: 'ðŸ“ˆ', LINK: 'ðŸ”—',
+  CARD: 'ðŸ’³', STOP: 'ðŸ›‘', EMAIL: 'ðŸ“§', INFO: 'â„¹ï¸', BLUE: 'ðŸ”µ'
 };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,7 +86,7 @@ function sanitizePrompt(prompt) {
     'phishing', 'malware', 'hack', 'exploit', 'illegal',
     'darknet', 'weapon', 'bomb', 'drug', 'gambling',
     'porn', 'adult', 'hate speech', 'racist', 'violence',
-    // ✅ OPTIONAL ADDITIONS:
+    // âœ… OPTIONAL ADDITIONS:
     'scam', 'fraud', 'ransomware', 'trojan', 'virus'
   ];
   const lowerPrompt = sanitized.toLowerCase();
@@ -244,7 +244,7 @@ if (stripeKey) {
 } else {
   logger.warn(`${E.WARN} STRIPE_SECRET_KEY not configured - payment features disabled`);
 }
-// ✅ FIX: Validate all Stripe price IDs are configured at startup
+// âœ… FIX: Validate all Stripe price IDs are configured at startup
 if (stripe) {
   const requiredPriceIds = [
     { name: 'STRIPE_BASIC_PRICE_ID', value: process.env.STRIPE_BASIC_PRICE_ID },
@@ -267,7 +267,7 @@ if (stripe) {
     logger.warn(`${E.WARN} STRIPE_PRO_YEARLY_PRICE_ID not set - yearly Pro plan disabled`);
   }
 }
-// ✅ FIX #20: Comprehensive environment variable validation
+// âœ… FIX #20: Comprehensive environment variable validation
 const requiredEnvVars = [
   { name: 'CLAUDE_API_KEY', critical: true },
   { name: 'VITE_SUPABASE_URL', critical: true },
@@ -334,7 +334,7 @@ const generateLimiter = rateLimit({
     }
   }
 });
-// ✅ ADD RATE LIMITER FOR CHECKOUT
+// âœ… ADD RATE LIMITER FOR CHECKOUT
 const checkoutLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 checkout attempts per 15 minutes
@@ -345,7 +345,7 @@ const checkoutLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-// ✅ ADD: Download rate limiter (FIX #21)
+// âœ… ADD: Download rate limiter (FIX #21)
 const downloadLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5, // 5 downloads per minute
@@ -382,7 +382,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-// ✅ FIX #26: REQUEST ID MIDDLEWARE
+// âœ… FIX #26: REQUEST ID MIDDLEWARE
 app.use((req, res, next) => {
   req.id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   res.setHeader('X-Request-ID', req.id);
@@ -461,14 +461,14 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
       case 'checkout.session.completed': {
         const session = event.data.object;
         const sessionId = session.id;
-        // ✅ FIX: Idempotency - check if this session was already processed
+        // âœ… FIX: Idempotency - check if this session was already processed
         const { data: existingSession, error: checkError } = await supabase
           .from('processed_webhooks')
           .select('session_id')
           .eq('session_id', sessionId)
           .single();
         if (existingSession) {
-          logger.log(`⚠️ Webhook already processed for session ${sessionId} - ignoring duplicate`);
+          logger.log(`âš ï¸ Webhook already processed for session ${sessionId} - ignoring duplicate`);
           return res.json({ received: true, duplicate: true });
         }
         // Continue with existing code...
@@ -476,7 +476,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const subscriptionId = session.subscription;
         const customerId = session.customer;
         const priceId = session.line_items?.data[0]?.price?.id;
-        // ✅ FIX: Validate customer ID exists
+        // âœ… FIX: Validate customer ID exists
         if (!customerId) {
           logger.error(`${E.CROSS} No customer ID in session`, {
             sessionId: session.id,
@@ -509,7 +509,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           process.env.STRIPE_BUSINESS_PRICE_ID,
           process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
         ].filter(Boolean);
-        // ✅ FIX: Strict validation - reject if price ID doesn't match any tier
+        // âœ… FIX: Strict validation - reject if price ID doesn't match any tier
         let tier = null;
         if (basicPriceIds.includes(priceId)) {
           tier = 'basic';
@@ -518,7 +518,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         } else if (businessPriceIds.includes(priceId)) {
           tier = 'business';
         }
-        // ✅ FIX: If no tier matched, this is an invalid/unknown price ID
+        // âœ… FIX: If no tier matched, this is an invalid/unknown price ID
         if (!tier) {
           logger.error(`${E.CROSS} CRITICAL: Unknown price ID received in webhook`, {
             priceId,
@@ -531,8 +531,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             message: 'Price ID does not match any configured tier'
           });
         }
-        logger.log(`✅ Price ID ${priceId} mapped to tier: ${tier}`);
-        // ✅ FIX: Use transaction-like approach with rollback capability
+        logger.log(`âœ… Price ID ${priceId} mapped to tier: ${tier}`);
+        // âœ… FIX: Use transaction-like approach with rollback capability
         let profileUpdated = false;
         let subscriptionUpdated = false;
         try {
@@ -595,7 +595,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           });
         }
         logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
-        // ✅ FIX #11 & #12: Log successful upgrade
+        // âœ… FIX #11 & #12: Log successful upgrade
         await logSecurityEvent({
           user_id: userId,
           event_type: 'tier_upgraded',
@@ -608,7 +608,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             subscriptionId: session.subscription
           }
         });
-        // ✅ FIX: Mark webhook as processed (idempotency)
+        // âœ… FIX: Mark webhook as processed (idempotency)
         const { error: trackError } = await supabase
           .from('processed_webhooks')
           .insert({
@@ -621,7 +621,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           logger.error(`${E.WARN} Failed to track webhook idempotency:`, trackError);
           // Don't fail the request - tier already updated successfully
         }
-        // ✅ FIX: Send welcome email asynchronously (non-blocking)
+        // âœ… FIX: Send welcome email asynchronously (non-blocking)
         supabase
           .from('profiles')
           .select('email, full_name')
@@ -829,8 +829,8 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
-           // ✅ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
-const TESTING_MODE = true; // ⚠️ SET TO FALSE AFTER TESTING
+           // âœ… TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
+const TESTING_MODE = true; // âš ï¸ SET TO FALSE AFTER TESTING
 const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
 // Check if user is admin
 const { data: { user: authUser } } = await supabase.auth.getUser(token);
@@ -856,7 +856,7 @@ if (!TESTING_MODE || !isAdmin) {
   }
 } else {
   // Admin bypass - log for audit
-  console.log(`🔓 TESTING MODE: Admin ${authUser?.email} bypassed limit (${generationsThisMonth}/${limit})`);
+  console.log(`ðŸ”“ TESTING MODE: Admin ${authUser?.email} bypassed limit (${generationsThisMonth}/${limit})`);
 }
           }
         }
@@ -881,13 +881,13 @@ if (!TESTING_MODE || !isAdmin) {
     max_tokens: 6000,
     system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
 
-🎯 CRITICAL SUCCESS CRITERIA:
+ðŸŽ¯ CRITICAL SUCCESS CRITERIA:
 1. EVERY image MUST use working Unsplash URLs with SPECIFIC search terms
 2. EVERY section must have proper spacing and visual hierarchy
 3. Modern, professional design with depth and polish
 4. Mobile-responsive by default
 
-📐 MANDATORY STRUCTURE:
+ðŸ“ MANDATORY STRUCTURE:
 
 <!DOCTYPE html>
 <html lang="en">
@@ -1023,9 +1023,9 @@ img[src] {
 </body>
 </html>
 
-🖼️ CRITICAL IMAGE SYSTEM - MANDATORY KEYWORD EXTRACTION:
+ðŸ–¼ï¸ CRITICAL IMAGE SYSTEM - MANDATORY KEYWORD EXTRACTION:
 
-⚠️ ABSOLUTE REQUIREMENT: You MUST read the user's prompt, identify the website topic, and extract specific keywords BEFORE writing any HTML code.
+âš ï¸ ABSOLUTE REQUIREMENT: You MUST read the user's prompt, identify the website topic, and extract specific keywords BEFORE writing any HTML code.
 
 **STEP-BY-STEP MANDATORY PROCESS:**
 
@@ -1037,18 +1037,18 @@ STEP 5: NEVER use placeholder text like [KEYWORD] or [EXTRACT_KEYWORDS]
 
 **CRITICAL RULE: THE KEYWORDS MUST BE ACTUAL WORDS, NOT PLACEHOLDERS!**
 
-❌ WRONG (PLACEHOLDER - DO NOT DO THIS):
+âŒ WRONG (PLACEHOLDER - DO NOT DO THIS):
 <img src="https://source.unsplash.com/1920x1080/?[EXTRACT_KEYWORDS_FROM_PROMPT]">
 
-✅ CORRECT (ACTUAL KEYWORDS):
+âœ… CORRECT (ACTUAL KEYWORDS):
 <img src="https://source.unsplash.com/1920x1080/?fastfood,burger,fries">
 
 **MANDATORY EXAMPLES - STUDY THESE CAREFULLY:**
 
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 EXAMPLE 1 - WEDDING WEBSITE:
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 User prompt: "Create a wedding website for Emma and James"
 
 STEP 1: Topic identified = WEDDING
@@ -1069,10 +1069,10 @@ Gallery images:
 <img src="https://source.unsplash.com/800x600/?wedding,reception"
      onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
 
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 EXAMPLE 2 - FAST FOOD RESTAURANT:
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 User prompt: "Create a fast food restaurant website selling burgers and fries"
 
 STEP 1: Topic identified = FAST FOOD RESTAURANT
@@ -1099,10 +1099,10 @@ Menu item cards:
      alt="Pizza"
      class="w-full h-64 object-cover">
 
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 EXAMPLE 3 - GYM/FITNESS WEBSITE:
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 User prompt: "Modern gym website with workout classes"
 
 STEP 1: Topic identified = GYM/FITNESS
@@ -1123,10 +1123,10 @@ Feature cards:
 <img src="https://source.unsplash.com/800x600/?workout,exercise"
      onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
 
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 EXAMPLE 4 - ITALIAN RESTAURANT:
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 User prompt: "Italian restaurant website"
 
 STEP 1: Topic identified = ITALIAN RESTAURANT
@@ -1145,7 +1145,7 @@ Menu items:
 <img src="https://source.unsplash.com/800x600/?lasagna,food"
      onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
 
-═══════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 **KEYWORD REFERENCE TABLE - USE THESE FOR COMMON TOPICS:**
 
@@ -1175,7 +1175,7 @@ E-commerce/Shop:
 
 Technology/Startup:
 - Primary: technology, software, innovation
-- Variations: coding, digital, tech, computer, startup, development
+- Variations: coding, digital, tech, computer, startup
 
 Real Estate:
 - Primary: realestate, property, house, home
@@ -1190,20 +1190,20 @@ Real Estate:
 - Banners: 1600x400
 
 **CRITICAL RULES - MEMORIZE THESE:**
-1. ✅ USE REAL WORDS: fastfood, burger, pizza (CORRECT)
-2. ❌ NEVER USE PLACEHOLDERS: [KEYWORD], [EXTRACT_KEYWORDS] (WRONG)
-3. ✅ KEYWORDS MUST MATCH TOPIC: Fast food website → fastfood, burger, fries
-4. ❌ DON'T USE GENERIC WORDS: nature, landscape, building (TOO VAGUE)
-5. ✅ ALWAYS ADD FALLBACK: onerror="this.onerror=null; this.src='https://picsum.photos/...'"
-6. ✅ USE DIFFERENT RANDOM NUMBERS: random=1, random=2, random=3, etc.
+1. âœ… USE REAL WORDS: fastfood, burger, pizza (CORRECT)
+2. âŒ NEVER USE PLACEHOLDERS: [KEYWORD], [EXTRACT_KEYWORDS] (WRONG)
+3. âœ… KEYWORDS MUST MATCH TOPIC: Fast food website â†’ fastfood, burger, fries
+4. âŒ DON'T USE GENERIC WORDS: nature, landscape, building (TOO VAGUE)
+5. âœ… ALWAYS ADD FALLBACK: onerror="this.onerror=null; this.src='https://picsum.photos/...'"
+6. âœ… USE DIFFERENT RANDOM NUMBERS: random=1, random=2, random=3, etc.
 
 **FINAL CHECK BEFORE GENERATING HTML:**
-□ Did I read the user's prompt?
-□ Did I identify the website topic?
-□ Did I extract 3-5 specific keywords?
-□ Did I write those keywords down?
-□ Am I using THOSE EXACT KEYWORDS in image URLs?
-□ Are there ANY placeholders like [KEYWORD] in my HTML?
+â–¡ Did I read the user's prompt?
+â–¡ Did I identify the website topic?
+â–¡ Did I extract 3-5 specific keywords?
+â–¡ Did I write those keywords down?
+â–¡ Am I using THOSE EXACT KEYWORDS in image URLs?
+â–¡ Are there ANY placeholders like [KEYWORD] in my HTML?
 
 If you answered NO to any of these, STOP and fix it before generating HTML.
 1. HERO SECTION (FIRST SECTION - ALWAYS):
@@ -1242,19 +1242,19 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
     </div>
 </div>
 
-🎯 QUALITY CHECKLIST:
-✅ Hero section with gradient background
-✅ Navigation bar (if multi-page feel needed)
-✅ At least 4-6 content sections
-✅ Every section has proper spacing (py-24)
-✅ Images load from Picsum Photos - reliable and always works
-✅ Hover effects on cards
-✅ Mobile responsive (Tailwind handles this)
-✅ Proper color contrast (dark text on light bg, light text on dark bg)
-✅ Call-to-action buttons in hero
-✅ Footer with contact info
+ðŸŽ¯ QUALITY CHECKLIST:
+âœ… Hero section with gradient background
+âœ… Navigation bar (if multi-page feel needed)
+âœ… At least 4-6 content sections
+âœ… Every section has proper spacing (py-24)
+âœ… Images load from Picsum Photos - reliable and always works
+âœ… Hover effects on cards
+âœ… Mobile responsive (Tailwind handles this)
+âœ… Proper color contrast (dark text on light bg, light text on dark bg)
+âœ… Call-to-action buttons in hero
+âœ… Footer with contact info
 
-Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
+Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...`,
     messages: [{
       role: 'user',
       content: sanitizedPrompt
@@ -1272,7 +1272,7 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
+      // âœ… CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
@@ -1281,7 +1281,7 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
           const shouldReset = profile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : (generationsThisMonth + 1);
           
-          console.log(`📊 TRACKING: User ${userId} - Current: ${generationsThisMonth} → New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
+          console.log(`ðŸ“Š TRACKING: User ${userId} - Current: ${generationsThisMonth} â†’ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           
           // Use await to ensure update completes
           const { data: updateResult, error: updateError } = await supabase
@@ -1295,13 +1295,13 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
             .select();
           
           if (updateError) {
-            console.error('❌ CRITICAL: Usage update FAILED:', updateError);
+            console.error('âŒ CRITICAL: Usage update FAILED:', updateError);
           } else {
-            console.log(`✅ Usage updated successfully: ${newCount}/${limit}`);
-            console.log(`📈 Update confirmed:`, updateResult);
+            console.log(`âœ… Usage updated successfully: ${newCount}/${limit}`);
+            console.log(`ðŸ“ˆ Update confirmed:`, updateResult);
           }
         } catch (error) {
-          console.error('❌ Exception during usage tracking:', error);
+          console.error('âŒ Exception during usage tracking:', error);
         }
       }
       const tierLimits = {
@@ -1311,7 +1311,7 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         business: 200
       };
       const limit = tierLimits[userTier] || 2;
-      console.log(`✅ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
+      console.log(`âœ… Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
       return res.json({
         success: true,
         htmlCode: generatedCode,
@@ -1379,7 +1379,7 @@ app.get('/api/profile', async (req, res) => {
         message: profileError.message
       });
     }
-    // ✅ FIX: Handle case when profile doesn't exist
+    // âœ… FIX: Handle case when profile doesn't exist
     if (!profile) {
       logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
       const currentMonth = new Date().toISOString().slice(0, 7);
@@ -1478,7 +1478,7 @@ app.get('/api/profile', async (req, res) => {
   }
 });
 // ============================================
-// ✅ FIX #16: DOWNLOAD TRACKING ENDPOINT
+// âœ… FIX #16: DOWNLOAD TRACKING ENDPOINT
 // ============================================
 app.post('/api/track-download', downloadLimiter, async (req, res) => {
   try {
@@ -1595,7 +1595,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         user_tier: userTier
       });
     logger.log(`${E.CHECK} [${req.id}] Download tracked for user ${user.id} (${downloadsThisMonth + 1}/${limit})`);
-    // ✅ FIX #22: Log security event
+    // âœ… FIX #22: Log security event
     await logSecurityEvent({
       user_id: user.id,
       event_type: 'website_downloaded',
@@ -1608,7 +1608,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         downloads_limit: limit
       }
     });
-    // ✅ FIX #23: Send warning email when approaching limit
+    // âœ… FIX #23: Send warning email when approaching limit
     const remainingDownloads = limit - (downloadsThisMonth + 1);
     if (remainingDownloads === 2 || remainingDownloads === 5) {
       // Send warning email asynchronously
@@ -1692,13 +1692,13 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         error: 'Invalid authentication'
       });
     }
-    // ✅ FIX #10: Get user's current tier
+    // âœ… FIX #10: Get user's current tier
     const { data: currentProfile } = await supabase
       .from('profiles')
       .select('user_tier')
       .eq('id', user.id)
       .single();
-    // ✅ FIX #11: Log upgrade attempt
+    // âœ… FIX #11: Log upgrade attempt
     await logSecurityEvent({
       user_id: user.id,
       event_type: 'checkout_initiated',
@@ -1800,7 +1800,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     });
   } catch (error) {
     logger.error(`${E.CROSS} [${req.id}] Checkout session error:`, error);
-    // ✅ FIX #13: Don't expose Stripe errors to client
+    // âœ… FIX #13: Don't expose Stripe errors to client
     const errorMessage = error.type === 'StripeError'
       ? 'Payment processing error'
       : 'Internal server error';
@@ -1888,7 +1888,7 @@ app.post('/api/cancel-subscription', async (req, res) => {
   }
 });
 // ============================================
-// ✅ FIX #24: API KEY RELOAD ENDPOINT (ADMIN ONLY)
+// âœ… FIX #24: API KEY RELOAD ENDPOINT (ADMIN ONLY)
 // ============================================
 app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
   try {
@@ -1933,7 +1933,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       .from('profiles')
       .select('id, email, user_tier, created_at, stripe_customer_id');
     if (profilesError) throw profilesError;
-    // ✅ FIX #25: Fetch download statistics
+    // âœ… FIX #25: Fetch download statistics
     const { data: downloadData, error: downloadError } = await supabase
       .from('download_tracking')
       .select('user_id, downloaded_at, user_tier');
@@ -1946,7 +1946,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       pro: profiles.filter(p => p.user_tier === 'pro').length,
       business: profiles.filter(p => p.user_tier === 'business').length
     };
-    // ✅ ADD: Download statistics
+    // âœ… ADD: Download statistics
     if (!downloadError && downloadData) {
       const totalDownloads = downloadData.length;
       const todayDownloads = downloadData.filter(d =>
@@ -2090,7 +2090,7 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
     const weekGenerations = weekData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
     // Calculate this month's generations
     const monthGenerations = usageData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
-    // ✅ ADD: Fetch download analytics
+    // âœ… ADD: Fetch download analytics
     const { data: downloadData, error: downloadError } = await supabase
       .from('download_tracking')
       .select('*')
