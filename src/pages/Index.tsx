@@ -395,14 +395,47 @@ useEffect(() => {
 useEffect(() => {
   const loadUserProfile = async () => {
     setIsLoadingProfile(true);
+    
     try {
       if (user?.id) {
         setUserId(user.id);
         
-        // ✅ FIX: Load data in parallel (faster)
+        // ✅ FIX: Load EVERYTHING in parallel for instant display
         await Promise.all([
-          refreshDownloadCount(),
-          refreshUsage() // Refresh usage stats immediately
+          // Load usage stats
+          (async () => {
+            try {
+              await refreshUsage();
+              console.log('✅ Usage stats loaded');
+            } catch (error) {
+              console.error('Failed to load usage stats:', error);
+            }
+          })(),
+          
+          // Load download count
+          (async () => {
+            try {
+              await refreshDownloadCount();
+              console.log('✅ Download count loaded');
+            } catch (error) {
+              console.error('Failed to load download count:', error);
+            }
+          })(),
+          
+          // Load projects from localStorage immediately
+          (async () => {
+            try {
+              const saved = localStorage.getItem('websiteHistory');
+              if (saved) {
+                const allHistory = JSON.parse(saved);
+                const userHistory = allHistory.filter((site: any) => site.userId === user.id);
+                setWebsiteHistory(userHistory);
+                console.log('✅ Projects loaded:', userHistory.length);
+              }
+            } catch (error) {
+              console.error('Failed to load projects:', error);
+            }
+          })()
         ]);
       }
     } catch (error) {
