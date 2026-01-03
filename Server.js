@@ -1023,24 +1023,48 @@ img[src] {
 </body>
 </html>
 
-🖼️ IMAGE RULES (CRITICAL):
-- Use high-quality placeholder services that ALWAYS work
-- PRIMARY: Picsum Photos - https://picsum.photos/WIDTH/HEIGHT
-- SECONDARY: Lorem Picsum with blur effect - https://picsum.photos/WIDTH/HEIGHT?blur=2
-- GRAYSCALE option: https://picsum.photos/WIDTH/HEIGHT?grayscale
+🖼️ INTELLIGENT IMAGE SYSTEM (CRITICAL - CONTEXT-AWARE IMAGES):
 
-IMAGE SIZING GUIDE:
-- Hero sections: https://picsum.photos/1920/1080
-- Feature cards: https://picsum.photos/800/600
-- Thumbnails: https://picsum.photos/400/400
-- Profile images: https://picsum.photos/200/200
-- Full-width banners: https://picsum.photos/1600/400
+**STEP 1: ANALYZE THE USER'S PROMPT**
+Before generating ANY HTML, identify the main topic/keywords from the user's description.
 
-LAYOUT PATTERNS WITH IMAGES:
-1. Hero with background:
+Examples of keyword extraction:
+- "restaurant", "dining", "food" → Use: restaurant,food,dining
+- "gym", "fitness", "workout" → Use: gym,fitness,workout
+- "portfolio", "designer", "creative" → Use: design,portfolio,creative
+- "e-commerce", "store", "products" → Use: ecommerce,shopping,products
+- "agency", "marketing", "business" → Use: agency,business,marketing
+- "hotel", "resort", "travel" → Use: hotel,travel,luxury
+- "tech", "software", "startup" → Use: technology,software,innovation
+- "fashion", "clothing", "style" → Use: fashion,style,apparel
+- "real estate", "property", "home" → Use: realestate,property,architecture
+- "education", "school", "learning" → Use: education,learning,students
+
+**STEP 2: PRIMARY IMAGE SOURCE - Unsplash Source API**
+Format: https://source.unsplash.com/WIDTHxHEIGHT/?KEYWORD1,KEYWORD2,KEYWORD3
+
+Size recommendations:
+- Hero sections: 1920x1080
+- Feature cards: 800x600
+- Team/Profile: 400x400
+- Product images: 600x600
+- Thumbnails: 300x300
+- Banners: 1600x400
+
+**STEP 3: ADD FALLBACK TO PICSUM**
+EVERY image MUST have an onerror handler to fallback to Picsum Photos.
+
+**IMPLEMENTATION EXAMPLES:**
+
+1. Hero Section (with topic-specific image):
 <section class="hero-gradient-blue min-h-screen flex items-center justify-center relative">
     <div class="absolute inset-0 opacity-30">
-        <img src="https://picsum.photos/1920/1080" class="w-full h-full object-cover" alt="Hero Background">
+        <img 
+            src="https://source.unsplash.com/1920x1080/?[EXTRACT_MAIN_KEYWORDS_FROM_USER_PROMPT]" 
+            onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
+            class="w-full h-full object-cover" 
+            alt="Hero Background"
+        >
     </div>
     <div class="container mx-auto px-6 text-center relative z-10 fade-in text-white">
         <h1 class="text-6xl font-bold mb-6">Your Headline Here</h1>
@@ -1048,9 +1072,14 @@ LAYOUT PATTERNS WITH IMAGES:
     </div>
 </section>
 
-2. Feature cards with images:
+2. Feature Cards (with related keywords):
 <div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
-    <img src="https://picsum.photos/800/600" alt="Feature" class="w-full h-64 object-cover">
+    <img 
+        src="https://source.unsplash.com/800x600/?[RELATED_KEYWORD]" 
+        onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';"
+        alt="Feature Image" 
+        class="w-full h-64 object-cover"
+    >
     <div class="p-6">
         <h3 class="text-2xl font-bold mb-3">Feature Title</h3>
         <p class="text-gray-600 mb-4">Feature description text</p>
@@ -1058,20 +1087,66 @@ LAYOUT PATTERNS WITH IMAGES:
     </div>
 </div>
 
-3. Image grid gallery:
+3. Image Grid Gallery (with variety):
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <img src="https://picsum.photos/600/400" class="rounded-xl hover-lift" alt="Gallery 1">
-    <img src="https://picsum.photos/600/400" class="rounded-xl hover-lift" alt="Gallery 2">
-    <img src="https://picsum.photos/600/400" class="rounded-xl hover-lift" alt="Gallery 3">
+    <img 
+        src="https://source.unsplash.com/600x400/?[KEYWORD_VARIATION_1]" 
+        onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=3';"
+        class="rounded-xl hover-lift" 
+        alt="Gallery Image 1"
+    >
+    <img 
+        src="https://source.unsplash.com/600x400/?[KEYWORD_VARIATION_2]" 
+        onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=4';"
+        class="rounded-xl hover-lift" 
+        alt="Gallery Image 2"
+    >
+    <img 
+        src="https://source.unsplash.com/600x400/?[KEYWORD_VARIATION_3]" 
+        onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=5';"
+        class="rounded-xl hover-lift" 
+        alt="Gallery Image 3"
+    >
 </div>
 
-IMPORTANT: 
-- EVERY section should have at least ONE image
-- Use different sizes for variety
-- Images MUST load reliably - Picsum ALWAYS works
-- Add object-cover class to prevent distortion
+**CRITICAL RULES FOR AI:**
+1. READ THE USER'S PROMPT and extract 2-4 main topic keywords
+2. USE those keywords in Unsplash URLs: https://source.unsplash.com/WIDTH/HEIGHT/?keyword1,keyword2
+3. ALWAYS add onerror fallback: onerror="this.onerror=null; this.src='https://picsum.photos/WIDTH/HEIGHT?random=N';"
+4. Use DIFFERENT random numbers (1, 2, 3, 4, 5...) for each fallback to ensure variety
+5. Add descriptive alt text based on the context
+6. Every major section MUST have at least ONE contextual image
 
-🎨 LAYOUT PATTERNS:
+**EXAMPLE - Restaurant Website:**
+User prompt: "Create a restaurant website for Mario's Italian Kitchen"
+- Extract keywords: restaurant, italian, food, dining
+- Hero: https://source.unsplash.com/1920x1080/?restaurant,italian,food
+- Menu: https://source.unsplash.com/800x600/?italian,pasta,cuisine
+- Interior: https://source.unsplash.com/600x400/?restaurant,dining,interior
+- Chef: https://source.unsplash.com/400x400/?chef,italian,cooking
+
+**EXAMPLE - Gym Website:**
+User prompt: "Modern fitness gym website with classes and trainers"
+- Extract keywords: gym, fitness, workout, training
+- Hero: https://source.unsplash.com/1920x1080/?gym,fitness,workout
+- Classes: https://source.unsplash.com/800x600/?fitness,exercise,training
+- Equipment: https://source.unsplash.com/600x400/?gym,equipment,weights
+- Trainers: https://source.unsplash.com/400x400/?fitness,trainer,athletic
+
+**EXAMPLE - Portfolio Website:**
+User prompt: "Portfolio for graphic designer Sarah Chen"
+- Extract keywords: design, portfolio, creative, graphic
+- Hero: https://source.unsplash.com/1920x1080/?design,creative,workspace
+- Projects: https://source.unsplash.com/800x600/?graphic,design,art
+- About: https://source.unsplash.com/600x400/?designer,creative,studio
+- Contact: https://source.unsplash.com/400x400/?design,portfolio,professional
+
+IMPORTANT: 
+- EVERY section should have at least ONE contextual image
+- Images MUST match the website topic
+- Always include onerror fallback for reliability
+- Use different random seeds for variety in fallbacks
+- Add object-cover class to prevent distortion
 
 1. HERO SECTION (FIRST SECTION - ALWAYS):
 <section class="hero-gradient-[color] min-h-screen flex items-center justify-center text-white">
@@ -1139,18 +1214,37 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // Update usage async (don't block response)
+      // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        supabase
-          .from('profiles')
-          .update({
-            generations_this_month: generationsThisMonth + 1,
-            last_generation_reset: currentMonth
-          })
-          .eq('id', userId)
-          .then(() => console.log('✅ Usage updated'))
-          .catch(err => console.error('⚠️ Usage update failed:', err));
+        try {
+          const currentMonth = new Date().toISOString().slice(0, 7);
+          
+          // Check if we need to reset for new month
+          const shouldReset = profile?.last_generation_reset !== currentMonth;
+          const newCount = shouldReset ? 1 : (generationsThisMonth + 1);
+          
+          console.log(`📊 TRACKING: User ${userId} - Current: ${generationsThisMonth} → New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
+          
+          // Use await to ensure update completes
+          const { data: updateResult, error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              generations_this_month: newCount,
+              last_generation_reset: currentMonth,
+              last_generation_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+            .select();
+          
+          if (updateError) {
+            console.error('❌ CRITICAL: Usage update FAILED:', updateError);
+          } else {
+            console.log(`✅ Usage updated successfully: ${newCount}/${limit}`);
+            console.log(`📈 Update confirmed:`, updateResult);
+          }
+        } catch (error) {
+          console.error('❌ Exception during usage tracking:', error);
+        }
       }
       const tierLimits = {
         free: 2,
