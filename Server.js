@@ -1023,126 +1023,120 @@ img[src] {
 </body>
 </html>
 
-🖼️ INTELLIGENT IMAGE SYSTEM (CRITICAL - CONTEXT-AWARE IMAGES):
+🖼️ INTELLIGENT IMAGE SYSTEM - CRITICAL INSTRUCTIONS:
 
-**STEP 1: ANALYZE THE USER'S PROMPT**
-Before generating ANY HTML, identify the main topic/keywords from the user's description.
+YOU MUST ANALYZE THE USER'S PROMPT AND EXTRACT KEYWORDS BEFORE GENERATING HTML.
 
-Examples of keyword extraction:
-- "restaurant", "dining", "food" → Use: restaurant,food,dining
-- "gym", "fitness", "workout" → Use: gym,fitness,workout
-- "portfolio", "designer", "creative" → Use: design,portfolio,creative
-- "e-commerce", "store", "products" → Use: ecommerce,shopping,products
-- "agency", "marketing", "business" → Use: agency,business,marketing
-- "hotel", "resort", "travel" → Use: hotel,travel,luxury
-- "tech", "software", "startup" → Use: technology,software,innovation
-- "fashion", "clothing", "style" → Use: fashion,style,apparel
-- "real estate", "property", "home" → Use: realestate,property,architecture
-- "education", "school", "learning" → Use: education,learning,students
+**KEYWORD EXTRACTION RULES:**
+1. Read the user's prompt carefully
+2. Identify 3-5 main topics/themes
+3. Convert them into search keywords
+4. Use THOSE EXACT KEYWORDS in image URLs
 
-**STEP 2: PRIMARY IMAGE SOURCE - Unsplash Source API**
-Format: https://source.unsplash.com/WIDTHxHEIGHT/?KEYWORD1,KEYWORD2,KEYWORD3
+**EXAMPLES OF CORRECT KEYWORD EXTRACTION:**
 
-Size recommendations:
+Example 1 - Wedding Website:
+User prompt: "Create a wedding website for Emma and James"
+✅ CORRECT keywords to extract: wedding, couple, love, ceremony, romantic
+✅ CORRECT hero image URL: https://source.unsplash.com/1920x1080/?wedding,couple,love
+✅ CORRECT gallery URLs: 
+   - https://source.unsplash.com/800x600/?wedding,ceremony
+   - https://source.unsplash.com/800x600/?couple,romantic
+   - https://source.unsplash.com/800x600/?wedding,celebration
+
+Example 2 - Restaurant Website:
+User prompt: "Create a restaurant website for Mario's Italian Kitchen"
+✅ CORRECT keywords: restaurant, italian, food, dining, pasta
+✅ CORRECT hero image URL: https://source.unsplash.com/1920x1080/?restaurant,italian,food
+✅ CORRECT menu image: https://source.unsplash.com/800x600/?pasta,italian,cuisine
+
+Example 3 - Gym Website:
+User prompt: "Modern fitness gym website"
+✅ CORRECT keywords: gym, fitness, workout, training, exercise
+✅ CORRECT hero image URL: https://source.unsplash.com/1920x1080/?gym,fitness,workout
+✅ CORRECT feature images: 
+   - https://source.unsplash.com/800x600/?gym,equipment
+   - https://source.unsplash.com/800x600/?fitness,training
+
+**HOW TO IMPLEMENT:**
+
+Step 1: READ the user's actual prompt
+Step 2: IDENTIFY the main topic (wedding/restaurant/gym/portfolio/etc)
+Step 3: EXTRACT 3-5 relevant keywords
+Step 4: BUILD image URLs using THOSE EXACT keywords
+
+**CORRECT IMAGE URL FORMAT:**
+
+For hero section:
+<img 
+    src="https://source.unsplash.com/1920x1080/?KEYWORD1,KEYWORD2,KEYWORD3" 
+    onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
+    alt="[Descriptive alt text]"
+    class="w-full h-full object-cover"
+>
+
+For feature cards:
+<img 
+    src="https://source.unsplash.com/800x600/?KEYWORD1,KEYWORD2" 
+    onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';"
+    alt="[Descriptive alt text]"
+    class="w-full h-64 object-cover"
+>
+
+For gallery (use related but different keywords):
+<img 
+    src="https://source.unsplash.com/600x400/?KEYWORD_VARIANT1" 
+    onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=3';"
+    class="rounded-xl hover-lift"
+    alt="Gallery Image"
+>
+
+**COMMON TOPICS AND THEIR KEYWORDS:**
+
+Wedding/Event:
+- Primary: wedding, couple, love, ceremony, romantic
+- Secondary: celebration, bride, groom, marriage, reception
+
+Restaurant:
+- Primary: restaurant, food, dining, cuisine
+- Secondary: chef, meal, cooking, interior, dish
+
+Gym/Fitness:
+- Primary: gym, fitness, workout, training
+- Secondary: exercise, athlete, equipment, health, sports
+
+Portfolio:
+- Primary: design, portfolio, creative, workspace
+- Secondary: project, professional, art, studio, work
+
+E-commerce:
+- Primary: ecommerce, shopping, products, store
+- Secondary: retail, shop, online, purchase, fashion
+
+Real Estate:
+- Primary: realestate, property, house, home
+- Secondary: architecture, interior, modern, luxury, apartment
+
+Technology/Startup:
+- Primary: technology, software, innovation, startup
+- Secondary: coding, digital, tech, computer, development
+
+**CRITICAL RULES:**
+1. NEVER use placeholder text like [EXTRACT_KEYWORDS] in actual HTML
+2. NEVER use generic keywords - always be specific to the topic
+3. ALWAYS include fallback with onerror handler
+4. Use different random numbers (1,2,3,4,5...) for Picsum fallbacks
+5. Every image must have descriptive alt text
+
+**SIZE GUIDE:**
 - Hero sections: 1920x1080
 - Feature cards: 800x600
-- Team/Profile: 400x400
+- Team/Profile photos: 400x400
 - Product images: 600x600
-- Thumbnails: 300x300
+- Gallery thumbnails: 600x400
 - Banners: 1600x400
 
-**STEP 3: ADD FALLBACK TO PICSUM**
-EVERY image MUST have an onerror handler to fallback to Picsum Photos.
-
-**IMPLEMENTATION EXAMPLES:**
-
-1. Hero Section (with topic-specific image):
-<section class="hero-gradient-blue min-h-screen flex items-center justify-center relative">
-    <div class="absolute inset-0 opacity-30">
-        <img 
-            src="https://source.unsplash.com/1920x1080/?[EXTRACT_MAIN_KEYWORDS_FROM_USER_PROMPT]" 
-            onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
-            class="w-full h-full object-cover" 
-            alt="Hero Background"
-        >
-    </div>
-    <div class="container mx-auto px-6 text-center relative z-10 fade-in text-white">
-        <h1 class="text-6xl font-bold mb-6">Your Headline Here</h1>
-        <p class="text-2xl mb-8">Engaging subheadline</p>
-    </div>
-</section>
-
-2. Feature Cards (with related keywords):
-<div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
-    <img 
-        src="https://source.unsplash.com/800x600/?[RELATED_KEYWORD]" 
-        onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';"
-        alt="Feature Image" 
-        class="w-full h-64 object-cover"
-    >
-    <div class="p-6">
-        <h3 class="text-2xl font-bold mb-3">Feature Title</h3>
-        <p class="text-gray-600 mb-4">Feature description text</p>
-        <a href="#" class="btn btn-primary">Learn More</a>
-    </div>
-</div>
-
-3. Image Grid Gallery (with variety):
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <img 
-        src="https://source.unsplash.com/600x400/?[KEYWORD_VARIATION_1]" 
-        onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=3';"
-        class="rounded-xl hover-lift" 
-        alt="Gallery Image 1"
-    >
-    <img 
-        src="https://source.unsplash.com/600x400/?[KEYWORD_VARIATION_2]" 
-        onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=4';"
-        class="rounded-xl hover-lift" 
-        alt="Gallery Image 2"
-    >
-    <img 
-        src="https://source.unsplash.com/600x400/?[KEYWORD_VARIATION_3]" 
-        onerror="this.onerror=null; this.src='https://picsum.photos/600/400?random=5';"
-        class="rounded-xl hover-lift" 
-        alt="Gallery Image 3"
-    >
-</div>
-
-**CRITICAL RULES FOR AI:**
-1. READ THE USER'S PROMPT and extract 2-4 main topic keywords
-2. USE those keywords in Unsplash URLs: https://source.unsplash.com/WIDTH/HEIGHT/?keyword1,keyword2
-3. ALWAYS add onerror fallback: onerror="this.onerror=null; this.src='https://picsum.photos/WIDTH/HEIGHT?random=N';"
-4. Use DIFFERENT random numbers (1, 2, 3, 4, 5...) for each fallback to ensure variety
-5. Add descriptive alt text based on the context
-6. Every major section MUST have at least ONE contextual image
-
-**EXAMPLE - Restaurant Website:**
-User prompt: "Create a restaurant website for Mario's Italian Kitchen"
-- Extract keywords: restaurant, italian, food, dining
-- Hero: https://source.unsplash.com/1920x1080/?restaurant,italian,food
-- Menu: https://source.unsplash.com/800x600/?italian,pasta,cuisine
-- Interior: https://source.unsplash.com/600x400/?restaurant,dining,interior
-- Chef: https://source.unsplash.com/400x400/?chef,italian,cooking
-
-**EXAMPLE - Gym Website:**
-User prompt: "Modern fitness gym website with classes and trainers"
-- Extract keywords: gym, fitness, workout, training
-- Hero: https://source.unsplash.com/1920x1080/?gym,fitness,workout
-- Classes: https://source.unsplash.com/800x600/?fitness,exercise,training
-- Equipment: https://source.unsplash.com/600x400/?gym,equipment,weights
-- Trainers: https://source.unsplash.com/400x400/?fitness,trainer,athletic
-
-**EXAMPLE - Portfolio Website:**
-User prompt: "Portfolio for graphic designer Sarah Chen"
-- Extract keywords: design, portfolio, creative, graphic
-- Hero: https://source.unsplash.com/1920x1080/?design,creative,workspace
-- Projects: https://source.unsplash.com/800x600/?graphic,design,art
-- About: https://source.unsplash.com/600x400/?designer,creative,studio
-- Contact: https://source.unsplash.com/400x400/?design,portfolio,professional
-
-IMPORTANT: 
-- EVERY section should have at least ONE contextual image
+IMPORTANT: The AI MUST extract real keywords from the user's prompt and use them in the actual HTML code. NO placeholders should appear in the final HTML.
 - Images MUST match the website topic
 - Always include onerror fallback for reliability
 - Use different random seeds for variety in fallbacks
