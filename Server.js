@@ -1175,7 +1175,7 @@ E-commerce/Shop:
 
 Technology/Startup:
 - Primary: technology, software, innovation
-- Variations: coding, digital, tech, computer, startup
+- Variations: coding, digital, tech, computer, startup, development
 
 Real Estate:
 - Primary: realestate, property, house, home
