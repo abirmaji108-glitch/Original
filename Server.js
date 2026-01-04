@@ -2156,24 +2156,29 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
       monthDownloads = downloadData.length;
     }
     // Generate 7-day history
-    const history = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      const dayData = usageData.filter(d =>
-        d.created_at && d.created_at.startsWith(dateStr)
-      );
-      const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
-      const dayDownloads = downloadData ? downloadData.filter(d =>
-        d.downloaded_at && d.downloaded_at.startsWith(dateStr)
-      ).length : 0;
-      history.push({
-        date: dateStr,
-        generations: dayTotal,
-        downloads: dayDownloads
-      });
-    }
+const history = [];
+for (let i = 6; i >= 0; i--) {
+  const date = new Date();
+  date.setDate(date.getDate() - i);
+  const dateStr = date.toISOString().split('T')[0];
+  
+  const dayData = usageData.filter(d => 
+    d.created_at && d.created_at.startsWith(dateStr)
+  );
+  
+  const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
+  
+  const dayDownloads = downloadData ? 
+    downloadData.filter(d => 
+      d.downloaded_at && d.downloaded_at.startsWith(dateStr)
+    ).length : 0;
+  
+  history.push({
+    date: dateStr,
+    generations: dayTotal,
+    downloads: dayDownloads
+  });
+}
     // Calculate top users by generations
     const userGenerations = new Map();
     usageData.forEach(d => {
