@@ -829,35 +829,39 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
-           // âœ… TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
-const TESTING_MODE = true; // âš ï¸ SET TO FALSE AFTER TESTING
-const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
-// Check if user is admin
-const { data: { user: authUser } } = await supabase.auth.getUser(token);
-const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
-// Check limits (skip for admins in testing mode)
-const tierLimits = {
-  free: 2,
-  basic: 10,
-  pro: 50,
-  business: 200
-};
-const limit = tierLimits[userTier] || 2;
-if (!TESTING_MODE || !isAdmin) {
-  // Normal limit enforcement for non-admins
-  if (generationsThisMonth >= limit) {
-    return res.status(429).json({
-      success: false,
-      error: 'Monthly limit reached',
-      limit_reached: true,
-      used: generationsThisMonth,
-      limit
-    });
-  }
-} else {
-  // Admin bypass - log for audit
-  console.log(`ðŸ”“ TESTING MODE: Admin ${authUser?.email} bypassed limit (${generationsThisMonth}/${limit})`);
-}
+            
+            // ✔ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
+            const TESTING_MODE = true; // ⚠️ SET TO FALSE AFTER TESTING
+            const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
+            
+            // Check if user is admin
+            const { data: { user: authUser } } = await supabase.auth.getUser(token);
+            const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
+            
+            // Check limits (skip for admins in testing mode)
+            const tierLimits = {
+              free: 2,
+              basic: 10,
+              pro: 50,
+              business: 200
+            };
+            const limit = tierLimits[userTier] || 2;
+            
+            if (!TESTING_MODE || !isAdmin) {
+              // Normal limit enforcement for non-admins
+              if (generationsThisMonth >= limit) {
+                return res.status(429).json({
+                  success: false,
+                  error: 'Monthly limit reached',
+                  limit_reached: true,
+                  used: generationsThisMonth,
+                  limit
+                });
+              }
+            } else {
+              // Admin bypass - log for audit
+              console.log(`🔓 TESTING MODE: Admin ${authUser?.email} bypassed limit (${generationsThisMonth}/${limit})`);
+            }
           }
         }
       } catch (authError) {
