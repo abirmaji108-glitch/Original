@@ -9,14 +9,14 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
-// âœ… FIXED: Import default export from logger
+// Ã¢Å“â€¦ FIXED: Import default export from logger
 import logger from './utils/logger.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
-  CHECK: 'âœ…', CROSS: 'âŒ', WARN: 'âš ï¸', CHART: 'ðŸ“Š', LOCK: 'ðŸ”’',
-  INBOX: 'ðŸ“¥', SIREN: 'ðŸš¨', REFRESH: 'ðŸ”„', UP: 'ðŸ“ˆ', LINK: 'ðŸ”—',
-  CARD: 'ðŸ’³', STOP: 'ðŸ›‘', EMAIL: 'ðŸ“§', INFO: 'â„¹ï¸', BLUE: 'ðŸ”µ'
+  CHECK: 'Ã¢Å“â€¦', CROSS: 'Ã¢ÂÅ’', WARN: 'Ã¢Å¡ Ã¯Â¸Â', CHART: 'Ã°Å¸â€œÅ ', LOCK: 'Ã°Å¸â€â€™',
+  INBOX: 'Ã°Å¸â€œÂ¥', SIREN: 'Ã°Å¸Å¡Â¨', REFRESH: 'Ã°Å¸â€â€ž', UP: 'Ã°Å¸â€œË†', LINK: 'Ã°Å¸â€â€”',
+  CARD: 'Ã°Å¸â€™Â³', STOP: 'Ã°Å¸â€ºâ€˜', EMAIL: 'Ã°Å¸â€œÂ§', INFO: 'Ã¢â€žÂ¹Ã¯Â¸Â', BLUE: 'Ã°Å¸â€Âµ'
 };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,7 +86,7 @@ function sanitizePrompt(prompt) {
     'phishing', 'malware', 'hack', 'exploit', 'illegal',
     'darknet', 'weapon', 'bomb', 'drug', 'gambling',
     'porn', 'adult', 'hate speech', 'racist', 'violence',
-    // âœ… OPTIONAL ADDITIONS:
+    // Ã¢Å“â€¦ OPTIONAL ADDITIONS:
     'scam', 'fraud', 'ransomware', 'trojan', 'virus'
   ];
   const lowerPrompt = sanitized.toLowerCase();
@@ -244,7 +244,7 @@ if (stripeKey) {
 } else {
   logger.warn(`${E.WARN} STRIPE_SECRET_KEY not configured - payment features disabled`);
 }
-// âœ… FIX: Validate all Stripe price IDs are configured at startup
+// Ã¢Å“â€¦ FIX: Validate all Stripe price IDs are configured at startup
 if (stripe) {
   const requiredPriceIds = [
     { name: 'STRIPE_BASIC_PRICE_ID', value: process.env.STRIPE_BASIC_PRICE_ID },
@@ -267,7 +267,7 @@ if (stripe) {
     logger.warn(`${E.WARN} STRIPE_PRO_YEARLY_PRICE_ID not set - yearly Pro plan disabled`);
   }
 }
-// âœ… FIX #20: Comprehensive environment variable validation
+// Ã¢Å“â€¦ FIX #20: Comprehensive environment variable validation
 const requiredEnvVars = [
   { name: 'CLAUDE_API_KEY', critical: true },
   { name: 'VITE_SUPABASE_URL', critical: true },
@@ -334,7 +334,7 @@ const generateLimiter = rateLimit({
     }
   }
 });
-// âœ… ADD RATE LIMITER FOR CHECKOUT
+// Ã¢Å“â€¦ ADD RATE LIMITER FOR CHECKOUT
 const checkoutLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 checkout attempts per 15 minutes
@@ -345,7 +345,7 @@ const checkoutLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-// âœ… ADD: Download rate limiter (FIX #21)
+// Ã¢Å“â€¦ ADD: Download rate limiter (FIX #21)
 const downloadLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5, // 5 downloads per minute
@@ -382,7 +382,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-// âœ… FIX #26: REQUEST ID MIDDLEWARE
+// Ã¢Å“â€¦ FIX #26: REQUEST ID MIDDLEWARE
 app.use((req, res, next) => {
   req.id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   res.setHeader('X-Request-ID', req.id);
@@ -461,14 +461,14 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
       case 'checkout.session.completed': {
         const session = event.data.object;
         const sessionId = session.id;
-        // âœ… FIX: Idempotency - check if this session was already processed
+        // Ã¢Å“â€¦ FIX: Idempotency - check if this session was already processed
         const { data: existingSession, error: checkError } = await supabase
           .from('processed_webhooks')
           .select('session_id')
           .eq('session_id', sessionId)
           .single();
         if (existingSession) {
-          logger.log(`âš ï¸ Webhook already processed for session ${sessionId} - ignoring duplicate`);
+          logger.log(`Ã¢Å¡ Ã¯Â¸Â Webhook already processed for session ${sessionId} - ignoring duplicate`);
           return res.json({ received: true, duplicate: true });
         }
         // Continue with existing code...
@@ -476,7 +476,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const subscriptionId = session.subscription;
         const customerId = session.customer;
         const priceId = session.line_items?.data[0]?.price?.id;
-        // âœ… FIX: Validate customer ID exists
+        // Ã¢Å“â€¦ FIX: Validate customer ID exists
         if (!customerId) {
           logger.error(`${E.CROSS} No customer ID in session`, {
             sessionId: session.id,
@@ -509,7 +509,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           process.env.STRIPE_BUSINESS_PRICE_ID,
           process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
         ].filter(Boolean);
-        // âœ… FIX: Strict validation - reject if price ID doesn't match any tier
+        // Ã¢Å“â€¦ FIX: Strict validation - reject if price ID doesn't match any tier
         let tier = null;
         if (basicPriceIds.includes(priceId)) {
           tier = 'basic';
@@ -518,7 +518,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         } else if (businessPriceIds.includes(priceId)) {
           tier = 'business';
         }
-        // âœ… FIX: If no tier matched, this is an invalid/unknown price ID
+        // Ã¢Å“â€¦ FIX: If no tier matched, this is an invalid/unknown price ID
         if (!tier) {
           logger.error(`${E.CROSS} CRITICAL: Unknown price ID received in webhook`, {
             priceId,
@@ -531,8 +531,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             message: 'Price ID does not match any configured tier'
           });
         }
-        logger.log(`âœ… Price ID ${priceId} mapped to tier: ${tier}`);
-        // âœ… FIX: Use transaction-like approach with rollback capability
+        logger.log(`Ã¢Å“â€¦ Price ID ${priceId} mapped to tier: ${tier}`);
+        // Ã¢Å“â€¦ FIX: Use transaction-like approach with rollback capability
         let profileUpdated = false;
         let subscriptionUpdated = false;
         try {
@@ -595,7 +595,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           });
         }
         logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
-        // âœ… FIX #11 & #12: Log successful upgrade
+        // Ã¢Å“â€¦ FIX #11 & #12: Log successful upgrade
         await logSecurityEvent({
           user_id: userId,
           event_type: 'tier_upgraded',
@@ -608,7 +608,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             subscriptionId: session.subscription
           }
         });
-        // âœ… FIX: Mark webhook as processed (idempotency)
+        // Ã¢Å“â€¦ FIX: Mark webhook as processed (idempotency)
         const { error: trackError } = await supabase
           .from('processed_webhooks')
           .insert({
@@ -621,7 +621,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           logger.error(`${E.WARN} Failed to track webhook idempotency:`, trackError);
           // Don't fail the request - tier already updated successfully
         }
-        // âœ… FIX: Send welcome email asynchronously (non-blocking)
+        // Ã¢Å“â€¦ FIX: Send welcome email asynchronously (non-blocking)
         supabase
           .from('profiles')
           .select('email, full_name')
@@ -830,8 +830,8 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               generationsThisMonth = profile.generations_this_month || 0;
             }
             
-            // ✔ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
-            const TESTING_MODE = true; // ⚠️ SET TO FALSE AFTER TESTING
+            // âœ” TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
+            const TESTING_MODE = true; // âš ï¸ SET TO FALSE AFTER TESTING
             const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
             
             // Check if user is admin
@@ -860,7 +860,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               }
             } else {
               // Admin bypass - log for audit
-              console.log(`🔓 TESTING MODE: Admin ${authUser?.email} bypassed limit (${generationsThisMonth}/${limit})`);
+              console.log(`ðŸ”“ TESTING MODE: Admin ${authUser?.email} bypassed limit (${generationsThisMonth}/${limit})`);
             }
           }
         }
@@ -885,18 +885,18 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     max_tokens: 6000,
     system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
 
-🚨🚨🚨 ABSOLUTE IMAGE REQUIREMENT - READ THIS FIRST 🚨🚨🚨
+ðŸš¨ðŸš¨ðŸš¨ ABSOLUTE IMAGE REQUIREMENT - READ THIS FIRST ðŸš¨ðŸš¨ðŸš¨
 NEVER EVER use source.unsplash.com - it causes images to change on refresh!
 ONLY use images.unsplash.com/photo-XXXXXX format with fixed photo IDs!
 Check the SMART IMAGE SYSTEM section below for the exact URLs to use!
 
-🎯 CRITICAL SUCCESS CRITERIA:
+ðŸŽ¯ CRITICAL SUCCESS CRITERIA:
 1. EVERY image MUST use working Unsplash URLs with SPECIFIC search terms
 2. EVERY section must have proper spacing and visual hierarchy
 3. Modern, professional design with depth and polish
 4. Mobile-responsive by default
 
-ðŸ“ MANDATORY STRUCTURE:
+Ã°Å¸â€œÂ MANDATORY STRUCTURE:
 
 <!DOCTYPE html>
 <html lang="en">
@@ -1032,9 +1032,9 @@ img[src] {
 </body>
 </html>
 
-ðŸ–¼ï¸ CRITICAL IMAGE SYSTEM - MANDATORY KEYWORD EXTRACTION:
+Ã°Å¸â€“Â¼Ã¯Â¸Â CRITICAL IMAGE SYSTEM - MANDATORY KEYWORD EXTRACTION:
 
-âš ï¸ ABSOLUTE REQUIREMENT: You MUST read the user's prompt, identify the website topic, and extract specific keywords BEFORE writing any HTML code.
+Ã¢Å¡ Ã¯Â¸Â ABSOLUTE REQUIREMENT: You MUST read the user's prompt, identify the website topic, and extract specific keywords BEFORE writing any HTML code.
 
 **STEP-BY-STEP MANDATORY PROCESS:**
 
@@ -1053,10 +1053,10 @@ CORRECT (ACTUAL KEYWORDS):
 <img src="https://source.unsplash.com/1920x1080/?fastfood,burger,fries">
 **MANDATORY EXAMPLES - STUDY THESE CAREFULLY:**
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
 EXAMPLE 1 - WEDDING WEBSITE:
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 User prompt: "Create a wedding website for Emma and James"
 
 STEP 1: Topic identified = WEDDING
@@ -1077,10 +1077,10 @@ Gallery images:
 <img src="https://source.unsplash.com/800x600/?wedding,reception"
      onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
 EXAMPLE 2 - FAST FOOD RESTAURANT:
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 User prompt: "Create a fast food restaurant website selling burgers and fries"
 
 STEP 1: Topic identified = FAST FOOD RESTAURANT
@@ -1107,10 +1107,10 @@ Menu item cards:
      alt="Pizza"
      class="w-full h-64 object-cover">
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
 EXAMPLE 3 - GYM/FITNESS WEBSITE:
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 User prompt: "Modern gym website with workout classes"
 
 STEP 1: Topic identified = GYM/FITNESS
@@ -1131,10 +1131,10 @@ Feature cards:
 <img src="https://source.unsplash.com/800x600/?workout,exercise"
      onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
 EXAMPLE 4 - ITALIAN RESTAURANT:
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 User prompt: "Italian restaurant website"
 
 STEP 1: Topic identified = ITALIAN RESTAURANT
@@ -1153,7 +1153,7 @@ Menu items:
 <img src="https://source.unsplash.com/800x600/?lasagna,food"
      onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
 
 **KEYWORD REFERENCE TABLE - USE THESE FOR COMMON TOPICS:**
 
@@ -1198,20 +1198,20 @@ Real Estate:
 - Banners: 1600x400
 
 **CRITICAL RULES - MEMORIZE THESE:**
-1. âœ… USE REAL WORDS: fastfood, burger, pizza (CORRECT)
-2. âŒ NEVER USE PLACEHOLDERS: [KEYWORD], [EXTRACT_KEYWORDS] (WRONG)
-3. âœ… KEYWORDS MUST MATCH TOPIC: Fast food website â†’ fastfood, burger, fries
-4. âŒ DON'T USE GENERIC WORDS: nature, landscape, building (TOO VAGUE)
-5. âœ… ALWAYS ADD FALLBACK: onerror="this.onerror=null; this.src='https://picsum.photos/...'"
-6. âœ… USE DIFFERENT RANDOM NUMBERS: random=1, random=2, random=3, etc.
+1. Ã¢Å“â€¦ USE REAL WORDS: fastfood, burger, pizza (CORRECT)
+2. Ã¢ÂÅ’ NEVER USE PLACEHOLDERS: [KEYWORD], [EXTRACT_KEYWORDS] (WRONG)
+3. Ã¢Å“â€¦ KEYWORDS MUST MATCH TOPIC: Fast food website Ã¢â€ â€™ fastfood, burger, fries
+4. Ã¢ÂÅ’ DON'T USE GENERIC WORDS: nature, landscape, building (TOO VAGUE)
+5. Ã¢Å“â€¦ ALWAYS ADD FALLBACK: onerror="this.onerror=null; this.src='https://picsum.photos/...'"
+6. Ã¢Å“â€¦ USE DIFFERENT RANDOM NUMBERS: random=1, random=2, random=3, etc.
 
 **FINAL CHECK BEFORE GENERATING HTML:**
-â–¡ Did I read the user's prompt?
-â–¡ Did I identify the website topic?
-â–¡ Did I extract 3-5 specific keywords?
-â–¡ Did I write those keywords down?
-â–¡ Am I using THOSE EXACT KEYWORDS in image URLs?
-â–¡ Are there ANY placeholders like [KEYWORD] in my HTML?
+Ã¢â€“Â¡ Did I read the user's prompt?
+Ã¢â€“Â¡ Did I identify the website topic?
+Ã¢â€“Â¡ Did I extract 3-5 specific keywords?
+Ã¢â€“Â¡ Did I write those keywords down?
+Ã¢â€“Â¡ Am I using THOSE EXACT KEYWORDS in image URLs?
+Ã¢â€“Â¡ Are there ANY placeholders like [KEYWORD] in my HTML?
 
 If you answered NO to any of these, STOP and fix it before generating HTML.
 1. HERO SECTION (FIRST SECTION - ALWAYS):
@@ -1250,15 +1250,15 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
     </div>
 </div>
 
-**🎯 SMART IMAGE SYSTEM - LOVABLE-QUALITY IMAGES FOR ALL TOPICS:**
+**ðŸŽ¯ SMART IMAGE SYSTEM - LOVABLE-QUALITY IMAGES FOR ALL TOPICS:**
 
 You have TWO image systems:
 1. FIXED IMAGES for 20 common topics (ALWAYS use these)
 2. DYNAMIC IMAGES for uncommon topics (fallback system)
 
-═══════════════════════════════════════════════════════════════════════════════
-📚 FIXED IMAGE LIBRARY - USE THESE FOR 20 COMMON TOPICS
-═══════════════════════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ðŸ“š FIXED IMAGE LIBRARY - USE THESE FOR 20 COMMON TOPICS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 **TOPIC 1: RESTAURANT/FOOD**
 Keywords: restaurant, food, dining, cafe, bistro, eatery
@@ -1308,7 +1308,7 @@ Image 3: https://images.unsplash.com/photo-1542744094-3a31f272c490?w=800&h=600&f
 Image 4: https://images.unsplash.com/photo-1487017159836-4e23ece2e4cf?w=800&h=600&fit=crop&q=80
 Image 5: https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=600&fit=crop&q=80
 
-**TOPIC 7: COFFEE SHOP/CAFÉ**
+**TOPIC 7: COFFEE SHOP/CAFÃ‰**
 Keywords: coffee, cafe, coffeeshop, barista, espresso
 Hero: https://images.unsplash.com/photo-1511920170033-f8396924c348?w=1920&h=1080&fit=crop&q=80
 Image 2: https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&h=600&fit=crop&q=80
@@ -1420,9 +1420,9 @@ Image 3: https://images.unsplash.com/photo-1556761175-4b46a572b786?w=800&h=600&f
 Image 4: https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?w=800&h=600&fit=crop&q=80
 Image 5: https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=600&fit=crop&q=80
 
-═══════════════════════════════════════════════════════════════════════════════
-🎲 DYNAMIC IMAGE SYSTEM - FOR UNCOMMON TOPICS
-═══════════════════════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ðŸŽ² DYNAMIC IMAGE SYSTEM - FOR UNCOMMON TOPICS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 If the user's topic is NOT one of the 20 above, use this fallback system:
 
@@ -1431,54 +1431,54 @@ If the user's topic is NOT one of the 20 above, use this fallback system:
 
 **30+ UNCOMMON TOPICS - PHOTO ID MAPPINGS:**
 
-Beer/Brewery → photo-1436076863939, photo-1516534775068, photo-1559827260-dc66
-Grocery → photo-1588964895597, photo-1542838132-92c53300491e, photo-1534723328310
-Pharmacy → photo-1576602976047, photo-1587854692152, photo-1585435421671
-Pet Store → photo-1450778869180, photo-1560807707-8cc77767d783, photo-1600077106725
-Salon/Spa → photo-1560066984-138dacc3d028, photo-1562322140-8baeececf3df, photo-1519415510236
-Tattoo → photo-1568515387631, photo-1611501275019, photo-1598899134739
-Bakery → photo-1555507036-ab1f4038808a, photo-1509440159596, photo-1486427944299
-Florist → photo-1490750967868, photo-1455659817273, photo-1487070183336
-Jewelry → photo-1515562141207, photo-1599643478518, photo-1611591437281
-Art Gallery → photo-1577083552792, photo-1547826039-bfc35e0f1ea8, photo-1561214115-f2f134cc4912
-Theater → photo-1503095396549, photo-1540575467063, photo-1514306191717
-Cinema → photo-1489599849927, photo-1543536448-d209d2d13a1c, photo-1585647347384
-Yoga → photo-1544367567-0f2fcb009e0b, photo-1506126613408, photo-1599901860904
-Martial Arts → photo-1555597673-b21d5c935865, photo-1595078475328, photo-1551958219-acbc608c6377
-Dance → photo-1508700115892, photo-1518834107812, photo-1545328042-f6f1ea5e10f1
-Music School → photo-1511379938547, photo-1507003211169, photo-1514320291840
-Daycare → photo-1560074334-175c13985e6f, photo-1560869713-bf165a68f88b, photo-1503454537195
-Veterinary → photo-1576201836106, photo-1601758228041, photo-1628009368231
-Dentist → photo-1588776814546, photo-1606811971618, photo-1629909613654
-Accounting → photo-1554224311-beee460c201f, photo-1554224154-26032ffc0d07, photo-1460925895917
-Insurance → photo-1450101499163, photo-1551836022-4c4c79ecde51, photo-1454165804606
-Financial → photo-1579621970563, photo-1579621970588, photo-1565514020179
-Marketing → photo-1533750349088, photo-1523474253046, photo-1557804506-669a67965ba0
-Architecture → photo-1503387762-592deb58ef4e, photo-1487958449943, photo-1511818966892
-Interior Design → photo-1618221195710, photo-1586023492125, photo-1616486338812
-Event Planning → photo-1511578314322, photo-1505236858219, photo-1530103862676
-Catering → photo-1555939594-58d7cb561ad1, photo-1540189549336, photo-1414235077428
-Wine Bar → photo-1510812431401, photo-1565299543923, photo-1569949381669
-Nightclub → photo-1514525253161, photo-1518929458119, photo-1470225620780
-Barber → photo-1585747860715, photo-1503951914875, photo-1622286346003
+Beer/Brewery â†’ photo-1436076863939, photo-1516534775068, photo-1559827260-dc66
+Grocery â†’ photo-1588964895597, photo-1542838132-92c53300491e, photo-1534723328310
+Pharmacy â†’ photo-1576602976047, photo-1587854692152, photo-1585435421671
+Pet Store â†’ photo-1450778869180, photo-1560807707-8cc77767d783, photo-1600077106725
+Salon/Spa â†’ photo-1560066984-138dacc3d028, photo-1562322140-8baeececf3df, photo-1519415510236
+Tattoo â†’ photo-1568515387631, photo-1611501275019, photo-1598899134739
+Bakery â†’ photo-1555507036-ab1f4038808a, photo-1509440159596, photo-1486427944299
+Florist â†’ photo-1490750967868, photo-1455659817273, photo-1487070183336
+Jewelry â†’ photo-1515562141207, photo-1599643478518, photo-1611591437281
+Art Gallery â†’ photo-1577083552792, photo-1547826039-bfc35e0f1ea8, photo-1561214115-f2f134cc4912
+Theater â†’ photo-1503095396549, photo-1540575467063, photo-1514306191717
+Cinema â†’ photo-1489599849927, photo-1543536448-d209d2d13a1c, photo-1585647347384
+Yoga â†’ photo-1544367567-0f2fcb009e0b, photo-1506126613408, photo-1599901860904
+Martial Arts â†’ photo-1555597673-b21d5c935865, photo-1595078475328, photo-1551958219-acbc608c6377
+Dance â†’ photo-1508700115892, photo-1518834107812, photo-1545328042-f6f1ea5e10f1
+Music School â†’ photo-1511379938547, photo-1507003211169, photo-1514320291840
+Daycare â†’ photo-1560074334-175c13985e6f, photo-1560869713-bf165a68f88b, photo-1503454537195
+Veterinary â†’ photo-1576201836106, photo-1601758228041, photo-1628009368231
+Dentist â†’ photo-1588776814546, photo-1606811971618, photo-1629909613654
+Accounting â†’ photo-1554224311-beee460c201f, photo-1554224154-26032ffc0d07, photo-1460925895917
+Insurance â†’ photo-1450101499163, photo-1551836022-4c4c79ecde51, photo-1454165804606
+Financial â†’ photo-1579621970563, photo-1579621970588, photo-1565514020179
+Marketing â†’ photo-1533750349088, photo-1523474253046, photo-1557804506-669a67965ba0
+Architecture â†’ photo-1503387762-592deb58ef4e, photo-1487958449943, photo-1511818966892
+Interior Design â†’ photo-1618221195710, photo-1586023492125, photo-1616486338812
+Event Planning â†’ photo-1511578314322, photo-1505236858219, photo-1530103862676
+Catering â†’ photo-1555939594-58d7cb561ad1, photo-1540189549336, photo-1414235077428
+Wine Bar â†’ photo-1510812431401, photo-1565299543923, photo-1569949381669
+Nightclub â†’ photo-1514525253161, photo-1518929458119, photo-1470225620780
+Barber â†’ photo-1585747860715, photo-1503951914875, photo-1622286346003
 
 **HOW TO USE DYNAMIC SYSTEM:**
 <img src="https://images.unsplash.com/photo-1436076863939?w=1920&h=1080&fit=crop&q=80" 
      alt="Beer brewery interior"
      class="w-full h-full object-cover">
 
-═══════════════════════════════════════════════════════════════════════════════
-🔒 MANDATORY RULES - READ BEFORE GENERATING
-═══════════════════════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ðŸ”’ MANDATORY RULES - READ BEFORE GENERATING
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-1. ✅ ALWAYS check if user's topic matches one of the 20 FIXED TOPICS first
-2. ✅ If match found → use ONLY those 5 fixed image URLs
-3. ✅ If NO match → use DYNAMIC system with photo IDs
-4. ✅ NEVER use source.unsplash.com (causes random changes)
-5. ✅ NEVER use picsum.photos
-6. ✅ NEVER use placeholder keywords like [KEYWORD]
-7. ✅ Images will NEVER change on refresh (same URLs = same images)
-8. ✅ ALWAYS use full URL format: https://images.unsplash.com/photo-{ID}?w={WIDTH}&h={HEIGHT}&fit=crop&q=80
+1. âœ… ALWAYS check if user's topic matches one of the 20 FIXED TOPICS first
+2. âœ… If match found â†’ use ONLY those 5 fixed image URLs
+3. âœ… If NO match â†’ use DYNAMIC system with photo IDs
+4. âœ… NEVER use source.unsplash.com (causes random changes)
+5. âœ… NEVER use picsum.photos
+6. âœ… NEVER use placeholder keywords like [KEYWORD]
+7. âœ… Images will NEVER change on refresh (same URLs = same images)
+8. âœ… ALWAYS use full URL format: https://images.unsplash.com/photo-{ID}?w={WIDTH}&h={HEIGHT}&fit=crop&q=80
 
 **EXAMPLE - RESTAURANT WEBSITE:**
 User: "Create a restaurant website"
@@ -1488,7 +1488,7 @@ Use: Fixed images from Topic 1 library
 **EXAMPLE - BEER WEBSITE:**
 User: "Create a beer brewery website"
 Topic Match: None (uncommon topic)
-Use: Dynamic system → photo-1436076863939 (beer/brewery)
+Use: Dynamic system â†’ photo-1436076863939 (beer/brewery)
 
 **ABSOLUTE REQUIREMENT:** 
 When user asks for "wedding website", use WEDDING FIXED images.
@@ -1496,17 +1496,17 @@ When user asks for "restaurant website", use FOOD FIXED images.
 When user asks for "gym website", use FITNESS FIXED images.
 When user asks for "beer website", use DYNAMIC beer photo IDs.
 
-ðŸŽ¯ QUALITY CHECKLIST:
-âœ… Hero section with gradient background
-âœ… Navigation bar (if multi-page feel needed)
-âœ… At least 4-6 content sections
-âœ… Every section has proper spacing (py-24)
-âœ… Images load from Unsplash with FIXED wedding/food/gym URLs - always relevant
-âœ… Hover effects on cards
-âœ… Mobile responsive (Tailwind handles this)
-âœ… Proper color contrast (dark text on light bg, light text on dark bg)
-âœ… Call-to-action buttons in hero
-âœ… Footer with contact info
+Ã°Å¸Å½Â¯ QUALITY CHECKLIST:
+Ã¢Å“â€¦ Hero section with gradient background
+Ã¢Å“â€¦ Navigation bar (if multi-page feel needed)
+Ã¢Å“â€¦ At least 4-6 content sections
+Ã¢Å“â€¦ Every section has proper spacing (py-24)
+Ã¢Å“â€¦ Images load from Unsplash with FIXED wedding/food/gym URLs - always relevant
+Ã¢Å“â€¦ Hover effects on cards
+Ã¢Å“â€¦ Mobile responsive (Tailwind handles this)
+Ã¢Å“â€¦ Proper color contrast (dark text on light bg, light text on dark bg)
+Ã¢Å“â€¦ Call-to-action buttons in hero
+Ã¢Å“â€¦ Footer with contact info
 
 Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...`,
     messages: [
@@ -1529,10 +1529,9 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```\n?/g, '')
         .trim();
 
-      // 🔥 EMERGENCY FIX: Force replace source.unsplash.com with fixed images
+      // ðŸ”¥ EMERGENCY FIX: Force replace source.unsplash.com with fixed images
       if (generatedCode.includes('source.unsplash.com')) {
-        console.log('⚠️ WARNING: Claude used source.unsplash.com - auto-fixing...');
-      }
+        console.log('âš ï¸ WARNING: Claude used source.unsplash.com - auto-fixing...');
         
         // Extract topic from prompt for smart replacement
         const promptLower = sanitizedPrompt.toLowerCase();
@@ -1613,10 +1612,10 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
           return `https://images.unsplash.com/${currentPhotoId}?w=${width}&h=${height}&fit=crop&q=80`;
         });
         
-        console.log(`✅ FIXED: Replaced ${photoIndex} source.unsplash.com URLs with fixed photo IDs`);
+        console.log(`âœ… FIXED: Replaced ${photoIndex} source.unsplash.com URLs with fixed photo IDs`);
       }
 
-      // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
+      // âœ… CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
@@ -1625,7 +1624,7 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
           const shouldReset = profile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : (generationsThisMonth + 1);
           
-          console.log(`📊 TRACKING: User ${userId} - Current: ${generationsThisMonth} → New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
+          console.log(`ðŸ“Š TRACKING: User ${userId} - Current: ${generationsThisMonth} â†’ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           // Use await to ensure update completes
           const { data: updateResult, error: updateError } = await supabase
             .from('profiles')
@@ -1638,13 +1637,13 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
             .select();
           
           if (updateError) {
-            console.error('âŒ CRITICAL: Usage update FAILED:', updateError);
+            console.error('Ã¢ÂÅ’ CRITICAL: Usage update FAILED:', updateError);
           } else {
-            console.log(`âœ… Usage updated successfully: ${newCount}/${limit}`);
-            console.log(`ðŸ“ˆ Update confirmed:`, updateResult);
+            console.log(`Ã¢Å“â€¦ Usage updated successfully: ${newCount}/${limit}`);
+            console.log(`Ã°Å¸â€œË† Update confirmed:`, updateResult);
           }
         } catch (error) {
-          console.error('âŒ Exception during usage tracking:', error);
+          console.error('Ã¢ÂÅ’ Exception during usage tracking:', error);
         }
       }
       const tierLimits = {
@@ -1654,7 +1653,7 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         business: 200
       };
       const limit = tierLimits[userTier] || 2;
-      console.log(`âœ… Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
+      console.log(`Ã¢Å“â€¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
       return res.json({
         success: true,
         htmlCode: generatedCode,
@@ -1722,7 +1721,7 @@ app.get('/api/profile', async (req, res) => {
         message: profileError.message
       });
     }
-    // âœ… FIX: Handle case when profile doesn't exist
+    // Ã¢Å“â€¦ FIX: Handle case when profile doesn't exist
     if (!profile) {
       logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
       const currentMonth = new Date().toISOString().slice(0, 7);
@@ -1821,7 +1820,7 @@ app.get('/api/profile', async (req, res) => {
   }
 });
 // ============================================
-// âœ… FIX #16: DOWNLOAD TRACKING ENDPOINT
+// Ã¢Å“â€¦ FIX #16: DOWNLOAD TRACKING ENDPOINT
 // ============================================
 app.post('/api/track-download', downloadLimiter, async (req, res) => {
   try {
@@ -1938,7 +1937,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         user_tier: userTier
       });
     logger.log(`${E.CHECK} [${req.id}] Download tracked for user ${user.id} (${downloadsThisMonth + 1}/${limit})`);
-    // âœ… FIX #22: Log security event
+    // Ã¢Å“â€¦ FIX #22: Log security event
     await logSecurityEvent({
       user_id: user.id,
       event_type: 'website_downloaded',
@@ -1951,7 +1950,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         downloads_limit: limit
       }
     });
-    // âœ… FIX #23: Send warning email when approaching limit
+    // Ã¢Å“â€¦ FIX #23: Send warning email when approaching limit
     const remainingDownloads = limit - (downloadsThisMonth + 1);
     if (remainingDownloads === 2 || remainingDownloads === 5) {
       // Send warning email asynchronously
@@ -2035,13 +2034,13 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         error: 'Invalid authentication'
       });
     }
-    // âœ… FIX #10: Get user's current tier
+    // Ã¢Å“â€¦ FIX #10: Get user's current tier
     const { data: currentProfile } = await supabase
       .from('profiles')
       .select('user_tier')
       .eq('id', user.id)
       .single();
-    // âœ… FIX #11: Log upgrade attempt
+    // Ã¢Å“â€¦ FIX #11: Log upgrade attempt
     await logSecurityEvent({
       user_id: user.id,
       event_type: 'checkout_initiated',
@@ -2143,7 +2142,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     });
   } catch (error) {
     logger.error(`${E.CROSS} [${req.id}] Checkout session error:`, error);
-    // âœ… FIX #13: Don't expose Stripe errors to client
+    // Ã¢Å“â€¦ FIX #13: Don't expose Stripe errors to client
     const errorMessage = error.type === 'StripeError'
       ? 'Payment processing error'
       : 'Internal server error';
@@ -2231,7 +2230,7 @@ app.post('/api/cancel-subscription', async (req, res) => {
   }
 });
 // ============================================
-// âœ… FIX #24: API KEY RELOAD ENDPOINT (ADMIN ONLY)
+// Ã¢Å“â€¦ FIX #24: API KEY RELOAD ENDPOINT (ADMIN ONLY)
 // ============================================
 app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
   try {
@@ -2276,7 +2275,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       .from('profiles')
       .select('id, email, user_tier, created_at, stripe_customer_id');
     if (profilesError) throw profilesError;
-    // âœ… FIX #25: Fetch download statistics
+    // Ã¢Å“â€¦ FIX #25: Fetch download statistics
     const { data: downloadData, error: downloadError } = await supabase
       .from('download_tracking')
       .select('user_id, downloaded_at, user_tier');
@@ -2289,7 +2288,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       pro: profiles.filter(p => p.user_tier === 'pro').length,
       business: profiles.filter(p => p.user_tier === 'business').length
     };
-    // âœ… ADD: Download statistics
+    // Ã¢Å“â€¦ ADD: Download statistics
     if (!downloadError && downloadData) {
       const totalDownloads = downloadData.length;
       const todayDownloads = downloadData.filter(d =>
@@ -2433,7 +2432,7 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
     const weekGenerations = weekData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
     // Calculate this month's generations
     const monthGenerations = usageData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
-    // âœ… ADD: Fetch download analytics
+    // Ã¢Å“â€¦ ADD: Fetch download analytics
     const { data: downloadData, error: downloadError } = await supabase
       .from('download_tracking')
       .select('*')
