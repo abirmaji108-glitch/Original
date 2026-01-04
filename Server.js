@@ -1037,12 +1037,11 @@ STEP 5: NEVER use placeholder text like [KEYWORD] or [EXTRACT_KEYWORDS]
 
 **CRITICAL RULE: THE KEYWORDS MUST BE ACTUAL WORDS, NOT PLACEHOLDERS!**
 
-âŒ WRONG (PLACEHOLDER - DO NOT DO THIS):
-<img src="https://source.unsplash.com/1920x1080/?[EXTRACT_KEYWORDS_FROM_PROMPT]">
+WRONG (PLACEHOLDER - DO NOT DO THIS):
+<img src="https://source.unsplash.com/1920x1080/?\[EXTRACT_KEYWORDS_FROM_PROMPT\]">
 
-âœ… CORRECT (ACTUAL KEYWORDS):
+CORRECT (ACTUAL KEYWORDS):
 <img src="https://source.unsplash.com/1920x1080/?fastfood,burger,fries">
-
 **MANDATORY EXAMPLES - STUDY THESE CAREFULLY:**
 
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1209,8 +1208,8 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
 1. HERO SECTION (FIRST SECTION - ALWAYS):
 <section class="hero-gradient-[color] min-h-screen flex items-center justify-center text-white">
     <div class="container mx-auto px-6 text-center fade-in">
-        <h1 class="text-6xl font-bold mb-6">[Compelling Headline]</h1>
-        <p class="text-2xl mb-8">[Engaging subheadline]</p>
+        <h1 class="text-6xl font-bold mb-6">\[Compelling Headline\]</h1>
+        <p class="text-2xl mb-8">\[Engaging subheadline\]</p>
         <div class="flex gap-4 justify-center">
             <a href="#" class="btn btn-primary">Primary CTA</a>
             <a href="#" class="btn btn-secondary">Secondary CTA</a>
@@ -1221,7 +1220,7 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
 2. CONTENT SECTIONS (ALTERNATE BACKGROUNDS):
 <section class="py-24 bg-white">
     <div class="container mx-auto px-6">
-        <h2 class="text-5xl font-bold text-center mb-16 text-gray-900">[Section Title]</h2>
+        <h2 class="text-5xl font-bold text-center mb-16 text-gray-900">\[Section Title\]</h2>
         <div class="grid-auto">
             <!-- Cards with images -->
         </div>
@@ -1236,8 +1235,8 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
 <div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
     <img src="https://picsum.photos/800/600?random=1" alt="Description" class="w-full h-64 object-cover">
     <div class="p-6">
-        <h3 class="text-2xl font-bold mb-3">[Card Title]</h3>
-        <p class="text-gray-600 mb-4">[Card description]</p>
+        <h3 class="text-2xl font-bold mb-3">\[Card Title\]</h3>
+        <p class="text-gray-600 mb-4">\[Card description\]</p>
         <a href="#" class="btn btn-primary">Learn More</a>
     </div>
 </div>
