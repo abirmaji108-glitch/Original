@@ -2169,9 +2169,8 @@ for (let i = 6; i >= 0; i--) {
   const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
   
   const dayDownloads = downloadData ? 
-    downloadData.filter(d => 
-      d.downloaded_at && d.downloaded_at.startsWith(dateStr)
-    ).length : 0;
+    downloadData.filter(d => d.downloaded_at && d.downloaded_at.startsWith(dateStr)).length 
+    : 0;
   
   history.push({
     date: dateStr,
