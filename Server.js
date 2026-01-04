@@ -1308,9 +1308,12 @@ When user asks for "gym website", use FITNESS images.
 âœ… Footer with contact info
 
 Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...`,
-      role: 'user',
-      content: sanitizedPrompt
-    }]
+    messages: [
+      {
+        role: 'user',
+        content: sanitizedPrompt
+      }
+    ]
   }),
         signal: controller.signal
       });
