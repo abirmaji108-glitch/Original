@@ -885,7 +885,12 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     max_tokens: 6000,
     system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
 
-ðŸŽ¯ CRITICAL SUCCESS CRITERIA:
+🚨🚨🚨 ABSOLUTE IMAGE REQUIREMENT - READ THIS FIRST 🚨🚨🚨
+NEVER EVER use source.unsplash.com - it causes images to change on refresh!
+ONLY use images.unsplash.com/photo-XXXXXX format with fixed photo IDs!
+Check the SMART IMAGE SYSTEM section below for the exact URLs to use!
+
+🎯 CRITICAL SUCCESS CRITERIA:
 1. EVERY image MUST use working Unsplash URLs with SPECIFIC search terms
 2. EVERY section must have proper spacing and visual hierarchy
 3. Modern, professional design with depth and polish
