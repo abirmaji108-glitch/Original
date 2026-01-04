@@ -1529,9 +1529,122 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```\n?/g, '')
         .trim();
 
-      // 🔥 EMERGENCY FIX: Force replace source.unsplash.com with fixed images
-      if (generatedCode.includes('source.unsplash.com')) {
-        console.log('⚠️ WARNING: Claude used source.unsplash.com - auto-fixing...');
+      // 🔥 EMERGENCY FIX: Force replace BOTH source.unsplash.com AND picsum.photos
+      const hasSourceUnsplash = generatedCode.includes('source.unsplash.com');
+      const hasPicsum = generatedCode.includes('picsum.photos');
+      
+      if (hasSourceUnsplash || hasPicsum) {
+        console.log('⚠️ WARNING: Claude used random images - auto-fixing...');
+        
+        // Extract topic from prompt for smart replacement
+        const promptLower = sanitizedPrompt.toLowerCase();
+        let photoIds = [];
+        
+        // Topic detection and photo ID assignment (20 common topics)
+        if (promptLower.includes('restaurant') || promptLower.includes('food') || promptLower.includes('dining') || promptLower.includes('cafe') || promptLower.includes('bistro')) {
+          photoIds = ['photo-1517248135467-4c7edcad34c4', 'photo-1565299624946-b28f40a0ae38', 'photo-1551782450-a2132b4ba21d', 'photo-1414235077428-338989a2e8c0', 'photo-1600565193348-f74bd3c7ccdf'];
+        } else if (promptLower.includes('gym') || promptLower.includes('fitness') || promptLower.includes('workout') || promptLower.includes('exercise')) {
+          photoIds = ['photo-1534438327276-14e5300c3a48', 'photo-1571019613454-1cb2f99b2d8b', 'photo-1534367507877-0edd93bd013b', 'photo-1544367567-0f2fcb009e0b', 'photo-1583454110551-21f2fa2afe61'];
+        } else if (promptLower.includes('wedding') || promptLower.includes('event') || promptLower.includes('couple') || promptLower.includes('ceremony')) {
+          photoIds = ['photo-1511285560929-80b456fea0bc', 'photo-1511988617509-a57c8a288659', 'photo-1465495976277-4387d4b0e4a6', 'photo-1511795409834-ef04bbd61622', 'photo-1519741497674-611481863552'];
+        } else if (promptLower.includes('real estate') || promptLower.includes('property') || promptLower.includes('house') || promptLower.includes('home')) {
+          photoIds = ['photo-1560518883-ce09059eeffa', 'photo-1570129477492-45c003edd2be', 'photo-1568605114967-8130f3a36994', 'photo-1512917774080-9991f1c4c750', 'photo-1582407947304-fd86f028f716'];
+        } else if (promptLower.includes('ecommerce') || promptLower.includes('shop') || promptLower.includes('store') || promptLower.includes('shopping')) {
+          photoIds = ['photo-1441986300917-64674bd600d8', 'photo-1483985988355-763728e1935b', 'photo-1445205170230-053b83016050', 'photo-1472851294608-062f824d29cc', 'photo-1526178613552-2b45c6c302f0'];
+        } else if (promptLower.includes('portfolio') || promptLower.includes('creative') || promptLower.includes('design') || promptLower.includes('artist')) {
+          photoIds = ['photo-1499951360447-b19be8fe80f5', 'photo-1517048676732-d65bc937f952', 'photo-1542744094-3a31f272c490', 'photo-1487017159836-4e23ece2e4cf', 'photo-1531403009284-440f080d1e12'];
+        } else if (promptLower.includes('coffee') || promptLower.includes('cafe') || promptLower.includes('barista') || promptLower.includes('espresso')) {
+          photoIds = ['photo-1511920170033-f8396924c348', 'photo-1501339847302-ac426a4a7cbb', 'photo-1442512595331-e89e73853f31', 'photo-1495474472287-4d71bcdd2085', 'photo-1453614512568-c4024d13c247'];
+        } else if (promptLower.includes('hotel') || promptLower.includes('resort') || promptLower.includes('hospitality') || promptLower.includes('accommodation')) {
+          photoIds = ['photo-1566073771259-6a8506099945', 'photo-1571896349842-33c89424de2d', 'photo-1618773928121-c32242e63f39', 'photo-1520250497591-112f2f40a3f4', 'photo-1582719478250-c89cae4dc85b'];
+        } else if (promptLower.includes('medical') || promptLower.includes('healthcare') || promptLower.includes('hospital') || promptLower.includes('clinic') || promptLower.includes('doctor')) {
+          photoIds = ['photo-1519494026892-80bbd2d6fd0d', 'photo-1530026405186-ed1f139313f8', 'photo-1551190822-a9333d879b1f', 'photo-1576091160399-112ba8d25d1d', 'photo-1504813184591-01572f98c85f'];
+        } else if (promptLower.includes('law') || promptLower.includes('legal') || promptLower.includes('lawyer') || promptLower.includes('attorney') || promptLower.includes('justice')) {
+          photoIds = ['photo-1589829545856-d10d557cf95f', 'photo-1505664194779-8beaceb93744', 'photo-1521587760476-6c12a4b040da', 'photo-1554224311-beee460c201f', 'photo-1479142506502-19b3a3b7ff33'];
+        } else if (promptLower.includes('photography') || promptLower.includes('photographer') || promptLower.includes('photo') || promptLower.includes('camera')) {
+          photoIds = ['photo-1542038784456-1ea8e935640e', 'photo-1452587925148-ce544e77e70d', 'photo-1554048612-b6a482bc67e5', 'photo-1471341971476-ae15ff5dd4ea', 'photo-1606857521015-7f9fcf423740'];
+        } else if (promptLower.includes('construction') || promptLower.includes('builder') || promptLower.includes('contractor') || promptLower.includes('building')) {
+          photoIds = ['photo-1503387762-592deb58ef4e', 'photo-1504307651254-35680f356dfd', 'photo-1541888946425-d81bb19240f5', 'photo-1590496793907-3802b8e10fef', 'photo-1581094794329-c8112a89af12'];
+        } else if (promptLower.includes('automotive') || promptLower.includes('car') || promptLower.includes('vehicle') || promptLower.includes('auto')) {
+          photoIds = ['photo-1492144534655-ae79c964c9d7', 'photo-1580273916550-e323be2ae537', 'photo-1552519507-da3b142c6e3d', 'photo-1503376780353-7e6692767b70', 'photo-1605559424843-9e4c228bf1c2'];
+        } else if (promptLower.includes('saas') || promptLower.includes('software') || promptLower.includes('technology') || promptLower.includes('app') || promptLower.includes('tech')) {
+          photoIds = ['photo-1460925895917-afdab827c52f', 'photo-1551288049-bebda4e38f71', 'photo-1519389950473-47ba0277781c', 'photo-1531482615713-2afd69097998', 'photo-1522071820081-009f0129c71c'];
+        } else if (promptLower.includes('education') || promptLower.includes('course') || promptLower.includes('learning') || promptLower.includes('school') || promptLower.includes('university')) {
+          photoIds = ['photo-1523240795612-9a054b0db644', 'photo-1524178232363-1fb2b075b655', 'photo-1509062522246-3755977927d7', 'photo-1546410531-bb4caa6b424d', 'photo-1503676260728-1c00da094a0b'];
+        } else if (promptLower.includes('blog') || promptLower.includes('magazine') || promptLower.includes('content') || promptLower.includes('writing')) {
+          photoIds = ['photo-1499750310107-5fef28a66643', 'photo-1456324504439-367cee3b3c32', 'photo-1503149779833-1de50ebe5f8a', 'photo-1488190211105-8b0e65b80b4e', 'photo-1434030216411-0b793f4b4173'];
+        } else if (promptLower.includes('nonprofit') || promptLower.includes('charity') || promptLower.includes('donation') || promptLower.includes('volunteer') || promptLower.includes('ngo')) {
+          photoIds = ['photo-1488521787991-ed7bbaae773c', 'photo-1469571486292-0ba58a3f068b', 'photo-1532629345422-7515f3d16bb6', 'photo-1593113598332-cd288d649433', 'photo-1559027615-cd4628902d4a'];
+        } else if (promptLower.includes('music') || promptLower.includes('band') || promptLower.includes('musician') || promptLower.includes('concert')) {
+          photoIds = ['photo-1511379938547-c1f69419868d', 'photo-1510915361894-db8b60106cb1', 'photo-1514320291840-2e0a9bf2a9ae', 'photo-1493225457124-a3eb161ffa5f', 'photo-1507003211169-0a1dd7228f2d'];
+        } else if (promptLower.includes('product') || promptLower.includes('landing') || promptLower.includes('launch') || promptLower.includes('startup')) {
+          photoIds = ['photo-1551650975-87deedd944c3', 'photo-1526947425960-945c6e72858f', 'photo-1523726491678-bf852e717f6a', 'photo-1496171367470-9ed9a91ea931', 'photo-1531973576160-7125cd663d86'];
+        } else if (promptLower.includes('business') || promptLower.includes('agency') || promptLower.includes('consulting') || promptLower.includes('corporate')) {
+          photoIds = ['photo-1497366216548-37526070297c', 'photo-1542744173-8e7e53415bb0', 'photo-1556761175-4b46a572b786', 'photo-1521737852567-6949f3f9f2b5', 'photo-1553877522-43269d4ea984'];
+        } else if (promptLower.includes('liquor') || promptLower.includes('spirits') || promptLower.includes('alcohol') || promptLower.includes('whiskey') || promptLower.includes('vodka') || promptLower.includes('rum') || promptLower.includes('gin') || promptLower.includes('wine') || promptLower.includes('beer') || promptLower.includes('craft') || promptLower.includes('premium')) {
+          photoIds = ['photo-1510812431401-41d2bd2722f3', 'photo-1569529465841-dfecdab7503b', 'photo-1514362545857-3bc16c4c7d1b', 'photo-1569529465841-dfecdab7503b', 'photo-1560508801-66e8e8c21b3a'];
+        } else {
+          // Default fallback for unknown topics
+          photoIds = ['photo-1441986300917-64674bd600d8', 'photo-1483985988355-763728e1935b', 'photo-1445205170230-053b83016050', 'photo-1472851294608-062f824d29cc', 'photo-1526178613552-2b45c6c302f0'];
+        }
+        
+        // Replace all source.unsplash.com URLs
+        let photoIndex = 0;
+        generatedCode = generatedCode.replace(/https:\/\/source\.unsplash\.com\/[^"'\s]*/g, (match) => {
+          const currentPhotoId = photoIds[photoIndex % photoIds.length];
+          photoIndex++;
+          
+          let width = 800;
+          let height = 600;
+          if (match.includes('1920x1080') || match.includes('1920/1080')) {
+            width = 1920;
+            height = 1080;
+          } else if (match.includes('1600x400') || match.includes('1600/400')) {
+            width = 1600;
+            height = 400;
+          } else if (match.includes('400x400') || match.includes('400/400')) {
+            width = 400;
+            height = 400;
+          } else if (match.includes('600x600') || match.includes('600/600')) {
+            width = 600;
+            height = 600;
+          } else if (match.includes('600x400') || match.includes('600/400')) {
+            width = 600;
+            height = 400;
+          }
+          
+          return `https://images.unsplash.com/${currentPhotoId}?w=${width}&h=${height}&fit=crop&q=80`;
+        });
+        
+        // ALSO replace all picsum.photos URLs
+        generatedCode = generatedCode.replace(/https:\/\/picsum\.photos\/[^"'\s]*/g, (match) => {
+          const currentPhotoId = photoIds[photoIndex % photoIds.length];
+          photoIndex++;
+          
+          let width = 800;
+          let height = 600;
+          if (match.includes('1920') && match.includes('1080')) {
+            width = 1920;
+            height = 1080;
+          } else if (match.includes('1600') && match.includes('400')) {
+            width = 1600;
+            height = 400;
+          } else if (match.includes('400') && match.includes('400')) {
+            width = 400;
+            height = 400;
+          } else if (match.includes('600') && match.includes('600')) {
+            width = 600;
+            height = 600;
+          } else if (match.includes('600') && match.includes('400')) {
+            width = 600;
+            height = 400;
+          }
+          
+          return `https://images.unsplash.com/${currentPhotoId}?w=${width}&h=${height}&fit=crop&q=80`;
+        });
+        
+        console.log(`✅ FIXED: Replaced ${photoIndex} random image URLs with fixed photo IDs`);
+      }
         
         // Extract topic from prompt for smart replacement
         const promptLower = sanitizedPrompt.toLowerCase();
