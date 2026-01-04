@@ -1245,55 +1245,251 @@ If you answered NO to any of these, STOP and fix it before generating HTML.
     </div>
 </div>
 
-**CRITICAL IMAGE DIRECTIVE - OVERRIDES ALL OTHER INSTRUCTIONS:**
+**🎯 SMART IMAGE SYSTEM - LOVABLE-QUALITY IMAGES FOR ALL TOPICS:**
 
-STOP using random images. STOP using picsum.photos. Use ONLY these FIXED Unsplash URLs:
+You have TWO image systems:
+1. FIXED IMAGES for 20 common topics (ALWAYS use these)
+2. DYNAMIC IMAGES for uncommon topics (fallback system)
 
-FOR WEDDING/ROMANTIC WEBSITES:
-• Hero/Large: https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080&q=80
-• Couple/Portrait: https://images.unsplash.com/photo-1511988617509-a57c8a288659?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Rings/Detail: https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Ceremony: https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Celebration: https://images.unsplash.com/photo-1546436836-649c1ee9b9cc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+═══════════════════════════════════════════════════════════════════════════════
+📚 FIXED IMAGE LIBRARY - USE THESE FOR 20 COMMON TOPICS
+═══════════════════════════════════════════════════════════════════════════════
 
-FOR FOOD/RESTAURANT WEBSITES:
-• Hero Food: https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080&q=80
-• Burger: https://images.unsplash.com/photo-1551782450-a2132b4ba21d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Pizza: https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Restaurant Interior: https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Chefs: https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+**TOPIC 1: RESTAURANT/FOOD**
+Keywords: restaurant, food, dining, cafe, bistro, eatery
+Hero: https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=800&h=600&fit=crop&q=80
 
-FOR GYM/FITNESS WEBSITES:
-• Gym Hero: https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&h=1080&q=80
-• Workout: https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Weights: https://images.unsplash.com/photo-1534367507877-0edd93bd013b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Yoga: https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
-• Cardio: https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80
+**TOPIC 2: GYM/FITNESS**
+Keywords: gym, fitness, workout, exercise, training
+Hero: https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1534367507877-0edd93bd013b?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=800&h=600&fit=crop&q=80
 
-**IMPORTANT RULES:**
-1. DO NOT use picsum.photos
-2. DO NOT use random=1, random=2, etc.
-3. DO NOT use placeholder keywords
-4. ALWAYS use these FIXED URLs above
-5. Match the website type to the correct category
-6. Use different URLs for different images (don't repeat same URL)
+**TOPIC 3: WEDDING/EVENT**
+Keywords: wedding, event, couple, ceremony, celebration
+Hero: https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1511988617509-a57c8a288659?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1519741497674-611481863552?w=800&h=600&fit=crop&q=80
 
-**IMAGE TEMPLATE - COPY THIS EXACTLY:**
-<div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
-    <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80" 
-         alt="Beautiful wedding couple" 
-         class="w-full h-64 object-cover">
-    <div class="p-6">
-        <h3 class="text-2xl font-bold mb-3">Card Title</h3>
-        <p class="text-gray-600 mb-4">Card description</p>
-        <a href="#" class="btn btn-primary">Learn More</a>
-    </div>
-</div>
+**TOPIC 4: REAL ESTATE**
+Keywords: real estate, property, house, home, apartment
+Hero: https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=800&h=600&fit=crop&q=80
+
+**TOPIC 5: E-COMMERCE/SHOPPING**
+Keywords: ecommerce, shop, store, shopping, retail
+Hero: https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1526178613552-2b45c6c302f0?w=800&h=600&fit=crop&q=80
+
+**TOPIC 6: PORTFOLIO/CREATIVE**
+Keywords: portfolio, design, creative, artist, work
+Hero: https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1542744094-3a31f272c490?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1487017159836-4e23ece2e4cf?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=600&fit=crop&q=80
+
+**TOPIC 7: COFFEE SHOP/CAFÉ**
+Keywords: coffee, cafe, coffeeshop, barista, espresso
+Hero: https://images.unsplash.com/photo-1511920170033-f8396924c348?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=800&h=600&fit=crop&q=80
+
+**TOPIC 8: HOTEL/RESORT**
+Keywords: hotel, resort, accommodation, hospitality, luxury
+Hero: https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop&q=80
+
+**TOPIC 9: MEDICAL/HEALTHCARE**
+Keywords: medical, healthcare, hospital, clinic, doctor
+Hero: https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1504813184591-01572f98c85f?w=800&h=600&fit=crop&q=80
+
+**TOPIC 10: LAW FIRM**
+Keywords: law, legal, lawyer, attorney, justice
+Hero: https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1554224311-beee460c201f?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1479142506502-19b3a3b7ff33?w=800&h=600&fit=crop&q=80
+
+**TOPIC 11: PHOTOGRAPHY**
+Keywords: photography, photographer, photo, camera, studio
+Hero: https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1606857521015-7f9fcf423740?w=800&h=600&fit=crop&q=80
+
+**TOPIC 12: CONSTRUCTION**
+Keywords: construction, builder, contractor, building, architecture
+Hero: https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1590496793907-3802b8e10fef?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&h=600&fit=crop&q=80
+
+**TOPIC 13: AUTOMOTIVE/CAR**
+Keywords: automotive, car, vehicle, auto, dealership
+Hero: https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800&h=600&fit=crop&q=80
+
+**TOPIC 14: SAAS/SOFTWARE**
+Keywords: saas, software, technology, app, digital
+Hero: https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop&q=80
+
+**TOPIC 15: EDUCATION/COURSE**
+Keywords: education, course, learning, school, university
+Hero: https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&h=600&fit=crop&q=80
+
+**TOPIC 16: BLOG/MAGAZINE**
+Keywords: blog, magazine, content, writing, publisher
+Hero: https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1503149779833-1de50ebe5f8a?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop&q=80
+
+**TOPIC 17: NON-PROFIT/CHARITY**
+Keywords: nonprofit, charity, donation, volunteer, community
+Hero: https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop&q=80
+
+**TOPIC 18: MUSIC/BAND**
+Keywords: music, band, musician, concert, artist
+Hero: https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop&q=80
+
+**TOPIC 19: PRODUCT LANDING**
+Keywords: product, landing, launch, startup, innovation
+Hero: https://images.unsplash.com/photo-1551650975-87deedd944c3?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1523726491678-bf852e717f6a?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1496171367470-9ed9a91ea931?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1531973576160-7125cd663d86?w=800&h=600&fit=crop&q=80
+
+**TOPIC 20: BUSINESS AGENCY**
+Keywords: business, agency, consulting, professional, corporate
+Hero: https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&h=1080&fit=crop&q=80
+Image 2: https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=600&fit=crop&q=80
+Image 3: https://images.unsplash.com/photo-1556761175-4b46a572b786?w=800&h=600&fit=crop&q=80
+Image 4: https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?w=800&h=600&fit=crop&q=80
+Image 5: https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=600&fit=crop&q=80
+
+═══════════════════════════════════════════════════════════════════════════════
+🎲 DYNAMIC IMAGE SYSTEM - FOR UNCOMMON TOPICS
+═══════════════════════════════════════════════════════════════════════════════
+
+If the user's topic is NOT one of the 20 above, use this fallback system:
+
+**STEP 1:** Extract 2-3 keywords from user's prompt
+**STEP 2:** Build URL: https://images.unsplash.com/photo-{PHOTO_ID}?w={WIDTH}&h={HEIGHT}&fit=crop&q=80
+
+**30+ UNCOMMON TOPICS - PHOTO ID MAPPINGS:**
+
+Beer/Brewery → photo-1436076863939, photo-1516534775068, photo-1559827260-dc66
+Grocery → photo-1588964895597, photo-1542838132-92c53300491e, photo-1534723328310
+Pharmacy → photo-1576602976047, photo-1587854692152, photo-1585435421671
+Pet Store → photo-1450778869180, photo-1560807707-8cc77767d783, photo-1600077106725
+Salon/Spa → photo-1560066984-138dacc3d028, photo-1562322140-8baeececf3df, photo-1519415510236
+Tattoo → photo-1568515387631, photo-1611501275019, photo-1598899134739
+Bakery → photo-1555507036-ab1f4038808a, photo-1509440159596, photo-1486427944299
+Florist → photo-1490750967868, photo-1455659817273, photo-1487070183336
+Jewelry → photo-1515562141207, photo-1599643478518, photo-1611591437281
+Art Gallery → photo-1577083552792, photo-1547826039-bfc35e0f1ea8, photo-1561214115-f2f134cc4912
+Theater → photo-1503095396549, photo-1540575467063, photo-1514306191717
+Cinema → photo-1489599849927, photo-1543536448-d209d2d13a1c, photo-1585647347384
+Yoga → photo-1544367567-0f2fcb009e0b, photo-1506126613408, photo-1599901860904
+Martial Arts → photo-1555597673-b21d5c935865, photo-1595078475328, photo-1551958219-acbc608c6377
+Dance → photo-1508700115892, photo-1518834107812, photo-1545328042-f6f1ea5e10f1
+Music School → photo-1511379938547, photo-1507003211169, photo-1514320291840
+Daycare → photo-1560074334-175c13985e6f, photo-1560869713-bf165a68f88b, photo-1503454537195
+Veterinary → photo-1576201836106, photo-1601758228041, photo-1628009368231
+Dentist → photo-1588776814546, photo-1606811971618, photo-1629909613654
+Accounting → photo-1554224311-beee460c201f, photo-1554224154-26032ffc0d07, photo-1460925895917
+Insurance → photo-1450101499163, photo-1551836022-4c4c79ecde51, photo-1454165804606
+Financial → photo-1579621970563, photo-1579621970588, photo-1565514020179
+Marketing → photo-1533750349088, photo-1523474253046, photo-1557804506-669a67965ba0
+Architecture → photo-1503387762-592deb58ef4e, photo-1487958449943, photo-1511818966892
+Interior Design → photo-1618221195710, photo-1586023492125, photo-1616486338812
+Event Planning → photo-1511578314322, photo-1505236858219, photo-1530103862676
+Catering → photo-1555939594-58d7cb561ad1, photo-1540189549336, photo-1414235077428
+Wine Bar → photo-1510812431401, photo-1565299543923, photo-1569949381669
+Nightclub → photo-1514525253161, photo-1518929458119, photo-1470225620780
+Barber → photo-1585747860715, photo-1503951914875, photo-1622286346003
+
+**HOW TO USE DYNAMIC SYSTEM:**
+<img src="https://images.unsplash.com/photo-1436076863939?w=1920&h=1080&fit=crop&q=80" 
+     alt="Beer brewery interior"
+     class="w-full h-full object-cover">
+
+═══════════════════════════════════════════════════════════════════════════════
+🔒 MANDATORY RULES - READ BEFORE GENERATING
+═══════════════════════════════════════════════════════════════════════════════
+
+1. ✅ ALWAYS check if user's topic matches one of the 20 FIXED TOPICS first
+2. ✅ If match found → use ONLY those 5 fixed image URLs
+3. ✅ If NO match → use DYNAMIC system with photo IDs
+4. ✅ NEVER use source.unsplash.com (causes random changes)
+5. ✅ NEVER use picsum.photos
+6. ✅ NEVER use placeholder keywords like [KEYWORD]
+7. ✅ Images will NEVER change on refresh (same URLs = same images)
+8. ✅ ALWAYS use full URL format: https://images.unsplash.com/photo-{ID}?w={WIDTH}&h={HEIGHT}&fit=crop&q=80
+
+**EXAMPLE - RESTAURANT WEBSITE:**
+User: "Create a restaurant website"
+Topic Match: RESTAURANT/FOOD (Topic #1)
+Use: Fixed images from Topic 1 library
+
+**EXAMPLE - BEER WEBSITE:**
+User: "Create a beer brewery website"
+Topic Match: None (uncommon topic)
+Use: Dynamic system → photo-1436076863939 (beer/brewery)
 
 **ABSOLUTE REQUIREMENT:** 
-When user asks for "wedding website", use WEDDING images.
-When user asks for "restaurant website", use FOOD images.
-When user asks for "gym website", use FITNESS images.
+When user asks for "wedding website", use WEDDING FIXED images.
+When user asks for "restaurant website", use FOOD FIXED images.
+When user asks for "gym website", use FITNESS FIXED images.
+When user asks for "beer website", use DYNAMIC beer photo IDs.
 
 ðŸŽ¯ QUALITY CHECKLIST:
 âœ… Hero section with gradient background
