@@ -1532,9 +1532,10 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
       // 🔥 EMERGENCY FIX: Force replace BOTH source.unsplash.com AND picsum.photos
 const hasSourceUnsplash = generatedCode.includes('source.unsplash.com');
 const hasPicsum = generatedCode.includes('picsum.photos');
+const hasImagesUnsplash = generatedCode.includes('images.unsplash.com/photo-');
 
-if (hasSourceUnsplash || hasPicsum) {
-  console.log('⚠️ WARNING: Claude used random images - auto-fixing...');
+if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
+  console.log('⚠️ WARNING: Claude used random/generic images - auto-fixing...');
   
   const promptLower = sanitizedPrompt.toLowerCase();
   let photoIds = [];
@@ -1588,57 +1589,52 @@ if (hasSourceUnsplash || hasPicsum) {
   
   let photoIndex = 0;
   
-  generatedCode = generatedCode.replace(/https:\/\/source\.unsplash\.com\/[^"'\s]*/g, function(match) {
+  // Replace source.unsplash.com
+  generatedCode = generatedCode.replace(/https?:\/\/source\.unsplash\.com\/[^"'\s)>]*/gi, function(match) {
     const currentPhotoId = photoIds[photoIndex % photoIds.length];
     photoIndex++;
     let width = 800;
     let height = 600;
-    if (match.includes('1920x1080') || match.includes('1920/1080')) {
-      width = 1920;
-      height = 1080;
-    } else if (match.includes('1600x400') || match.includes('1600/400')) {
-      width = 1600;
-      height = 400;
-    } else if (match.includes('400x400') || match.includes('400/400')) {
-      width = 400;
-      height = 400;
-    } else if (match.includes('600x600') || match.includes('600/600')) {
-      width = 600;
-      height = 600;
-    } else if (match.includes('600x400') || match.includes('600/400')) {
-      width = 600;
-      height = 400;
-    }
+    if (match.includes('1920')) width = 1920, height = 1080;
+    else if (match.includes('1600')) width = 1600, height = 400;
+    else if (match.includes('400')) width = 400, height = 400;
     return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
   });
   
-  generatedCode = generatedCode.replace(/https:\/\/picsum\.photos\/[^"'\s]*/g, function(match) {
+  // Replace picsum.photos
+  generatedCode = generatedCode.replace(/https?:\/\/picsum\.photos\/[^"'\s)>]*/gi, function(match) {
     const currentPhotoId = photoIds[photoIndex % photoIds.length];
     photoIndex++;
-    let width = 800;
-    let height = 600;
-    if (match.includes('1920') && match.includes('1080')) {
-      width = 1920;
-      height = 1080;
-    } else if (match.includes('1600') && match.includes('400')) {
-      width = 1600;
-      height = 400;
-    } else if (match.includes('400') && match.includes('400')) {
-      width = 400;
-      height = 400;
-    } else if (match.includes('600') && match.includes('600')) {
-      width = 600;
-      height = 600;
-    } else if (match.includes('600') && match.includes('400')) {
-      width = 600;
-      height = 400;
+    let width = 800, height = 600;
+    const sizeMatch = match.match(/(\d+)[\/ ](\d+)/);
+    if (sizeMatch) {
+      width = parseInt(sizeMatch[1]);
+      height = parseInt(sizeMatch[2]);
     }
     return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
   });
   
-  console.log('✅ FIXED: Replaced ' + photoIndex + ' random image URLs with fixed photo IDs');
+  // NEW: Also replace generic images.unsplash.com URLs that don't have our fixed photo IDs
+  generatedCode = generatedCode.replace(/https:\/\/images\.unsplash\.com\/photo-([a-zA-Z0-9_-]+)\?(?![^"'\s)>]*random)/gi, function(match, capturedId) {
+    // Check if this is one of our fixed photo IDs
+    const isFixedId = photoIds.some(function(id) { return match.includes(id); });
+    if (!isFixedId) {
+      const currentPhotoId = photoIds[photoIndex % photoIds.length];
+      photoIndex++;
+      const paramMatch = match.match(/[?&]w=(\d+)&h=(\d+)/);
+      let width = 800, height = 600;
+      if (paramMatch) {
+        width = parseInt(paramMatch[1]);
+        height = parseInt(paramMatch[2]);
+      }
+      console.log('🔄 Replacing generic Unsplash ID: ' + capturedId + ' with fixed: ' + currentPhotoId);
+      return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
+    }
+    return match;
+  });
+  
+  console.log('✅ FIXED: Replaced ' + photoIndex + ' random/generic image URLs with fixed photo IDs');
 }
-
       // âœ… CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
