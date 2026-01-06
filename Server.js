@@ -864,9 +864,6 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
             }
           }
         }
-            }
-          }
-        }
       } catch (authError) {
         console.error('Auth error:', authError);
         // Continue as free user
