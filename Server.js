@@ -16,8 +16,9 @@ import logger from './utils/logger.js';
 const E = {
   CHECK: 'Ã¢Å“â€¦', CROSS: 'Ã¢ÂÅ’', WARN: 'Ã¢Å¡ Ã¯Â¸Â', CHART: 'Ã°Å¸â€œÅ ', LOCK: 'Ã°Å¸â€â€™',
   INBOX: 'Ã°Å¸â€œÂ¥', SIREN: 'Ã°Å¸Å¡Â¨', REFRESH: 'Ã°Å¸â€â€ž', UP: 'Ã°Å¸â€œË†', LINK: 'Ã°Å¸â€â€”',
-  CARD: 'Ã°Å¸â€™Â³', STOP: 'Ã°Å¸â€ºâ€˜', EMAIL: 'Ã°Å¸â€œÂ§', INFO: 'Ã¢â€žÂ¹Ã¯Â¸Â', BLUE: 'Ã°Å¸â€Âµ'
+  CARD: 'Ã°Å¸â€™Â³', STOP: 'Ã°Å¸â€ºâ€˜', EMAIL: 'Ã°Å¸â€œÂ§', INFO: 'Ã¢â€žÂ¹Ã¯Â¸Â', BLUE: 'Ã°Å¸âÂµ'
 };
+import { IMAGE_LIBRARY, detectTopic } from './imageLibrary.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -255,7 +256,7 @@ if (stripe) {
     logger.error(`${E.CROSS} CRITICAL: Missing required Stripe price IDs:`,
       missingPriceIds.map(p => p.name).join(', ')
     );
-    logger.error(`${E.WARN} Payments will fail! Please configure these in Render.com environment variables.`);
+    logger.error(`${E.WARN} Payments will fail! Please configure these in [Render.com](http://Render.com) environment variables.`);
   } else {
     logger.log(`${E.CHECK} All required Stripe price IDs configured`);
   }
@@ -395,7 +396,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ============================================
 // ADMIN AUTHENTICATION MIDDLEWARE
 // ============================================
-const adminEmails = (process.env.ADMIN_EMAILS || 'abirmaji108@gmail.com').split(',');
+const adminEmails = (process.env.ADMIN_EMAILS || '<abirmaji108@gmail.com>').split(',');
 async function requireAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -806,10 +807,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
-     
+    
         if (!error && user) {
           userId = user.id;
-       
+      
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
@@ -825,19 +826,19 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-         
+        
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
-            
+           
             // âœ” TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
             const TESTING_MODE = true; // âš ï¸ SET TO FALSE AFTER TESTING
-            const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
-            
+            const ADMIN_EMAILS = ['<abirmaji108@gmail.com>']; // Your admin email
+           
             // Check if user is admin
             const { data: { user: authUser } } = await supabase.auth.getUser(token);
             const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
-            
+           
             // Check limits (skip for admins in testing mode)
             const tierLimits = {
               free: 2,
@@ -846,7 +847,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               business: 200
             };
             const limit = tierLimits[userTier] || 2;
-            
+           
             if (!TESTING_MODE || !isAdmin) {
               // Normal limit enforcement for non-admins
               if (generationsThisMonth >= limit) {
@@ -883,632 +884,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
-
-ðŸš¨ðŸš¨ðŸš¨ ABSOLUTE IMAGE REQUIREMENT - READ THIS FIRST ðŸš¨ðŸš¨ðŸš¨
-NEVER EVER use source.unsplash.com - it causes images to change on refresh!
-ONLY use images.unsplash.com/photo-XXXXXX format with fixed photo IDs!
-Check the SMART IMAGE SYSTEM section below for the exact URLs to use!
-
-ðŸŽ¯ CRITICAL SUCCESS CRITERIA:
-1. EVERY image MUST use working Unsplash URLs with SPECIFIC search terms
-2. EVERY section must have proper spacing and visual hierarchy
-3. Modern, professional design with depth and polish
-4. Mobile-responsive by default
-
-Ã°Å¸â€œÂ MANDATORY STRUCTURE:
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Website</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-        
-        /* HERO GRADIENTS - Use these for hero sections */
-        .hero-gradient-blue {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
-        }
-        
-        .hero-gradient-purple {
-            background: linear-gradient(135deg, #581c87 0%, #a855f7 50%, #c084fc 100%);
-        }
-        
-        .hero-gradient-sunset {
-            background: linear-gradient(135deg, #ea580c 0%, #f59e0b 50%, #fbbf24 100%);
-        }
-        
-        .hero-gradient-ocean {
-            background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%);
-        }
-        
-        /* GLASSMORPHISM EFFECTS */
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-        }
-        
-        .glass-dark {
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-        }
-        
-        /* SMOOTH ANIMATIONS */
-        .fade-in {
-            animation: fadeIn 0.6s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .hover-lift {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .hover-lift:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        }
-        
-        /* IMAGE OPTIMIZATION */
-img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-
-img[src] {
-    background: none;
-}
-        
-        /* RESPONSIVE GRID */
-        .grid-auto {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-        
-        /* BUTTONS */
-        .btn {
-            display: inline-block;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
-        }
-        
-        .btn-secondary {
-            background: white;
-            color: #1e40af;
-            border: 2px solid #1e40af;
-        }
-        
-        .btn-secondary:hover {
-            background: #1e40af;
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <!-- CONTENT GOES HERE -->
-</body>
-</html>
-
-Ã°Å¸â€“Â¼Ã¯Â¸Â CRITICAL IMAGE SYSTEM - MANDATORY KEYWORD EXTRACTION:
-
-Ã¢Å¡ Ã¯Â¸Â ABSOLUTE REQUIREMENT: You MUST read the user's prompt, identify the website topic, and extract specific keywords BEFORE writing any HTML code.
-
-**STEP-BY-STEP MANDATORY PROCESS:**
-
-STEP 1: READ the user's exact prompt word-by-word
-STEP 2: IDENTIFY the main topic (wedding/restaurant/gym/fastfood/etc)
-STEP 3: WRITE DOWN 3-5 specific keywords related to that topic
-STEP 4: USE those exact keywords in EVERY image URL
-STEP 5: NEVER use placeholder text like [KEYWORD] or [EXTRACT_KEYWORDS]
-
-**CRITICAL RULE: THE KEYWORDS MUST BE ACTUAL WORDS, NOT PLACEHOLDERS!**
-
-WRONG (PLACEHOLDER - DO NOT DO THIS):
-<img src="https://source.unsplash.com/1920x1080/?\[EXTRACT_KEYWORDS_FROM_PROMPT\]">
-
-CORRECT (ACTUAL KEYWORDS):
-<img src="https://source.unsplash.com/1920x1080/?fastfood,burger,fries">
-**MANDATORY EXAMPLES - STUDY THESE CAREFULLY:**
-
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-
-EXAMPLE 1 - WEDDING WEBSITE:
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-User prompt: "Create a wedding website for Emma and James"
-
-STEP 1: Topic identified = WEDDING
-STEP 2: Keywords extracted = wedding, couple, love, ceremony, bride, groom
-STEP 3: Build URLs with THESE EXACT WORDS:
-
-Hero section:
-<img src="https://source.unsplash.com/1920x1080/?wedding,couple,love"
-     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
-     alt="Wedding celebration"
-     class="w-full h-full object-cover">
-
-Gallery images:
-<img src="https://source.unsplash.com/800x600/?wedding,ceremony"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';">
-<img src="https://source.unsplash.com/800x600/?bride,groom"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';">
-<img src="https://source.unsplash.com/800x600/?wedding,reception"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
-
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-
-EXAMPLE 2 - FAST FOOD RESTAURANT:
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-User prompt: "Create a fast food restaurant website selling burgers and fries"
-
-STEP 1: Topic identified = FAST FOOD RESTAURANT
-STEP 2: Keywords extracted = fastfood, burger, fries, restaurant, food
-STEP 3: Build URLs with THESE EXACT WORDS:
-
-Hero section:
-<img src="https://source.unsplash.com/1920x1080/?fastfood,burger,fries"
-     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
-     alt="Delicious fast food"
-     class="w-full h-full object-cover">
-
-Menu item cards:
-<img src="https://source.unsplash.com/800x600/?burger,cheese"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';"
-     alt="Cheeseburger"
-     class="w-full h-64 object-cover">
-<img src="https://source.unsplash.com/800x600/?fries,food"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';"
-     alt="French fries"
-     class="w-full h-64 object-cover">
-<img src="https://source.unsplash.com/800x600/?pizza,fastfood"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';"
-     alt="Pizza"
-     class="w-full h-64 object-cover">
-
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-
-EXAMPLE 3 - GYM/FITNESS WEBSITE:
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-User prompt: "Modern gym website with workout classes"
-
-STEP 1: Topic identified = GYM/FITNESS
-STEP 2: Keywords extracted = gym, fitness, workout, exercise, training
-STEP 3: Build URLs with THESE EXACT WORDS:
-
-Hero section:
-<img src="https://source.unsplash.com/1920x1080/?gym,fitness,workout"
-     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';"
-     alt="Modern gym facility"
-     class="w-full h-full object-cover">
-
-Feature cards:
-<img src="https://source.unsplash.com/800x600/?gym,equipment"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';">
-<img src="https://source.unsplash.com/800x600/?fitness,training"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';">
-<img src="https://source.unsplash.com/800x600/?workout,exercise"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
-
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-
-EXAMPLE 4 - ITALIAN RESTAURANT:
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-User prompt: "Italian restaurant website"
-
-STEP 1: Topic identified = ITALIAN RESTAURANT
-STEP 2: Keywords extracted = italian, restaurant, pasta, pizza, food
-STEP 3: Build URLs with THESE EXACT WORDS:
-
-Hero section:
-<img src="https://source.unsplash.com/1920x1080/?italian,restaurant,food"
-     onerror="this.onerror=null; this.src='https://picsum.photos/1920/1080?random=1';">
-
-Menu items:
-<img src="https://source.unsplash.com/800x600/?pasta,italian"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=2';">
-<img src="https://source.unsplash.com/800x600/?pizza,italian"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=3';">
-<img src="https://source.unsplash.com/800x600/?lasagna,food"
-     onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=4';">
-
-Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
-
-**KEYWORD REFERENCE TABLE - USE THESE FOR COMMON TOPICS:**
-
-Fast Food:
-- Primary: fastfood, burger, fries, food
-- Menu items: burger, fries, pizza, sandwich, hotdog, chicken
-
-Wedding/Event:
-- Primary: wedding, couple, love, ceremony
-- Variations: bride, groom, reception, celebration, romantic
-
-Restaurant (General):
-- Primary: restaurant, food, dining, cuisine
-- Variations: chef, meal, dish, cooking, interior
-
-Gym/Fitness:
-- Primary: gym, fitness, workout, exercise
-- Variations: training, equipment, athlete, health, sports
-
-Portfolio/Creative:
-- Primary: design, portfolio, creative, workspace
-- Variations: art, professional, studio, project, work
-
-E-commerce/Shop:
-- Primary: ecommerce, shopping, products, store
-- Variations: retail, fashion, online, shop, purchase
-
-Technology/Startup:
-- Primary: technology, software, innovation
-- Variations: coding, digital, tech, computer, startup
-
-Real Estate:
-- Primary: realestate, property, house, home
-- Variations: architecture, interior, modern, luxury
-
-**IMAGE SIZE GUIDE:**
-- Hero sections: 1920x1080
-- Feature/Menu cards: 800x600
-- Team photos: 400x400
-- Product images: 600x600
-- Gallery thumbs: 600x400
-- Banners: 1600x400
-
-**CRITICAL RULES - MEMORIZE THESE:**
-1. Ã¢Å“â€¦ USE REAL WORDS: fastfood, burger, pizza (CORRECT)
-2. Ã¢ÂÅ’ NEVER USE PLACEHOLDERS: [KEYWORD], [EXTRACT_KEYWORDS] (WRONG)
-3. Ã¢Å“â€¦ KEYWORDS MUST MATCH TOPIC: Fast food website Ã¢â€ â€™ fastfood, burger, fries
-4. Ã¢ÂÅ’ DON'T USE GENERIC WORDS: nature, landscape, building (TOO VAGUE)
-5. Ã¢Å“â€¦ ALWAYS ADD FALLBACK: onerror="this.onerror=null; this.src='https://picsum.photos/...'"
-6. Ã¢Å“â€¦ USE DIFFERENT RANDOM NUMBERS: random=1, random=2, random=3, etc.
-
-**FINAL CHECK BEFORE GENERATING HTML:**
-Ã¢â€“Â¡ Did I read the user's prompt?
-Ã¢â€“Â¡ Did I identify the website topic?
-Ã¢â€“Â¡ Did I extract 3-5 specific keywords?
-Ã¢â€“Â¡ Did I write those keywords down?
-Ã¢â€“Â¡ Am I using THOSE EXACT KEYWORDS in image URLs?
-Ã¢â€“Â¡ Are there ANY placeholders like [KEYWORD] in my HTML?
-
-If you answered NO to any of these, STOP and fix it before generating HTML.
-1. HERO SECTION (FIRST SECTION - ALWAYS):
-<section class="hero-gradient-[color] min-h-screen flex items-center justify-center text-white">
-    <div class="container mx-auto px-6 text-center fade-in">
-        <h1 class="text-6xl font-bold mb-6">\[Compelling Headline\]</h1>
-        <p class="text-2xl mb-8">\[Engaging subheadline\]</p>
-        <div class="flex gap-4 justify-center">
-            <a href="#" class="btn btn-primary">Primary CTA</a>
-            <a href="#" class="btn btn-secondary">Secondary CTA</a>
-        </div>
-    </div>
-</section>
-
-2. CONTENT SECTIONS (ALTERNATE BACKGROUNDS):
-<section class="py-24 bg-white">
-    <div class="container mx-auto px-6">
-        <h2 class="text-5xl font-bold text-center mb-16 text-gray-900">\[Section Title\]</h2>
-        <div class="grid-auto">
-            <!-- Cards with images -->
-        </div>
-    </div>
-</section>
-
-<section class="py-24 bg-gray-50">
-    <!-- Next section -->
-</section>
-
-3. CARDS (WITH IMAGES):
-<div class="bg-white rounded-2xl overflow-hidden shadow-xl hover-lift">
-    <img src="https://picsum.photos/800/600?random=1" alt="Description" class="w-full h-64 object-cover">
-    <div class="p-6">
-        <h3 class="text-2xl font-bold mb-3">\[Card Title\]</h3>
-        <p class="text-gray-600 mb-4">\[Card description\]</p>
-        <a href="#" class="btn btn-primary">Learn More</a>
-    </div>
-</div>
-
-**ðŸŽ¯ SMART IMAGE SYSTEM - LOVABLE-QUALITY IMAGES FOR ALL TOPICS:**
-
-You have TWO image systems:
-1. FIXED IMAGES for 20 common topics (ALWAYS use these)
-2. DYNAMIC IMAGES for uncommon topics (fallback system)
-
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-ðŸ“š FIXED IMAGE LIBRARY - USE THESE FOR 20 COMMON TOPICS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-**TOPIC 1: RESTAURANT/FOOD**
-Keywords: restaurant, food, dining, cafe, bistro, eatery
-Hero: https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=800&h=600&fit=crop&q=80
-
-**TOPIC 2: GYM/FITNESS**
-Keywords: gym, fitness, workout, exercise, training
-Hero: https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1534367507877-0edd93bd013b?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=800&h=600&fit=crop&q=80
-
-**TOPIC 3: WEDDING/EVENT**
-Keywords: wedding, event, couple, ceremony, celebration
-Hero: https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1511988617509-a57c8a288659?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1519741497674-611481863552?w=800&h=600&fit=crop&q=80
-
-**TOPIC 4: REAL ESTATE**
-Keywords: real estate, property, house, home, apartment
-Hero: https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=800&h=600&fit=crop&q=80
-
-**TOPIC 5: E-COMMERCE/SHOPPING**
-Keywords: ecommerce, shop, store, shopping, retail
-Hero: https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1526178613552-2b45c6c302f0?w=800&h=600&fit=crop&q=80
-
-**TOPIC 6: PORTFOLIO/CREATIVE**
-Keywords: portfolio, design, creative, artist, work
-Hero: https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1542744094-3a31f272c490?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1487017159836-4e23ece2e4cf?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=600&fit=crop&q=80
-
-**TOPIC 7: COFFEE SHOP/CAFÃ‰**
-Keywords: coffee, cafe, coffeeshop, barista, espresso
-Hero: https://images.unsplash.com/photo-1511920170033-f8396924c348?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1453614512568-c4024d13c247?w=800&h=600&fit=crop&q=80
-
-**TOPIC 8: HOTEL/RESORT**
-Keywords: hotel, resort, accommodation, hospitality, luxury
-Hero: https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop&q=80
-
-**TOPIC 9: MEDICAL/HEALTHCARE**
-Keywords: medical, healthcare, hospital, clinic, doctor
-Hero: https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1504813184591-01572f98c85f?w=800&h=600&fit=crop&q=80
-
-**TOPIC 10: LAW FIRM**
-Keywords: law, legal, lawyer, attorney, justice
-Hero: https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1505664194779-8beaceb93744?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1554224311-beee460c201f?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1479142506502-19b3a3b7ff33?w=800&h=600&fit=crop&q=80
-
-**TOPIC 11: PHOTOGRAPHY**
-Keywords: photography, photographer, photo, camera, studio
-Hero: https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1606857521015-7f9fcf423740?w=800&h=600&fit=crop&q=80
-
-**TOPIC 12: CONSTRUCTION**
-Keywords: construction, builder, contractor, building, architecture
-Hero: https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1590496793907-3802b8e10fef?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800&h=600&fit=crop&q=80
-
-**TOPIC 13: AUTOMOTIVE/CAR**
-Keywords: automotive, car, vehicle, auto, dealership
-Hero: https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800&h=600&fit=crop&q=80
-
-**TOPIC 14: SAAS/SOFTWARE**
-Keywords: saas, software, technology, app, digital
-Hero: https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop&q=80
-
-**TOPIC 15: EDUCATION/COURSE**
-Keywords: education, course, learning, school, university
-Hero: https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&h=600&fit=crop&q=80
-
-**TOPIC 16: BLOG/MAGAZINE**
-Keywords: blog, magazine, content, writing, publisher
-Hero: https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1503149779833-1de50ebe5f8a?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop&q=80
-
-**TOPIC 17: NON-PROFIT/CHARITY**
-Keywords: nonprofit, charity, donation, volunteer, community
-Hero: https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop&q=80
-
-**TOPIC 18: MUSIC/BAND**
-Keywords: music, band, musician, concert, artist
-Hero: https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop&q=80
-
-**TOPIC 19: PRODUCT LANDING**
-Keywords: product, landing, launch, startup, innovation
-Hero: https://images.unsplash.com/photo-1551650975-87deedd944c3?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1523726491678-bf852e717f6a?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1496171367470-9ed9a91ea931?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1531973576160-7125cd663d86?w=800&h=600&fit=crop&q=80
-
-**TOPIC 20: BUSINESS AGENCY**
-Keywords: business, agency, consulting, professional, corporate
-Hero: https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&h=1080&fit=crop&q=80
-Image 2: https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=600&fit=crop&q=80
-Image 3: https://images.unsplash.com/photo-1556761175-4b46a572b786?w=800&h=600&fit=crop&q=80
-Image 4: https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?w=800&h=600&fit=crop&q=80
-Image 5: https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=600&fit=crop&q=80
-
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-ðŸŽ² DYNAMIC IMAGE SYSTEM - FOR UNCOMMON TOPICS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-If the user's topic is NOT one of the 20 above, use this fallback system:
-
-**STEP 1:** Extract 2-3 keywords from user's prompt
-**STEP 2:** Build URL: https://images.unsplash.com/photo-{PHOTO_ID}?w={WIDTH}&h={HEIGHT}&fit=crop&q=80
-
-**30+ UNCOMMON TOPICS - PHOTO ID MAPPINGS:**
-
-Beer/Brewery â†’ photo-1436076863939, photo-1516534775068, photo-1559827260-dc66
-Grocery â†’ photo-1588964895597, photo-1542838132-92c53300491e, photo-1534723328310
-Pharmacy â†’ photo-1576602976047, photo-1587854692152, photo-1585435421671
-Pet Store â†’ photo-1450778869180, photo-1560807707-8cc77767d783, photo-1600077106725
-Salon/Spa â†’ photo-1560066984-138dacc3d028, photo-1562322140-8baeececf3df, photo-1519415510236
-Tattoo â†’ photo-1568515387631, photo-1611501275019, photo-1598899134739
-Bakery â†’ photo-1555507036-ab1f4038808a, photo-1509440159596, photo-1486427944299
-Florist â†’ photo-1490750967868, photo-1455659817273, photo-1487070183336
-Jewelry â†’ photo-1515562141207, photo-1599643478518, photo-1611591437281
-Art Gallery â†’ photo-1577083552792, photo-1547826039-bfc35e0f1ea8, photo-1561214115-f2f134cc4912
-Theater â†’ photo-1503095396549, photo-1540575467063, photo-1514306191717
-Cinema â†’ photo-1489599849927, photo-1543536448-d209d2d13a1c, photo-1585647347384
-Yoga â†’ photo-1544367567-0f2fcb009e0b, photo-1506126613408, photo-1599901860904
-Martial Arts â†’ photo-1555597673-b21d5c935865, photo-1595078475328, photo-1551958219-acbc608c6377
-Dance â†’ photo-1508700115892, photo-1518834107812, photo-1545328042-f6f1ea5e10f1
-Music School â†’ photo-1511379938547, photo-1507003211169, photo-1514320291840
-Daycare â†’ photo-1560074334-175c13985e6f, photo-1560869713-bf165a68f88b, photo-1503454537195
-Veterinary â†’ photo-1576201836106, photo-1601758228041, photo-1628009368231
-Dentist â†’ photo-1588776814546, photo-1606811971618, photo-1629909613654
-Accounting â†’ photo-1554224311-beee460c201f, photo-1554224154-26032ffc0d07, photo-1460925895917
-Insurance â†’ photo-1450101499163, photo-1551836022-4c4c79ecde51, photo-1454165804606
-Financial â†’ photo-1579621970563, photo-1579621970588, photo-1565514020179
-Marketing â†’ photo-1533750349088, photo-1523474253046, photo-1557804506-669a67965ba0
-Architecture â†’ photo-1503387762-592deb58ef4e, photo-1487958449943, photo-1511818966892
-Interior Design â†’ photo-1618221195710, photo-1586023492125, photo-1616486338812
-Event Planning â†’ photo-1511578314322, photo-1505236858219, photo-1530103862676
-Catering â†’ photo-1555939594-58d7cb561ad1, photo-1540189549336, photo-1414235077428
-Wine Bar â†’ photo-1510812431401, photo-1565299543923, photo-1569949381669
-Nightclub â†’ photo-1514525253161, photo-1518929458119, photo-1470225620780
-Barber â†’ photo-1585747860715, photo-1503951914875, photo-1622286346003
-
-**HOW TO USE DYNAMIC SYSTEM:**
-<img src="https://images.unsplash.com/photo-1436076863939?w=1920&h=1080&fit=crop&q=80" 
-     alt="Beer brewery interior"
-     class="w-full h-full object-cover">
-
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-ðŸ”’ MANDATORY RULES - READ BEFORE GENERATING
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-1. âœ… ALWAYS check if user's topic matches one of the 20 FIXED TOPICS first
-2. âœ… If match found â†’ use ONLY those 5 fixed image URLs
-3. âœ… If NO match â†’ use DYNAMIC system with photo IDs
-4. âœ… NEVER use source.unsplash.com (causes random changes)
-5. âœ… NEVER use picsum.photos
-6. âœ… NEVER use placeholder keywords like [KEYWORD]
-7. âœ… Images will NEVER change on refresh (same URLs = same images)
-8. âœ… ALWAYS use full URL format: https://images.unsplash.com/photo-{ID}?w={WIDTH}&h={HEIGHT}&fit=crop&q=80
-
-**EXAMPLE - RESTAURANT WEBSITE:**
-User: "Create a restaurant website"
-Topic Match: RESTAURANT/FOOD (Topic #1)
-Use: Fixed images from Topic 1 library
-
-**EXAMPLE - BEER WEBSITE:**
-User: "Create a beer brewery website"
-Topic Match: None (uncommon topic)
-Use: Dynamic system â†’ photo-1436076863939 (beer/brewery)
-
-**ABSOLUTE REQUIREMENT:** 
-When user asks for "wedding website", use WEDDING FIXED images.
-When user asks for "restaurant website", use FOOD FIXED images.
-When user asks for "gym website", use FITNESS FIXED images.
-When user asks for "beer website", use DYNAMIC beer photo IDs.
-
-Ã°Å¸Å½Â¯ QUALITY CHECKLIST:
-Ã¢Å“â€¦ Hero section with gradient background
-Ã¢Å“â€¦ Navigation bar (if multi-page feel needed)
-Ã¢Å“â€¦ At least 4-6 content sections
-Ã¢Å“â€¦ Every section has proper spacing (py-24)
-Ã¢Å“â€¦ Images load from Unsplash with FIXED wedding/food/gym URLs - always relevant
-Ã¢Å“â€¦ Hover effects on cards
-Ã¢Å“â€¦ Mobile responsive (Tailwind handles this)
-Ã¢Å“â€¦ Proper color contrast (dark text on light bg, light text on dark bg)
-Ã¢Å“â€¦ Call-to-action buttons in hero
-Ã¢Å“â€¦ Footer with contact info
-
-Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...`,
+    system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript. 🚨 CRITICAL IMAGE REQUIREMENT 🚨 Use ONLY these placeholders for ALL images: - {{IMAGE_1}} for hero section - {{IMAGE_2}} for first feature/card - {{IMAGE_3}} for second feature/card - {{IMAGE_4}} for third feature/card - {{IMAGE_5}} for fourth feature/card - {{IMAGE_6}} for fifth feature/card (if needed) Example of CORRECT usage: <img src="{{IMAGE_1}}" alt="Hero" class="w-full h-full object-cover"> <img src="{{IMAGE_2}}" alt="Feature 1" class="w-full h-64 object-cover"> ⛔ NEVER use: - [source.unsplash.com](http://source.unsplash.com) - [picsum.photos](http://picsum.photos) - images.unsplash.com/photo-XXXXX - ANY real image URLs ONLY use {{IMAGE_N}} placeholders. The server will replace them with correct images. 📐 MANDATORY STRUCTURE: <!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Website</title> <script src="https://cdn.tailwindcss.com"></script> <style> * { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; overflow-x: hidden; } /* HERO GRADIENTS */ .hero-gradient-blue { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%); } .hero-gradient-purple { background: linear-gradient(135deg, #581c87 0%, #a855f7 50%, #c084fc 100%); } .hero-gradient-sunset { background: linear-gradient(135deg, #ea580c 0%, #f59e0b 50%, #fbbf24 100%); } .hero-gradient-ocean { background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%); } /* GLASSMORPHISM */ .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; } .glass-dark { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; } /* ANIMATIONS */ .fade-in { animation: fadeIn 0.6s ease-out; } @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .hover-lift { transition: transform 0.3s ease, box-shadow 0.3s ease; } .hover-lift:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); } /* IMAGE LOADING */ img { max-width: 100%; height: auto; display: block; border-radius: 12px; } /* RESPONSIVE GRID */ .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; } /* BUTTONS */ .btn { display: inline-block; padding: 1rem 2rem; border-radius: 12px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; cursor: pointer; border: none; } .btn-primary { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; } .btn-primary:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4); } .btn-secondary { background: white; color: #1e40af; border: 2px solid #1e40af; } .btn-secondary:hover { background: #1e40af; color: white; } </style> </head> <body> <!-- CONTENT GOES HERE --> </body> </html> ✅ QUALITY CHECKLIST: - Hero section with gradient background - At least 4-6 content sections - Every section has proper spacing (py-24) - Images use {{IMAGE_N}} placeholders - Hover effects on cards - Mobile responsive - Call-to-action buttons in hero - Footer with contact info Return ONLY the HTML code. No explanations. No markdown.`,
     messages: [
       {
         role: 'user',
@@ -1528,18 +904,41 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-
-      // 🔥 EMERGENCY FIX: Force replace BOTH source.unsplash.com AND picsum.photos
+      // 🎯 LAYER 1: PLACEHOLDER REPLACEMENT (Primary - 85% success)
+console.log('🔍 Checking for placeholders in generated code...');
+if (generatedCode.includes('{{IMAGE_')) {
+  console.log('✅ Found placeholders - replacing with topic-specific images');
+  // Detect topic from user's prompt
+  const topic = detectTopic(sanitizedPrompt);
+  console.log(`📌 Detected topic: ${topic}`);
+  // Get images for this topic
+  const topicData = IMAGE_LIBRARY[topic];
+  const images = topicData.images;
+  // Replace placeholders with actual Unsplash URLs
+  for (let i = 1; i <= 6; i++) {
+    const placeholder = `{{IMAGE_${i}}}`;
+    const photoId = images[(i - 1) % images.length];
+    // Determine size based on image number (1 = hero, rest = cards)
+    const width = i === 1 ? 1920 : 800;
+    const height = i === 1 ? 1080 : 600;
+    const imageUrl = `https://images.unsplash.com/${photoId}?w=${width}&h=${height}&fit=crop&q=80`;
+    // Replace all occurrences of this placeholder
+    generatedCode = generatedCode.split(placeholder).join(imageUrl);
+  }
+  console.log('✅ Placeholder replacement complete');
+} else {
+  console.log('⚠️ No placeholders found - Claude may have ignored instructions (Layer 2 & 3 will catch this)');
+}
+      // 🔥 LAYER 2 & 3: EMERGENCY FIX (Secondary & Tertiary - catches 15% Claude ignores placeholders)
 const hasSourceUnsplash = generatedCode.includes('source.unsplash.com');
 const hasPicsum = generatedCode.includes('picsum.photos');
 const hasImagesUnsplash = generatedCode.includes('images.unsplash.com/photo-');
-
 if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
   console.log('⚠️ WARNING: Claude used random/generic images - auto-fixing...');
-  
+ 
   const promptLower = sanitizedPrompt.toLowerCase();
   let photoIds = [];
-  
+ 
   // Topic detection and photo ID assignment (22 common topics)
   if (promptLower.includes('restaurant') || promptLower.includes('food') || promptLower.includes('dining') || promptLower.includes('cafe') || promptLower.includes('bistro')) {
     photoIds = ['photo-1517248135467-4c7edcad34c4', 'photo-1565299624946-b28f40a0ae38', 'photo-1551782450-a2132b4ba21d', 'photo-1414235077428-338989a2e8c0', 'photo-1600565193348-f74bd3c7ccdf'];
@@ -1586,9 +985,9 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
   } else {
     photoIds = ['photo-1441986300917-64674bd600d8', 'photo-1483985988355-763728e1935b', 'photo-1445205170230-053b83016050', 'photo-1472851294608-062f824d29cc', 'photo-1526178613552-2b45c6c302f0'];
   }
-  
+ 
   let photoIndex = 0;
-  
+ 
   // Replace source.unsplash.com
   generatedCode = generatedCode.replace(/https?:\/\/source\.unsplash\.com\/[^"'\s)>]*/gi, function(match) {
     const currentPhotoId = photoIds[photoIndex % photoIds.length];
@@ -1600,7 +999,7 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
     else if (match.includes('400')) width = 400, height = 400;
     return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
   });
-  
+ 
   // Replace picsum.photos
   generatedCode = generatedCode.replace(/https?:\/\/picsum\.photos\/[^"'\s)>]*/gi, function(match) {
     const currentPhotoId = photoIds[photoIndex % photoIds.length];
@@ -1613,7 +1012,7 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
     }
     return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
   });
-  
+ 
   // NEW: Also replace generic images.unsplash.com URLs that don't have our fixed photo IDs
   generatedCode = generatedCode.replace(/https:\/\/images\.unsplash\.com\/photo-([a-zA-Z0-9_-]+)\?(?![^"'\s)>]*random)/gi, function(match, capturedId) {
     // Check if this is one of our fixed photo IDs
@@ -1632,18 +1031,18 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
     }
     return match;
   });
-  
+ 
   console.log('✅ FIXED: Replaced ' + photoIndex + ' random/generic image URLs with fixed photo IDs');
 }
       // âœ… CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
-          
+         
           // Check if we need to reset for new month
           const shouldReset = profile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : (generationsThisMonth + 1);
-          
+         
           console.log(`ðŸ“Š TRACKING: User ${userId} - Current: ${generationsThisMonth} â†’ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           // Use await to ensure update completes
           const { data: updateResult, error: updateError } = await supabase
@@ -1655,7 +1054,7 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
             })
             .eq('id', userId)
             .select();
-          
+         
           if (updateError) {
             console.error('Ã¢ÂÅ’ CRITICAL: Usage update FAILED:', updateError);
           } else {
@@ -1688,7 +1087,7 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
     } catch (apiError) {
       clearTimeout(timeout);
       console.error('Claude API error:', apiError);
-   
+  
       return res.status(502).json({
         success: false,
         error: 'AI service temporarily unavailable',
@@ -2475,17 +1874,17 @@ for (let i = 6; i >= 0; i--) {
   const date = new Date();
   date.setDate(date.getDate() - i);
   const dateStr = date.toISOString().split('T')[0];
-  
-  const dayData = usageData.filter(d => 
+ 
+  const dayData = usageData.filter(d =>
     d.created_at && d.created_at.startsWith(dateStr)
   );
-  
+ 
   const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
-  
-  const dayDownloads = downloadData ? 
-    downloadData.filter(d => d.downloaded_at && d.downloaded_at.startsWith(dateStr)).length 
+ 
+  const dayDownloads = downloadData ?
+    downloadData.filter(d => d.downloaded_at && d.downloaded_at.startsWith(dateStr)).length
     : 0;
-  
+ 
   history.push({
     date: dateStr,
     generations: dayTotal,
