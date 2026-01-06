@@ -570,68 +570,33 @@ const IMAGE_LIBRARY = {
 // IMAGE MATCHING FUNCTION
 // ============================================
 /**
- * Get images for a given topic by matching keywords
+ * Detect topic from user's prompt
  * @param {string} prompt - User's website description/prompt
- * @returns {Array<string>} - Array of 6 image photo IDs
+ * @returns {string} - Detected topic key
  */
-export function getImagesForTopic(prompt) {
+function detectTopic(prompt) {
   if (!prompt || typeof prompt !== 'string') {
-    return IMAGE_LIBRARY.business.images; // Default fallback
+    return 'business';
   }
+  
   const lowerPrompt = prompt.toLowerCase();
- 
-  // Check each topic's keywords for matches
+  
   for (const [topic, data] of Object.entries(IMAGE_LIBRARY)) {
     const keywordMatches = data.keywords.some(keyword =>
       lowerPrompt.includes(keyword.toLowerCase())
     );
-   
+    
     if (keywordMatches) {
       console.log(`✅ Matched topic: ${topic}`);
-      return data.images;
+      return topic;
     }
   }
- 
-  // No match found - return generic business images
+  
   console.log('⚠️ No topic match - using generic business images');
-  return IMAGE_LIBRARY.business.images;
+  return 'business';
 }
-/**
- * Build full Unsplash URL from photo ID
- * @param {string} photoId - Unsplash photo ID (e.g., 'photo-1234567890')
- * @param {number} width - Image width
- * @param {number} height - Image height
- * @returns {string} - Full Unsplash URL
- */
-export function buildImageUrl(photoId, width = 800, height = 600) {
-  return `https://images.unsplash.com/${photoId}?w=${width}&h=${height}&fit=crop&q=80`;
-}
-/**
- * Get all images with full URLs for a topic
- * @param {string} prompt - User's website description
- * @param {Object} sizes - Image size configuration
- * @returns {Object} - Object with hero, card, and thumbnail URLs
- */
-export function getImageSet(prompt, sizes = {}) {
-  const photoIds = getImagesForTopic(prompt);
- 
-  const defaultSizes = {
-    hero: { width: 1920, height: 1080 },
-    card: { width: 800, height: 600 },
-    thumbnail: { width: 400, height: 400 }
-  };
- 
-  const finalSizes = { ...defaultSizes, ...sizes };
- 
-  return {
-    hero: buildImageUrl(photoIds[0], finalSizes.hero.width, finalSizes.hero.height),
-    images: photoIds.slice(1).map(id =>
-      buildImageUrl(id, finalSizes.card.width, finalSizes.card.height)
-    ),
-    thumbnails: photoIds.map(id =>
-      buildImageUrl(id, finalSizes.thumbnail.width, finalSizes.thumbnail.height)
-    )
-  };
-}
-// Export everything
-export default IMAGE_LIBRARY;
+
+// ============================================
+// EXPORTS - ES6 MODULE SYNTAX
+// ============================================
+export { IMAGE_LIBRARY, detectTopic };
