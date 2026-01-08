@@ -9,16 +9,16 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
-// Ã¢Å“â€¦ FIXED: Import default export from logger
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIXED: Import default export from logger
 import logger from './utils/logger.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
-  CHECK: 'Ã¢Å“â€¦', CROSS: 'Ã¢ÂÅ’', WARN: 'Ã¢Å¡ Ã¯Â¸Â', CHART: 'Ã°Å¸â€œÅ ', LOCK: 'Ã°Å¸â€â€™',
-  INBOX: 'Ã°Å¸â€œÂ¥', SIREN: 'Ã°Å¸Å¡Â¨', REFRESH: 'Ã°Å¸â€â€ž', UP: 'Ã°Å¸â€œË†', LINK: 'Ã°Å¸â€â€”',
-  CARD: 'Ã°Å¸â€™Â³', STOP: 'Ã°Å¸â€ºâ€˜', EMAIL: 'Ã°Å¸â€œÂ§', INFO: 'Ã¢â€žÂ¹Ã¯Â¸Â', BLUE: 'Ã°Å¸âÂµ'
+  CHECK: 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦', CROSS: 'ÃƒÂ¢Ã‚ÂÃ…â€™', WARN: 'ÃƒÂ¢Ã…Â¡ ÃƒÂ¯Ã‚Â¸Ã‚Â', CHART: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã… ', LOCK: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢',
+  INBOX: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥', SIREN: 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â¨', REFRESH: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾', UP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€ ', LINK: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€',
+  CARD: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³', STOP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬Ëœ', EMAIL: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â§', INFO: 'ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â', BLUE: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ'
 };
-import { IMAGE_LIBRARY, detectTopic } from './imageLibrary.js';
+import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl } from './imageLibrary.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -87,7 +87,7 @@ function sanitizePrompt(prompt) {
     'phishing', 'malware', 'hack', 'exploit', 'illegal',
     'darknet', 'weapon', 'bomb', 'drug', 'gambling',
     'porn', 'adult', 'hate speech', 'racist', 'violence',
-    // Ã¢Å“â€¦ OPTIONAL ADDITIONS:
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ OPTIONAL ADDITIONS:
     'scam', 'fraud', 'ransomware', 'trojan', 'virus'
   ];
   const lowerPrompt = sanitized.toLowerCase();
@@ -245,7 +245,7 @@ if (stripeKey) {
 } else {
   logger.warn(`${E.WARN} STRIPE_SECRET_KEY not configured - payment features disabled`);
 }
-// Ã¢Å“â€¦ FIX: Validate all Stripe price IDs are configured at startup
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate all Stripe price IDs are configured at startup
 if (stripe) {
   const requiredPriceIds = [
     { name: 'STRIPE_BASIC_PRICE_ID', value: process.env.STRIPE_BASIC_PRICE_ID },
@@ -256,7 +256,7 @@ if (stripe) {
     logger.error(`${E.CROSS} CRITICAL: Missing required Stripe price IDs:`,
       missingPriceIds.map(p => p.name).join(', ')
     );
-    logger.error(`${E.WARN} Payments will fail! Please configure these in [Render.com](http://Render.com) environment variables.`);
+    logger.error(`${E.WARN} Payments will fail! Please configure these in Render.com environment variables.`);
   } else {
     logger.log(`${E.CHECK} All required Stripe price IDs configured`);
   }
@@ -268,7 +268,7 @@ if (stripe) {
     logger.warn(`${E.WARN} STRIPE_PRO_YEARLY_PRICE_ID not set - yearly Pro plan disabled`);
   }
 }
-// Ã¢Å“â€¦ FIX #20: Comprehensive environment variable validation
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #20: Comprehensive environment variable validation
 const requiredEnvVars = [
   { name: 'CLAUDE_API_KEY', critical: true },
   { name: 'VITE_SUPABASE_URL', critical: true },
@@ -335,7 +335,7 @@ const generateLimiter = rateLimit({
     }
   }
 });
-// Ã¢Å“â€¦ ADD RATE LIMITER FOR CHECKOUT
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ADD RATE LIMITER FOR CHECKOUT
 const checkoutLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 checkout attempts per 15 minutes
@@ -346,7 +346,7 @@ const checkoutLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-// Ã¢Å“â€¦ ADD: Download rate limiter (FIX #21)
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ADD: Download rate limiter (FIX #21)
 const downloadLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5, // 5 downloads per minute
@@ -383,7 +383,7 @@ app.use((req, res, next) => {
   }
   next();
 });
-// Ã¢Å“â€¦ FIX #26: REQUEST ID MIDDLEWARE
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #26: REQUEST ID MIDDLEWARE
 app.use((req, res, next) => {
   req.id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   res.setHeader('X-Request-ID', req.id);
@@ -396,7 +396,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ============================================
 // ADMIN AUTHENTICATION MIDDLEWARE
 // ============================================
-const adminEmails = (process.env.ADMIN_EMAILS || '<abirmaji108@gmail.com>').split(',');
+const adminEmails = (process.env.ADMIN_EMAILS || 'abirmaji108@gmail.com').split(',');
 async function requireAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -462,14 +462,14 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
       case 'checkout.session.completed': {
         const session = event.data.object;
         const sessionId = session.id;
-        // Ã¢Å“â€¦ FIX: Idempotency - check if this session was already processed
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Idempotency - check if this session was already processed
         const { data: existingSession, error: checkError } = await supabase
           .from('processed_webhooks')
           .select('session_id')
           .eq('session_id', sessionId)
           .single();
         if (existingSession) {
-          logger.log(`Ã¢Å¡ Ã¯Â¸Â Webhook already processed for session ${sessionId} - ignoring duplicate`);
+          logger.log(`ÃƒÂ¢Ã…Â¡ ÃƒÂ¯Ã‚Â¸Ã‚Â Webhook already processed for session ${sessionId} - ignoring duplicate`);
           return res.json({ received: true, duplicate: true });
         }
         // Continue with existing code...
@@ -477,7 +477,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const subscriptionId = session.subscription;
         const customerId = session.customer;
         const priceId = session.line_items?.data[0]?.price?.id;
-        // Ã¢Å“â€¦ FIX: Validate customer ID exists
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
         if (!customerId) {
           logger.error(`${E.CROSS} No customer ID in session`, {
             sessionId: session.id,
@@ -510,7 +510,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           process.env.STRIPE_BUSINESS_PRICE_ID,
           process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
         ].filter(Boolean);
-        // Ã¢Å“â€¦ FIX: Strict validation - reject if price ID doesn't match any tier
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Strict validation - reject if price ID doesn't match any tier
         let tier = null;
         if (basicPriceIds.includes(priceId)) {
           tier = 'basic';
@@ -519,7 +519,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         } else if (businessPriceIds.includes(priceId)) {
           tier = 'business';
         }
-        // Ã¢Å“â€¦ FIX: If no tier matched, this is an invalid/unknown price ID
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: If no tier matched, this is an invalid/unknown price ID
         if (!tier) {
           logger.error(`${E.CROSS} CRITICAL: Unknown price ID received in webhook`, {
             priceId,
@@ -532,8 +532,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             message: 'Price ID does not match any configured tier'
           });
         }
-        logger.log(`Ã¢Å“â€¦ Price ID ${priceId} mapped to tier: ${tier}`);
-        // Ã¢Å“â€¦ FIX: Use transaction-like approach with rollback capability
+        logger.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Price ID ${priceId} mapped to tier: ${tier}`);
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Use transaction-like approach with rollback capability
         let profileUpdated = false;
         let subscriptionUpdated = false;
         try {
@@ -596,7 +596,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           });
         }
         logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
-        // Ã¢Å“â€¦ FIX #11 & #12: Log successful upgrade
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #11 & #12: Log successful upgrade
         await logSecurityEvent({
           user_id: userId,
           event_type: 'tier_upgraded',
@@ -609,7 +609,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             subscriptionId: session.subscription
           }
         });
-        // Ã¢Å“â€¦ FIX: Mark webhook as processed (idempotency)
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Mark webhook as processed (idempotency)
         const { error: trackError } = await supabase
           .from('processed_webhooks')
           .insert({
@@ -622,7 +622,7 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
           logger.error(`${E.WARN} Failed to track webhook idempotency:`, trackError);
           // Don't fail the request - tier already updated successfully
         }
-        // Ã¢Å“â€¦ FIX: Send welcome email asynchronously (non-blocking)
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Send welcome email asynchronously (non-blocking)
         supabase
           .from('profiles')
           .select('email, full_name')
@@ -807,40 +807,39 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
-    
+   
         if (!error && user) {
           userId = user.id;
-      
+     
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
             .select('user_tier, generations_this_month, last_generation_reset')
             .eq('id', userId)
             .maybeSingle();
-            
           const { data: profile } = await Promise.race([
             profilePromise,
             new Promise((_, reject) =>
               setTimeout(() => reject(new Error('Profile timeout')), 3000)
             )
           ]).catch(() => ({ data: null }));
-          
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-        
+       
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
-         
-            // ✅ ADMIN BYPASS - Check email BEFORE limit enforcement
-            const TESTING_MODE = true; // ⚠️ SET TO FALSE AFTER TESTING
+          
+            // Ã¢Å“â€ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
+            const TESTING_MODE = true; // Ã¢Å¡ Ã¯Â¸Â SET TO FALSE AFTER TESTING
             const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
-         
-            // Check if current user is admin
-            const isAdmin = user && user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
-         
-            // Check limits
+          
+            // Check if user is admin
+            const { data: { user: authUser } } = await supabase.auth.getUser(token);
+            const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
+          
+            // Check limits (skip for admins in testing mode)
             const tierLimits = {
               free: 2,
               basic: 10,
@@ -848,13 +847,9 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               business: 200
             };
             const limit = tierLimits[userTier] || 2;
-         
-            // 🔓 ADMIN BYPASS: Skip limit check if admin in testing mode
-            if (TESTING_MODE && isAdmin) {
-              console.log(`🔓 ADMIN BYPASS: ${user.email} - Unlimited generation (Used: ${generationsThisMonth})`);
-              // Don't check limits - proceed to generation
-            } else {
-              // Normal users - enforce limits
+          
+            if (!TESTING_MODE || !isAdmin) {
+              // Normal limit enforcement for non-admins
               if (generationsThisMonth >= limit) {
                 return res.status(429).json({
                   success: false,
@@ -864,6 +859,9 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
                   limit
                 });
               }
+            } else {
+              // Admin bypass - log for audit
+              console.log(`Ã°Å¸â€â€œ TESTING MODE: Admin ${authUser?.email} bypassed limit (${generationsThisMonth}/${limit})`);
             }
           }
         }
@@ -886,7 +884,155 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript. 🚨 CRITICAL IMAGE REQUIREMENT 🚨 Use ONLY these placeholders for ALL images: - {{IMAGE_1}} for hero section - {{IMAGE_2}} for first feature/card - {{IMAGE_3}} for second feature/card - {{IMAGE_4}} for third feature/card - {{IMAGE_5}} for fourth feature/card - {{IMAGE_6}} for fifth feature/card (if needed) Example of CORRECT usage: <img src="{{IMAGE_1}}" alt="Hero" class="w-full h-full object-cover"> <img src="{{IMAGE_2}}" alt="Feature 1" class="w-full h-64 object-cover"> ⛔ NEVER use: - [source.unsplash.com](http://source.unsplash.com) - [picsum.photos](http://picsum.photos) - images.unsplash.com/photo-XXXXX - ANY real image URLs ONLY use {{IMAGE_N}} placeholders. The server will replace them with correct images. 📐 MANDATORY STRUCTURE: <!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Website</title> <script src="https://cdn.tailwindcss.com"></script> <style> * { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; overflow-x: hidden; } /* HERO GRADIENTS */ .hero-gradient-blue { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%); } .hero-gradient-purple { background: linear-gradient(135deg, #581c87 0%, #a855f7 50%, #c084fc 100%); } .hero-gradient-sunset { background: linear-gradient(135deg, #ea580c 0%, #f59e0b 50%, #fbbf24 100%); } .hero-gradient-ocean { background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%); } /* GLASSMORPHISM */ .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; } .glass-dark { background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; } /* ANIMATIONS */ .fade-in { animation: fadeIn 0.6s ease-out; } @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .hover-lift { transition: transform 0.3s ease, box-shadow 0.3s ease; } .hover-lift:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); } /* IMAGE LOADING */ img { max-width: 100%; height: auto; display: block; border-radius: 12px; } /* RESPONSIVE GRID */ .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; } /* BUTTONS */ .btn { display: inline-block; padding: 1rem 2rem; border-radius: 12px; font-weight: 600; text-decoration: none; transition: all 0.3s ease; cursor: pointer; border: none; } .btn-primary { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; } .btn-primary:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4); } .btn-secondary { background: white; color: #1e40af; border: 2px solid #1e40af; } .btn-secondary:hover { background: #1e40af; color: white; } </style> </head> <body> <!-- CONTENT GOES HERE --> </body> </html> ✅ QUALITY CHECKLIST: - Hero section with gradient background - At least 4-6 content sections - Every section has proper spacing (py-24) - Images use {{IMAGE_N}} placeholders - Hover effects on cards - Mobile responsive - Call-to-action buttons in hero - Footer with contact info Return ONLY the HTML code. No explanations. No markdown.`,
+    system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
+Ã°Å¸Å½Â¯ CRITICAL SUCCESS CRITERIA:
+1. Use placeholders for images: {{IMAGE_1}} {{IMAGE_2}} {{IMAGE_3}} {{IMAGE_4}} {{IMAGE_5}} {{IMAGE_6}}
+2. EVERY section must have proper spacing and visual hierarchy
+3. Modern, professional design with depth and polish
+4. Mobile-responsive by default
+ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â MANDATORY STRUCTURE:
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+      
+        /* HERO GRADIENTS - Use these for hero sections */
+        .hero-gradient-blue {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+        }
+      
+        .hero-gradient-purple {
+            background: linear-gradient(135deg, #581c87 0%, #a855f7 50%, #c084fc 100%);
+        }
+      
+        .hero-gradient-sunset {
+            background: linear-gradient(135deg, #ea580c 0%, #f59e0b 50%, #fbbf24 100%);
+        }
+      
+        .hero-gradient-ocean {
+            background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%);
+        }
+      
+        /* GLASSMORPHISM EFFECTS */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+        }
+      
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+      
+        /* SMOOTH ANIMATIONS */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+      
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+      
+        .hover-lift {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+      
+        .hover-lift:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+      
+        /* IMAGE OPTIMIZATION */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+img[src] {
+    background: none;
+}
+      
+        /* RESPONSIVE GRID */
+        .grid-auto {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+      
+        /* BUTTONS */
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+      
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+      
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+        }
+      
+        .btn-secondary {
+            background: white;
+            color: #1e40af;
+            border: 2px solid #1e40af;
+        }
+      
+        .btn-secondary:hover {
+            background: #1e40af;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- CONTENT GOES HERE -->
+</body>
+</html>
+ÃƒÂ°Ã…Â¸Ã…Â½Â¯ QUALITY CHECKLIST:
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Hero section with gradient background
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Navigation bar (if multi-page feel needed)
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ At least 4-6 content sections
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Every section has proper spacing (py-24)
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Hover effects on cards
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Mobile responsive (Tailwind handles this)
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Proper color contrast (dark text on light bg, light text on dark bg)
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Call-to-action buttons in hero
+ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Footer with contact info
+Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...`,
     messages: [
       {
         role: 'user',
@@ -906,146 +1052,29 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // 🎯 LAYER 1: PLACEHOLDER REPLACEMENT (Primary - 85% success)
-console.log('🔍 Checking for placeholders in generated code...');
-if (generatedCode.includes('{{IMAGE_')) {
-  console.log('✅ Found placeholders - replacing with topic-specific images');
-  // Detect topic from user's prompt
-  const topic = detectTopic(sanitizedPrompt);
-  console.log(`📌 Detected topic: ${topic}`);
-  // Get images for this topic
-  const topicData = IMAGE_LIBRARY[topic];
-  const images = topicData.images;
-  // Replace placeholders with actual Unsplash URLs
-  for (let i = 1; i <= 6; i++) {
-    const placeholder = `{{IMAGE_${i}}}`;
-    const photoId = images[(i - 1) % images.length];
-    // Determine size based on image number (1 = hero, rest = cards)
-    const width = i === 1 ? 1920 : 800;
-    const height = i === 1 ? 1080 : 600;
-    const imageUrl = `https://images.unsplash.com/${photoId}?w=${width}&h=${height}&fit=crop&q=80`;
-    // Replace all occurrences of this placeholder
-    generatedCode = generatedCode.split(placeholder).join(imageUrl);
-  }
-  console.log('✅ Placeholder replacement complete');
-} else {
-  console.log('⚠️ No placeholders found - Claude may have ignored instructions (Layer 2 & 3 will catch this)');
-}
-      // 🔥 LAYER 2 & 3: EMERGENCY FIX (Secondary & Tertiary - catches 15% Claude ignores placeholders)
-const hasSourceUnsplash = generatedCode.includes('source.unsplash.com');
-const hasPicsum = generatedCode.includes('picsum.photos');
-const hasImagesUnsplash = generatedCode.includes('images.unsplash.com/photo-');
-if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
-  console.log('⚠️ WARNING: Claude used random/generic images - auto-fixing...');
- 
-  const promptLower = sanitizedPrompt.toLowerCase();
-  let photoIds = [];
- 
-  // Topic detection and photo ID assignment (22 common topics)
-  if (promptLower.includes('restaurant') || promptLower.includes('food') || promptLower.includes('dining') || promptLower.includes('cafe') || promptLower.includes('bistro')) {
-    photoIds = ['photo-1517248135467-4c7edcad34c4', 'photo-1565299624946-b28f40a0ae38', 'photo-1551782450-a2132b4ba21d', 'photo-1414235077428-338989a2e8c0', 'photo-1600565193348-f74bd3c7ccdf'];
-  } else if (promptLower.includes('gym') || promptLower.includes('fitness') || promptLower.includes('workout') || promptLower.includes('exercise')) {
-    photoIds = ['photo-1534438327276-14e5300c3a48', 'photo-1571019613454-1cb2f99b2d8b', 'photo-1534367507877-0edd93bd013b', 'photo-1544367567-0f2fcb009e0b', 'photo-1583454110551-21f2fa2afe61'];
-  } else if (promptLower.includes('wedding') || promptLower.includes('event') || promptLower.includes('couple') || promptLower.includes('ceremony')) {
-    photoIds = ['photo-1511285560929-80b456fea0bc', 'photo-1511988617509-a57c8a288659', 'photo-1465495976277-4387d4b0e4a6', 'photo-1511795409834-ef04bbd61622', 'photo-1519741497674-611481863552'];
-  } else if (promptLower.includes('real estate') || promptLower.includes('property') || promptLower.includes('house') || promptLower.includes('home')) {
-    photoIds = ['photo-1560518883-ce09059eeffa', 'photo-1570129477492-45c003edd2be', 'photo-1568605114967-8130f3a36994', 'photo-1512917774080-9991f1c4c750', 'photo-1582407947304-fd86f028f716'];
-  } else if (promptLower.includes('ecommerce') || promptLower.includes('shop') || promptLower.includes('store') || promptLower.includes('shopping')) {
-    photoIds = ['photo-1441986300917-64674bd600d8', 'photo-1483985988355-763728e1935b', 'photo-1445205170230-053b83016050', 'photo-1472851294608-062f824d29cc', 'photo-1526178613552-2b45c6c302f0'];
-  } else if (promptLower.includes('portfolio') || promptLower.includes('creative') || promptLower.includes('design') || promptLower.includes('artist')) {
-    photoIds = ['photo-1499951360447-b19be8fe80f5', 'photo-1517048676732-d65bc937f952', 'photo-1542744094-3a31f272c490', 'photo-1487017159836-4e23ece2e4cf', 'photo-1531403009284-440f080d1e12'];
-  } else if (promptLower.includes('coffee') || promptLower.includes('barista') || promptLower.includes('espresso')) {
-    photoIds = ['photo-1511920170033-f8396924c348', 'photo-1501339847302-ac426a4a7cbb', 'photo-1442512595331-e89e73853f31', 'photo-1495474472287-4d71bcdd2085', 'photo-1453614512568-c4024d13c247'];
-  } else if (promptLower.includes('hotel') || promptLower.includes('resort') || promptLower.includes('hospitality') || promptLower.includes('accommodation')) {
-    photoIds = ['photo-1566073771259-6a8506099945', 'photo-1571896349842-33c89424de2d', 'photo-1618773928121-c32242e63f39', 'photo-1520250497591-112f2f40a3f4', 'photo-1582719478250-c89cae4dc85b'];
-  } else if (promptLower.includes('medical') || promptLower.includes('healthcare') || promptLower.includes('hospital') || promptLower.includes('clinic') || promptLower.includes('doctor')) {
-    photoIds = ['photo-1519494026892-80bbd2d6fd0d', 'photo-1530026405186-ed1f139313f8', 'photo-1551190822-a9333d879b1f', 'photo-1576091160399-112ba8d25d1d', 'photo-1504813184591-01572f98c85f'];
-  } else if (promptLower.includes('law') || promptLower.includes('legal') || promptLower.includes('lawyer') || promptLower.includes('attorney') || promptLower.includes('justice')) {
-    photoIds = ['photo-1589829545856-d10d557cf95f', 'photo-1505664194779-8beaceb93744', 'photo-1521587760476-6c12a4b040da', 'photo-1554224311-beee460c201f', 'photo-1479142506502-19b3a3b7ff33'];
-  } else if (promptLower.includes('photography') || promptLower.includes('photographer') || promptLower.includes('photo') || promptLower.includes('camera')) {
-    photoIds = ['photo-1542038784456-1ea8e935640e', 'photo-1452587925148-ce544e77e70d', 'photo-1554048612-b6a482bc67e5', 'photo-1471341971476-ae15ff5dd4ea', 'photo-1606857521015-7f9fcf423740'];
-  } else if (promptLower.includes('construction') || promptLower.includes('builder') || promptLower.includes('contractor') || promptLower.includes('building')) {
-    photoIds = ['photo-1503387762-592deb58ef4e', 'photo-1504307651254-35680f356dfd', 'photo-1541888946425-d81bb19240f5', 'photo-1590496793907-3802b8e10fef', 'photo-1581094794329-c8112a89af12'];
-  } else if (promptLower.includes('automotive') || promptLower.includes('car') || promptLower.includes('vehicle') || promptLower.includes('auto')) {
-    photoIds = ['photo-1492144534655-ae79c964c9d7', 'photo-1580273916550-e323be2ae537', 'photo-1552519507-da3b142c6e3d', 'photo-1503376780353-7e6692767b70', 'photo-1605559424843-9e4c228bf1c2'];
-  } else if (promptLower.includes('saas') || promptLower.includes('software') || promptLower.includes('technology') || promptLower.includes('app') || promptLower.includes('tech')) {
-    photoIds = ['photo-1460925895917-afdab827c52f', 'photo-1551288049-bebda4e38f71', 'photo-1519389950473-47ba0277781c', 'photo-1531482615713-2afd69097998', 'photo-1522071820081-009f0129c71c'];
-  } else if (promptLower.includes('education') || promptLower.includes('course') || promptLower.includes('learning') || promptLower.includes('school') || promptLower.includes('university')) {
-    photoIds = ['photo-1523240795612-9a054b0db644', 'photo-1524178232363-1fb2b075b655', 'photo-1509062522246-3755977927d7', 'photo-1546410531-bb4caa6b424d', 'photo-1503676260728-1c00da094a0b'];
-  } else if (promptLower.includes('blog') || promptLower.includes('magazine') || promptLower.includes('content') || promptLower.includes('writing')) {
-    photoIds = ['photo-1499750310107-5fef28a66643', 'photo-1456324504439-367cee3b3c32', 'photo-1503149779833-1de50ebe5f8a', 'photo-1488190211105-8b0e65b80b4e', 'photo-1434030216411-0b793f4b4173'];
-  } else if (promptLower.includes('nonprofit') || promptLower.includes('charity') || promptLower.includes('donation') || promptLower.includes('volunteer') || promptLower.includes('ngo')) {
-    photoIds = ['photo-1488521787991-ed7bbaae773c', 'photo-1469571486292-0ba58a3f068b', 'photo-1532629345422-7515f3d16bb6', 'photo-1593113598332-cd288d649433', 'photo-1559027615-cd4628902d4a'];
-  } else if (promptLower.includes('music') || promptLower.includes('band') || promptLower.includes('musician') || promptLower.includes('concert')) {
-    photoIds = ['photo-1511379938547-c1f69419868d', 'photo-1510915361894-db8b60106cb1', 'photo-1514320291840-2e0a9bf2a9ae', 'photo-1493225457124-a3eb161ffa5f', 'photo-1507003211169-0a1dd7228f2d'];
-  } else if (promptLower.includes('product') || promptLower.includes('landing') || promptLower.includes('launch') || promptLower.includes('startup')) {
-    photoIds = ['photo-1551650975-87deedd944c3', 'photo-1526947425960-945c6e72858f', 'photo-1523726491678-bf852e717f6a', 'photo-1496171367470-9ed9a91ea931', 'photo-1531973576160-7125cd663d86'];
-  } else if (promptLower.includes('business') || promptLower.includes('agency') || promptLower.includes('consulting') || promptLower.includes('corporate')) {
-    photoIds = ['photo-1497366216548-37526070297c', 'photo-1542744173-8e7e53415bb0', 'photo-1556761175-4b46a572b786', 'photo-1521737852567-6949f3f9f2b5', 'photo-1553877522-43269d4ea984'];
-  } else if (promptLower.includes('liquor') || promptLower.includes('spirits') || promptLower.includes('alcohol') || promptLower.includes('whiskey') || promptLower.includes('vodka') || promptLower.includes('rum') || promptLower.includes('gin') || promptLower.includes('wine') || promptLower.includes('beer') || promptLower.includes('craft') || promptLower.includes('premium')) {
-    photoIds = ['photo-1510812431401-41d2bd2722f3', 'photo-1569529465841-dfecdab7503b', 'photo-1514362545857-3bc16c4c7d1b', 'photo-1569529465841-dfecdab7503b', 'photo-1560508801-66e8e8c21b3a'];
-  } else {
-    photoIds = ['photo-1441986300917-64674bd600d8', 'photo-1483985988355-763728e1935b', 'photo-1445205170230-053b83016050', 'photo-1472851294608-062f824d29cc', 'photo-1526178613552-2b45c6c302f0'];
-  }
- 
-  let photoIndex = 0;
- 
-  // Replace source.unsplash.com
-  generatedCode = generatedCode.replace(/https?:\/\/source\.unsplash\.com\/[^"'\s)>]*/gi, function(match) {
-    const currentPhotoId = photoIds[photoIndex % photoIds.length];
-    photoIndex++;
-    let width = 800;
-    let height = 600;
-    if (match.includes('1920')) width = 1920, height = 1080;
-    else if (match.includes('1600')) width = 1600, height = 400;
-    else if (match.includes('400')) width = 400, height = 400;
-    return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
-  });
- 
-  // Replace picsum.photos
-  generatedCode = generatedCode.replace(/https?:\/\/picsum\.photos\/[^"'\s)>]*/gi, function(match) {
-    const currentPhotoId = photoIds[photoIndex % photoIds.length];
-    photoIndex++;
-    let width = 800, height = 600;
-    const sizeMatch = match.match(/(\d+)[\/ ](\d+)/);
-    if (sizeMatch) {
-      width = parseInt(sizeMatch[1]);
-      height = parseInt(sizeMatch[2]);
-    }
-    return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
-  });
- 
-  // NEW: Also replace generic images.unsplash.com URLs that don't have our fixed photo IDs
-  generatedCode = generatedCode.replace(/https:\/\/images\.unsplash\.com\/photo-([a-zA-Z0-9_-]+)\?(?![^"'\s)>]*random)/gi, function(match, capturedId) {
-    // Check if this is one of our fixed photo IDs
-    const isFixedId = photoIds.some(function(id) { return match.includes(id); });
-    if (!isFixedId) {
-      const currentPhotoId = photoIds[photoIndex % photoIds.length];
-      photoIndex++;
-      const paramMatch = match.match(/[?&]w=(\d+)&h=(\d+)/);
-      let width = 800, height = 600;
-      if (paramMatch) {
-        width = parseInt(paramMatch[1]);
-        height = parseInt(paramMatch[2]);
+      // Detect topic and get images
+      const topic = detectTopic(sanitizedPrompt);
+      const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
+      const images = topicData.images;
+      // Shuffle images for random variety (non-destructive copy)
+      const shuffledImages = [...images].sort(() => 0.5 - Math.random());
+      // Replace placeholders
+      for (let i = 1; i <= 6; i++) {
+        const placeholder = `{{IMAGE_${i}}}`;
+        const photoId = shuffledImages[i - 1];
+        const imageUrl = getUnsplashUrl(photoId, 1200, 80);
+        generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
       }
-      console.log('🔄 Replacing generic Unsplash ID: ' + capturedId + ' with fixed: ' + currentPhotoId);
-      return 'https://images.unsplash.com/' + currentPhotoId + '?w=' + width + '&h=' + height + '&fit=crop&q=80';
-    }
-    return match;
-  });
- 
-  console.log('✅ FIXED: Replaced ' + photoIndex + ' random/generic image URLs with fixed photo IDs');
-}
-      // âœ… CRITICAL: Force synchronous usage tracking with proper month reset
+      // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
-         
+        
           // Check if we need to reset for new month
           const shouldReset = profile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : (generationsThisMonth + 1);
-         
-          console.log(`ðŸ“Š TRACKING: User ${userId} - Current: ${generationsThisMonth} â†’ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
+        
+          console.log(`Ã°Å¸â€œÅ  TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           // Use await to ensure update completes
           const { data: updateResult, error: updateError } = await supabase
             .from('profiles')
@@ -1056,15 +1085,15 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
             })
             .eq('id', userId)
             .select();
-         
+        
           if (updateError) {
-            console.error('Ã¢ÂÅ’ CRITICAL: Usage update FAILED:', updateError);
+            console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ CRITICAL: Usage update FAILED:', updateError);
           } else {
-            console.log(`Ã¢Å“â€¦ Usage updated successfully: ${newCount}/${limit}`);
-            console.log(`Ã°Å¸â€œË† Update confirmed:`, updateResult);
+            console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Usage updated successfully: ${newCount}/${limit}`);
+            console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€  Update confirmed:`, updateResult);
           }
         } catch (error) {
-          console.error('Ã¢ÂÅ’ Exception during usage tracking:', error);
+          console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception during usage tracking:', error);
         }
       }
       const tierLimits = {
@@ -1074,7 +1103,7 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
         business: 200
       };
       const limit = tierLimits[userTier] || 2;
-      console.log(`Ã¢Å“â€¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
+      console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
       return res.json({
         success: true,
         htmlCode: generatedCode,
@@ -1089,7 +1118,7 @@ if (hasSourceUnsplash || hasPicsum || hasImagesUnsplash) {
     } catch (apiError) {
       clearTimeout(timeout);
       console.error('Claude API error:', apiError);
-  
+ 
       return res.status(502).json({
         success: false,
         error: 'AI service temporarily unavailable',
@@ -1142,7 +1171,7 @@ app.get('/api/profile', async (req, res) => {
         message: profileError.message
       });
     }
-    // Ã¢Å“â€¦ FIX: Handle case when profile doesn't exist
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Handle case when profile doesn't exist
     if (!profile) {
       logger.warn(`[${req.id}] No profile found for user ${user.id}, creating default`);
       const currentMonth = new Date().toISOString().slice(0, 7);
@@ -1241,7 +1270,7 @@ app.get('/api/profile', async (req, res) => {
   }
 });
 // ============================================
-// Ã¢Å“â€¦ FIX #16: DOWNLOAD TRACKING ENDPOINT
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #16: DOWNLOAD TRACKING ENDPOINT
 // ============================================
 app.post('/api/track-download', downloadLimiter, async (req, res) => {
   try {
@@ -1358,7 +1387,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         user_tier: userTier
       });
     logger.log(`${E.CHECK} [${req.id}] Download tracked for user ${user.id} (${downloadsThisMonth + 1}/${limit})`);
-    // Ã¢Å“â€¦ FIX #22: Log security event
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #22: Log security event
     await logSecurityEvent({
       user_id: user.id,
       event_type: 'website_downloaded',
@@ -1371,7 +1400,7 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         downloads_limit: limit
       }
     });
-    // Ã¢Å“â€¦ FIX #23: Send warning email when approaching limit
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #23: Send warning email when approaching limit
     const remainingDownloads = limit - (downloadsThisMonth + 1);
     if (remainingDownloads === 2 || remainingDownloads === 5) {
       // Send warning email asynchronously
@@ -1455,13 +1484,13 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         error: 'Invalid authentication'
       });
     }
-    // Ã¢Å“â€¦ FIX #10: Get user's current tier
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #10: Get user's current tier
     const { data: currentProfile } = await supabase
       .from('profiles')
       .select('user_tier')
       .eq('id', user.id)
       .single();
-    // Ã¢Å“â€¦ FIX #11: Log upgrade attempt
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #11: Log upgrade attempt
     await logSecurityEvent({
       user_id: user.id,
       event_type: 'checkout_initiated',
@@ -1563,7 +1592,7 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     });
   } catch (error) {
     logger.error(`${E.CROSS} [${req.id}] Checkout session error:`, error);
-    // Ã¢Å“â€¦ FIX #13: Don't expose Stripe errors to client
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #13: Don't expose Stripe errors to client
     const errorMessage = error.type === 'StripeError'
       ? 'Payment processing error'
       : 'Internal server error';
@@ -1651,7 +1680,7 @@ app.post('/api/cancel-subscription', async (req, res) => {
   }
 });
 // ============================================
-// Ã¢Å“â€¦ FIX #24: API KEY RELOAD ENDPOINT (ADMIN ONLY)
+// ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #24: API KEY RELOAD ENDPOINT (ADMIN ONLY)
 // ============================================
 app.post('/api/admin/reload-keys', requireAdmin, async (req, res) => {
   try {
@@ -1696,7 +1725,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       .from('profiles')
       .select('id, email, user_tier, created_at, stripe_customer_id');
     if (profilesError) throw profilesError;
-    // Ã¢Å“â€¦ FIX #25: Fetch download statistics
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #25: Fetch download statistics
     const { data: downloadData, error: downloadError } = await supabase
       .from('download_tracking')
       .select('user_id, downloaded_at, user_tier');
@@ -1709,7 +1738,7 @@ app.get('/api/admin/stats', adminLimiter, requireAdmin, async (req, res) => {
       pro: profiles.filter(p => p.user_tier === 'pro').length,
       business: profiles.filter(p => p.user_tier === 'business').length
     };
-    // Ã¢Å“â€¦ ADD: Download statistics
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ADD: Download statistics
     if (!downloadError && downloadData) {
       const totalDownloads = downloadData.length;
       const todayDownloads = downloadData.filter(d =>
@@ -1853,7 +1882,7 @@ app.get('/api/admin/analytics', adminLimiter, requireAdmin, async (req, res) => 
     const weekGenerations = weekData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
     // Calculate this month's generations
     const monthGenerations = usageData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
-    // Ã¢Å“â€¦ ADD: Fetch download analytics
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ADD: Fetch download analytics
     const { data: downloadData, error: downloadError } = await supabase
       .from('download_tracking')
       .select('*')
@@ -1876,17 +1905,13 @@ for (let i = 6; i >= 0; i--) {
   const date = new Date();
   date.setDate(date.getDate() - i);
   const dateStr = date.toISOString().split('T')[0];
- 
   const dayData = usageData.filter(d =>
     d.created_at && d.created_at.startsWith(dateStr)
   );
- 
   const dayTotal = dayData.reduce((sum, d) => sum + (d.generations_used || 0), 0);
- 
   const dayDownloads = downloadData ?
     downloadData.filter(d => d.downloaded_at && d.downloaded_at.startsWith(dateStr)).length
     : 0;
- 
   history.push({
     date: dateStr,
     generations: dayTotal,
