@@ -18,7 +18,7 @@ const E = {
   INBOX: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥', SIREN: 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â¨', REFRESH: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾', UP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€ ', LINK: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€',
   CARD: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³', STOP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬Ëœ', EMAIL: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â§', INFO: 'ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â', BLUE: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ'
 };
-import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl } from './imageLibrary.js';
+import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getImages, getRateLimitStatus } from './imageLibrary.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -1052,19 +1052,28 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // Detect topic and get images
-      const topic = detectTopic(sanitizedPrompt);
-      const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
-      const images = topicData.images;
-      // Shuffle images for random variety (non-destructive copy)
-      const shuffledImages = [...images].sort(() => 0.5 - Math.random());
-      // Replace placeholders
-      for (let i = 1; i <= 6; i++) {
-        const placeholder = `{{IMAGE_${i}}}`;
-        const photoId = shuffledImages[i - 1];
-        const imageUrl = getUnsplashUrl(photoId, 1200, 80);
-        generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
-      }
+      // 🎯 HYBRID APPROACH: Unsplash API → Fallback to ID Library
+const imageResult = await getImages(sanitizedPrompt, 6);
+
+console.log(`📸 Image source: ${imageResult.source}`);
+
+// Replace placeholders with images
+for (let i = 1; i <= 6; i++) {
+  const placeholder = `{{IMAGE_${i}}}`;
+  const imageUrl = imageResult.images[i - 1] || imageResult.images[0]; // Fallback to first image if not enough
+  generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+}
+
+// Log rate limit status
+const rateLimitStatus = getRateLimitStatus();
+console.log(`📊 Unsplash rate limit: ${rateLimitStatus.used}/${rateLimitStatus.limit} (${rateLimitStatus.percentUsed}%)`);
+
+// ⚠️ ALERT if approaching limit
+if (rateLimitStatus.percentUsed >= 90) {
+  console.log(`🚨 ALERT: Unsplash rate limit at ${rateLimitStatus.percentUsed}%`);
+  // TODO: Add email alert here if you want
+}
+
       // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
