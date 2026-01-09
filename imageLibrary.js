@@ -382,34 +382,55 @@ function extractKeywords(prompt) {
  * Search Unsplash for images
  */
 async function searchUnsplashImages(query, count = 6) {
+  console.log('🌐 [searchUnsplashImages] Starting search for:', query);
+  
   const apiKey = process.env.UNSPLASH_ACCESS_KEY;
   
   if (!apiKey) {
+    console.error('❌ [searchUnsplashImages] UNSPLASH_ACCESS_KEY not found');
     throw new Error('UNSPLASH_ACCESS_KEY not found in environment variables');
   }
 
   const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${count}&orientation=landscape`;
+  console.log('🌐 [searchUnsplashImages] URL:', url);
+  console.log('🌐 [searchUnsplashImages] API Key (first 10 chars):', apiKey.substring(0, 10) + '...');
   
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Client-ID ${apiKey}`
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Client-ID ${apiKey}`
+      }
+    });
+
+    console.log('🌐 [searchUnsplashImages] Response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [searchUnsplashImages] API error:', errorText);
+      throw new Error(`Unsplash API error: ${response.status} - ${errorText}`);
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Unsplash API error: ${response.status}`);
+    const data = await response.json();
+    console.log('🌐 [searchUnsplashImages] Response data:', {
+      total: data.total,
+      totalPages: data.total_pages,
+      results: data.results?.length || 0
+    });
+    
+    if (!data.results || data.results.length === 0) {
+      throw new Error('No images found on Unsplash');
+    }
+
+    // Return image URLs
+    const imageUrls = data.results.map(photo => photo.urls.regular);
+    console.log('✅ [searchUnsplashImages] Successfully got', imageUrls.length, 'images');
+    return imageUrls;
+    
+  } catch (error) {
+    console.error('❌ [searchUnsplashImages] Fetch error:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  
-  if (!data.results || data.results.length === 0) {
-    throw new Error('No images found on Unsplash');
-  }
-
-  // Return image URLs
-  return data.results.map(photo => photo.urls.regular);
 }
-
 /**
  * Get fallback images from ID library
  */
@@ -427,27 +448,45 @@ function getFallbackImages(prompt, count = 6) {
  * Main function: Get images (Unsplash API → Fallback to ID Library)
  */
 async function getImages(prompt, count = 6) {
+  console.log('🎬 [getImages] Function called with prompt:', prompt.substring(0, 50));
+  
   checkAndResetRateLimit();
   
   // Check if we should use fallback due to rate limiting
   const rateLimitStatus = getRateLimitStatus();
+  console.log('📊 [getImages] Rate limit status:', rateLimitStatus);
   
   if (rateLimitStatus.percentUsed >= (RATE_LIMIT_THRESHOLD * 100)) {
-    console.log(`⚠️  Rate limit at ${rateLimitStatus.percentUsed}% - using fallback`);
+    console.log(`⚠️ [getImages] Rate limit at ${rateLimitStatus.percentUsed}% - using fallback`);
     return {
       images: getFallbackImages(prompt, count),
       source: 'fallback (rate limit protection)'
     };
   }
 
+  // Check if API key exists
+  const apiKey = process.env.UNSPLASH_ACCESS_KEY;
+  console.log('🔑 [getImages] API Key exists:', !!apiKey);
+  console.log('🔑 [getImages] API Key length:', apiKey ? apiKey.length : 0);
+  
+  if (!apiKey) {
+    console.log('❌ [getImages] No API key found - using fallback');
+    return {
+      images: getFallbackImages(prompt, count),
+      source: 'fallback (no API key)'
+    };
+  }
+
   try {
     // Try Unsplash API first
-    console.log(`🔍 Searching Unsplash for: "${extractKeywords(prompt)}"`);
+    const keywords = extractKeywords(prompt);
+    console.log(`🔍 [getImages] Searching Unsplash for: "${keywords}"`);
     
-    const images = await searchUnsplashImages(extractKeywords(prompt), count);
+    const images = await searchUnsplashImages(keywords, count);
     
     unsplashCallCount++;
-    console.log(`✅ Unsplash API success (${unsplashCallCount}/${RATE_LIMIT} calls used)`);
+    console.log(`✅ [getImages] Unsplash API success (${unsplashCallCount}/${RATE_LIMIT} calls used)`);
+    console.log(`📸 [getImages] Received ${images.length} images from Unsplash`);
     
     return {
       images: images,
@@ -456,16 +495,15 @@ async function getImages(prompt, count = 6) {
     
   } catch (error) {
     // Fallback to ID library
-    console.log(`⚠️  Unsplash failed: ${error.message}`);
-    console.log(`🔄 Falling back to ID library`);
+    console.error(`❌ [getImages] Unsplash failed:`, error);
+    console.log(`🔄 [getImages] Falling back to ID library`);
     
     return {
       images: getFallbackImages(prompt, count),
-      source: 'fallback (error)'
+      source: `fallback (${error.message})`
     };
   }
 }
-
 export {
   IMAGE_LIBRARY,
   detectTopic,
