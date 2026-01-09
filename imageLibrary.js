@@ -466,4 +466,10 @@ async function getImages(prompt, count = 6) {
   }
 }
 
-export { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getRateLimitStatus, getImages };
+export {
+  IMAGE_LIBRARY,
+  detectTopic,
+  getUnsplashUrl,
+  getImages,
+  getRateLimitStatus
+};
