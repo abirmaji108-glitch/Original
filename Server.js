@@ -1053,26 +1053,41 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```\n?/g, '')
         .trim();
       // 🎯 HYBRID APPROACH: Unsplash API → Fallback to ID Library
-const imageResult = await getImages(sanitizedPrompt, 6);
-
-console.log(`📸 Image source: ${imageResult.source}`);
-
-// Replace placeholders with images
-for (let i = 1; i <= 6; i++) {
-  const placeholder = `{{IMAGE_${i}}}`;
-  const imageUrl = imageResult.images[i - 1] || imageResult.images[0]; // Fallback to first image if not enough
-  generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
-}
-
-// Log rate limit status
-const rateLimitStatus = getRateLimitStatus();
-console.log(`📊 Unsplash rate limit: ${rateLimitStatus.used}/${rateLimitStatus.limit} (${rateLimitStatus.percentUsed}%)`);
-
-// ⚠️ ALERT if approaching limit
-if (rateLimitStatus.percentUsed >= 90) {
-  console.log(`🚨 ALERT: Unsplash rate limit at ${rateLimitStatus.percentUsed}%`);
-  // TODO: Add email alert here if you want
-}
+      try {
+        console.log('🔍 [IMAGE] Starting image search for:', sanitizedPrompt.substring(0, 50));
+        
+        const imageResult = await getImages(sanitizedPrompt, 6);
+        
+        console.log(`📸 [IMAGE] Image source: ${imageResult.source}`);
+        console.log(`📸 [IMAGE] Got ${imageResult.images.length} images`);
+        
+        // Replace placeholders with images
+        for (let i = 1; i <= 6; i++) {
+          const placeholder = `{{IMAGE_${i}}}`;
+          const imageUrl = imageResult.images[i - 1] || imageResult.images[0];
+          console.log(`📸 [IMAGE] Replacing ${placeholder} with: ${imageUrl.substring(0, 60)}...`);
+          generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+        }
+        
+        // Log rate limit status
+        const rateLimitStatus = getRateLimitStatus();
+        console.log(`📊 [IMAGE] Unsplash rate limit: ${rateLimitStatus.used}/${rateLimitStatus.limit} (${rateLimitStatus.percentUsed}%)`);
+        
+        // ⚠️ ALERT if approaching limit
+        if (rateLimitStatus.percentUsed >= 90) {
+          console.log(`🚨 [IMAGE] ALERT: Unsplash rate limit at ${rateLimitStatus.percentUsed}%`);
+        }
+      } catch (imageError) {
+        console.error('❌ [IMAGE] CRITICAL: Image fetching completely failed:', imageError);
+        // Emergency fallback - use business images
+        const fallbackImages = IMAGE_LIBRARY.business.images.slice(0, 6);
+        for (let i = 1; i <= 6; i++) {
+          const placeholder = `{{IMAGE_${i}}}`;
+          const imageUrl = getUnsplashUrl(fallbackImages[i - 1], 1200, 80);
+          generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+        }
+        console.log('📸 [IMAGE] Used emergency fallback images');
+      }
 
       // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
