@@ -362,20 +362,31 @@ function getRateLimitStatus() {
 }
 
 /**
- * Extract keywords from user prompt for image search
+ * 🔥 IMPROVED: Extract RELEVANT keywords from prompt
  */
 function extractKeywords(prompt) {
-  // Remove common words
-  const stopWords = ['create', 'make', 'build', 'design', 'website', 'for', 'a', 'an', 'the', 'page', 'site'];
+  console.log('🔍 [extractKeywords] Original prompt:', prompt);
   
-  const words = prompt
+  // First, detect the topic to get relevant keywords
+  const topic = detectTopic(prompt);
+  const topicData = IMAGE_LIBRARY[topic];
+  
+  console.log('🎯 [extractKeywords] Detected topic:', topic);
+  
+  // Get the primary keyword from detected topic
+  const primaryKeyword = topicData.keywords[0]; // e.g., "coffee" for coffee shop
+  
+  // Clean up the prompt to extract secondary context
+  const cleanPrompt = prompt
     .toLowerCase()
-    .replace(/[^\w\s]/g, '') // Remove punctuation
-    .split(/\s+/)
-    .filter(word => word.length > 2 && !stopWords.includes(word));
+    .replace(/create|make|build|design|website|for|page|site|professional|modern|landing/gi, '')
+    .trim();
   
-  // Return top 3 keywords
-  return words.slice(0, 3).join(' ');
+  // Combine topic keyword with context
+  const searchQuery = `${primaryKeyword} shop interior`;
+  
+  console.log('🔍 [extractKeywords] Final search query:', searchQuery);
+  return searchQuery;
 }
 
 /**
