@@ -60,7 +60,7 @@ const IMAGE_LIBRARY = {
   },
   saas: {
     keywords: ['saas', 'software', 'technology', 'app', 'digital', 'tech', 'platform', 'cloud', 'solution', 'startup', 'innovation'],
-    images: ['1678565869434-c81195861939', '1556155092-490a1ba16284', '1563986768609-322da13575f3', '1555421689-491a97ff2040', '1683147638125-fd31a506a429', '1642132652859-3ef5a1048fd1', '1590971862391-06cac0657603', '1556761175-b413da4baf72', '1680509034814-e733c5f873ac', '1557804506-669a67965ba0', '1630673559640-000a51b4dd28', '1590402494587-44b71d7772f6', '1669592891900-bb3b896dfff6', '1556761175-4b46a572b786', '1590402494693-bd0499aefe00', '1602265585142-6b221b9b2c24', '1675793714962-a2413250c490', '1642132652860-603f4e3c19b7', '1642132652860-471b4228023e', '1559526324-593bc073d938']
+    images: ['1678565869434-c81195861939', '1556155092-490a1ba16284', '1563986768609-322da13575f3', '1555421689-491a97ff2040', '1683147638125-fd31a506a429', '1642132652859-3ef5a1048fd1', '1590971862391-06cac0657603', '1556761175-b413da4baf72', '1680509034814-e733c5f873ac', '1557804506-669a67965ba0', '1630673559640-000a51b4dd28', '1590402494587-44b71d9772f6', '1669592891900-bb3b896dfff6', '1556761175-4b46a572b786', '1590402494693-bd0499aefe00', '1602265585142-6b221b9b2c24', '1675793714962-a2413250c580', '1642132652860-603f4e3c19b7', '1642132652860-471b4228023e', '1559526324-593bc073d938']
   },
   education: {
     keywords: ['education', 'course', 'learning', 'school', 'university', 'training', 'academy', 'college', 'student', 'teaching', 'elearning'],
@@ -80,7 +80,7 @@ const IMAGE_LIBRARY = {
   },
   product: {
     keywords: ['product', 'landing', 'launch', 'startup', 'innovation', 'showcase', 'app landing', 'feature', 'demo', 'presentation'],
-    images: ['1664392147011-2a720f214e01', '1523275335684-37898b6baf30', '1505740420928-5e560c06d30e', '1542291026-7eec264c27ff', '1679913792906-13ccc5c84d44', '1602143407151-7111542de6e8', '1572635196237-14b3f281503f', '1526170375885-4d8ecf77b99f', '1675896084254-dcb626387e1e', '1541643600914-78b084683601', '1546868871-7041f2a55e12', '1615397349754-cfa2066a298e', '1670537994863-5ad53a3214e0', '1491553895911-0055eca6402d', '1560343090-f0409e92791a', '1615396899839-c99c121888b0', '1677541205130-51e60e937318', '1503602642458-232111445657', '1543163521-1bf539c55dd2', '1583394838336-acd977736f90']
+    images: ['1664392147011-2a720f214e01', '1523275335684-37898b6baf30', '1505740420928-5e560c06d30e', '1542291026-7eec264c27ff', '1679913792906-13ccc5c84d44', '1602143407151-7111542de6e8', '1572635196237-14b3f281503f', '1526170375885-4d8ecf77b99f', '1675896084254-dcb626387e1e', '1546868871-7041f2a55e12', '1546868871-7041f2a55e13', '1615397349754-cfa2066a298e', '1670537994863-5ad53a3214e0', '1491553895911-0055eca6402d', '1560343090-f0409e92791a', '1615396899839-c99c121888b0', '1677541205130-51e60e937318', '1503602642458-232111445657', '1543163521-1bf539c55dd2', '1583394838336-acd977736f90']
   },
   business: {
     keywords: ['business', 'agency', 'consulting', 'professional', 'corporate', 'company', 'enterprise', 'services', 'firm', 'office'],
@@ -156,7 +156,7 @@ const IMAGE_LIBRARY = {
   },
   daycare: {
     keywords: ['daycare', 'childcare', 'preschool', 'kids', 'children', 'nursery', 'kindergarten'],
-    images: ['1663126319781-f4de55c7ebd4', '1564429238817-393bd4286b2d', '1567746455504-cb3213f8f5b8', '1578349035260-9f3d4042f1f7', '1726812194411-dead4f0e267b', '1587323655395-b1c77a12c89a', '1588075592446-265fd1e6e76f', '1484820540004-14229fe36ca4', '1683133426133-729423c95f32', '1501686637-b7aa9c48a882', '1516627145497-ae6968895b74', '1557452765-5b57d100c1dc', '1663106419176-ab3e42499a5c', '1453749024858-4bca89bd9edc', '1586694680938-9682c9e1f736', '1503676260728-1c00da094a0b', '1663099230808-ff36ef2545fd', '1560130958-0ea787c275de', '1570319736696-894f69f52bd3', '1567405258710-35a7015252c0']
+    images: ['1663126319781-f4de55c7ebd4', '1564429238817-393bd4286b2d', '1567746455504-cb3213f8f5b8', '1578349035260-9f3d4042f1f7', '1726812194411-dead4f0e267b', '1588075592446-265fd1e6e76f', '1484820540004-14229fe36ca4', '1683133426133-729423c95f32', '1501686637-b7aa9c48a882', '1516627145497-ae6968895b74', '1557452765-5b57d100c1dc', '1663106419176-ab3e42499a5c', '1453749024858-4bca89bd9edc', '1586694680938-9682c9e1f736', '1503676260728-1c00da094a0b', '1663099230808-ff36ef2545fd', '1560130958-0ea787c275de', '1570319736696-894f69f52bd3', '1567405258710-35a7015252c0']
   },
   veterinary: {
     keywords: ['veterinary', 'vet', 'animal hospital', 'pet care', 'animal clinic', 'pets'],
@@ -164,7 +164,7 @@ const IMAGE_LIBRARY = {
   },
   dentist: {
     keywords: ['dentist', 'dental', 'dentistry', 'teeth', 'oral health', 'orthodontist', 'clinic'],
-    images: ['1681966962522-546f370bc98e', '1606811971618-4486d14f3f99', '1606811841689-23dfddce3e95', '1598256989800-fe5f95da9787', '1681967039743-37dc3a27f4ce', '1588776814546-daab30f310ce', '1593022356769-11f762e25ed9', '1489278353717-f64c6ee8a4d2', '1672922646298-3afc6c6397c9', '1629909613654-28e377c37b09', '1667133295308-9ef24f71952e', '1495573020741-8a2f372bbec3', '1675686363507-22a8d0e11b4c', '1588776814546-1ffcf47267a5', '1670250492416-570b5b7343b1', '1667133295315-820bb6481730', '1663088767412-b10c8dc27ad1', '1564420228450-d9a5bc8d6565', '1631051103633-24959376b92d', '1607613009820-a29f7bb81c04']
+    images: ['1681966962522-546f370bc98e', '1606811971618-4486d14f3f99', '1606811841689-23dfddce3e95', '1598256989800-fe5f95da9787', '1681967039743-37dc3a27f4ce', '1588776814546-daab30f310ce', '1593022356769-11f762e25ed9', '1489278353717-f64c6ee8a4d2', '1672922646298-3afc6c6397c9', '1629909613654-28e377c37b09', '1667133295308-9ef24f71952e', '1495573020741-8a2f372bbec3', '1675686363507-22a8d0e11b4c', '1588776814546-1ffcf47267a5', '1670250492416-570b5bb7343b1', '1667133295315-820bb6481730', '1663088767412-b10c8dc27ad1', '1564420228450-d9a5bc8d6565', '1631051103633-24959376b92d', '1607613009820-a29f7bb81c04']
   },
   accounting: {
     keywords: ['accounting', 'accountant', 'finance', 'bookkeeping', 'tax', 'cpa', 'financial'],
@@ -200,7 +200,7 @@ const IMAGE_LIBRARY = {
   },
   plumbing: {
     keywords: ['plumber', 'plumbing', 'pipes', 'repair', 'water', 'drain'],
-    images: ['1664301972519-506636f0245d', '1676210134188-4c05dd172f89', '1542013936693-884638332954', '1620653713380-7a34b773fef8', '1683141410787-c4dbd2220487', '1676210133055-eab6ef033ce3', '1558618666-fcd25c85cd64', '1607472586893-edb57bdc0e39', '1663045495725-89f23b57cfc5', '1538474705339-e87de81450e8', '1517646287270-a5a9ca602e5c', '1585704032915-c3400ca199e7', '1661884973994-d7625e52631a', '1454988501794-2992f706932e', '1601997123254-a9f1ad6a756b', '1545193329-4a052e14eb8f', '1663047170515-66632d2a374d', '1693907986952-3cd372e4c9d8', '1650551182991-b07558247564', '1521207418485-99c705420785']
+    images: ['1664301972519-506636f0245d', '1676210134188-4c05dd172f89', '1542013936693-884638332954', '1620653713380-7a34b773fef8', '1683141410787-c4dbd2220487', '1676210133055-eab6ef033ce3', '1558618666-fcd25c85cd64', '1607472586893-edb57bdc0e39', '1663045495725-89f23b57cfc5', '1538474705339-e87de81450e8', '1517646287270-a5a9ca602e5c', '1585704032915-c3400ca199e7', '1661884973994-d7625e52631a', '1454988501794-2a76612e676e', '1601997123254-a9f1ad6a756b', '1545193329-4a052e14eb8f', '1663047170515-66632d2a374d', '1693907986952-3cd372e4c9d8', '1650551182991-b07558247564', '1521207418485-99c705420785']
   },
   electrical: {
     keywords: ['electrician', 'electrical', 'wiring', 'power', 'electric', 'repair'],
@@ -212,11 +212,11 @@ const IMAGE_LIBRARY = {
   },
   moving: {
     keywords: ['moving', 'relocation', 'mover', 'transport', 'packing', 'delivery'],
-    images: ['1679858780540-83cf9db66d55', '1730154838368-c37b1fdebcf6', '1520038410233-7141be7e6f97', '1624137527136-66e631bdaa0e', '1679858379227-1a9e4cd878d4', '1600725935160-f67ee4f6084a', '1580709839515-54b8991e2813', '1586781383963-8e66f88077ec', '1663100751368-14d0196b37a9', '1581573950452-5a438c5f390f', '1600518464441-9154a4dea21b', '1714647211902-bb711d643a17', '1679858781690-71bffb438658', '1663625318264-695d2d04f11a', '1614359835514-92f8ba196357', '1517478615425-ea923377dac7', '1663100748872-6524de61dc16', '1577702312572-5bb9328a9f15', '1580709430621-697349bd4bb9', '1609143739217-01b60dad1c67']
+    images: ['1679858780540-83cf9db66d55', '1730154838368-c37b1fdebcf6', '1520038410233-7141be7e6f97', '1624137527136-66e631bdaa0e', '1679858379227-1a9e4cd878d4', '1600725935160-f67ee4f6084a', '1580709839515-54b8991e2813', '1586781383963-8e66f88077ec', '1663100751368-14d0196b37a9', '1581573950452-5a438c5f390f', '1600518464441-9154a3a4dea21b', '1714647211902-bb711d643a17', '1679858781690-71bffb438658', '1663625318264-695d2d04f11a', '1614359835514-92f8ba196357', '1517478615425-ea923377dac7', '1663100748872-6524de61dc16', '1577702312572-5bb9328a9f15', '1580709430621-697349bd4bb9', '1609143739217-01b60dad1c67']
   },
   security: {
     keywords: ['security', 'guard', 'protection', 'surveillance', 'safety', 'monitoring'],
-    images: ['1661878265739-da90bc1af051', '1496368077930-c1e31b4e5b44', '1614064641938-3bbee52942c7', '1548092372-0d1bd40894a3', '1676618539992-21c7d3b6df0f', '1485230405346-71acb9518d9c', '1451187580459-43490279c0fa', '1550751827-4bd374c3f58b', '1674582744373-c0805c281744', '1523961131990-5ea7c61b2107', '1603899122634-f086ca5f5ddd', '1566245024852-04fbf7842ce9', '1682125948844-e2dc8996b0f0', '1581568736305-49a04e012c13', '1520697830682-bbb6e85e2b0b', '1563920443079-783e5c786b83', '1683120968693-9af51578770e', '1633265486064-086b219458ec', '1461685265823-f8d5d0b08b9b', '1508345228704-935cc84bf5e2']
+    images: ['1661878265739-da90bc1af051', '1496368077930-c1e31b4e5b44', '1614064641938-3bbee52942c7', '1548092372-0d1bd40894a3', '1676618539992-21c7d3b6df0f', '1485230405346-71acb9518d9c', '1451187580459-43490279c0fa', '1550751827-4bd374c3f58b', '1674582744373-c0805c281744', '1523961131990-5ea7c61b2107', '1603899122634-f086ca5f5ddd', '1566245024852-04fbf7842ce9', '1682125948844-e2dc8996b0f0', '1581568736305-49a04e007c13', '1520697830682-bbb6e85e2b0b', '1563920443079-783e5c786b83', '1683120968693-9af51578770e', '1633265486064-086b219458ec', '1461685265823-f8d5d0b08b9b', '1508345228704-935cc84bf5e2']
   },
   logistics: {
     keywords: ['logistics', 'supply chain', 'freight', 'transport', 'distribution', 'cargo'],
@@ -292,7 +292,7 @@ const IMAGE_LIBRARY = {
   },
   painting: {
     keywords: ['painting', 'painter', 'interior', 'exterior', 'decorating', 'color'],
-    images: ['1664013263421-91e3a8101259', '1579783928621-7a13d66a62d1', '1578301978693-85fa9c0320b9', '1578926375605-eaf7559b1458', '1678812165213-12dc8d1f3e19', '1572392640988-ba48d1a74457', '1579965342575-16428a7c8881', '1515405295579-ba7b45403062', '1675378165346-5f6c3959f0d2', '1579783901586-d88db74b4fe4', '1549289524-06cf8837ace5', '1541961017774-22349e4a1262', '1664640458839-000c310875fa', '1578301978018-3005759f48f7', '1583119912267-cc97c911e416', '1581337204873-ef36aa186caa', '1689518469262-6f9499412ef0', '1510832842230-87253f48d74f', '1579541814924-49fef17c5be5', '1578301996581-bf7caec556c0']
+    images: ['1664013263421-91e3a8101259', '1579783928621-7a13d66a62d1', '1578301978693-85fa9c0320b9', '1578926375605-eaf7559b1458', '1678812165213-12dc8d1f3e19', '1572392640988-ba48d1a74457', '1579965342575-16428a7c8881', '1515405295579-ba7b45403062', '1675378165346-5f6c3959f0d2', '1579783901586-d88db74b4fe4', '1549289524-06cf8837ace5', '1541961017774-22349e4a1262', '1664640458839-000c310875fa', '1578301978018-3005759f48f7', '1583119912267-cc97c911e416', '1689518469262-6f9499412ef0', '1510832842230-87253f48d74f', '1579541814924-49fef17c5be5', '1578301996581-bf7caec556c0']
   },
   storage: {
     keywords: ['storage', 'warehouse', 'self storage', 'facility', 'unit', 'space'],
@@ -325,4 +325,145 @@ function getUnsplashUrl(id, width = 1200, quality = 80) {
   return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${width}&q=${quality}`;
 }
 
-export { IMAGE_LIBRARY, detectTopic, getUnsplashUrl };
+// ============================================
+// 🚀 UNSPLASH API INTEGRATION (NEW)
+// ============================================
+
+// Rate limiting tracking
+let unsplashCallCount = 0;
+let lastResetTime = Date.now();
+const RATE_LIMIT = 50; // Unsplash allows 50 requests/hour
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
+const RATE_LIMIT_THRESHOLD = 0.9; // Switch to fallback at 90%
+
+/**
+ * Reset rate limit counter if 1 hour has passed
+ */
+function checkAndResetRateLimit() {
+  const now = Date.now();
+  if (now - lastResetTime >= RATE_LIMIT_WINDOW) {
+    unsplashCallCount = 0;
+    lastResetTime = now;
+    console.log('🔄 Unsplash rate limit counter reset');
+  }
+}
+
+/**
+ * Get current rate limit status
+ */
+function getRateLimitStatus() {
+  checkAndResetRateLimit();
+  return {
+    used: unsplashCallCount,
+    limit: RATE_LIMIT,
+    percentUsed: Math.round((unsplashCallCount / RATE_LIMIT) * 100),
+    remaining: RATE_LIMIT - unsplashCallCount
+  };
+}
+
+/**
+ * Extract keywords from user prompt for image search
+ */
+function extractKeywords(prompt) {
+  // Remove common words
+  const stopWords = ['create', 'make', 'build', 'design', 'website', 'for', 'a', 'an', 'the', 'page', 'site'];
+  
+  const words = prompt
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '') // Remove punctuation
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.includes(word));
+  
+  // Return top 3 keywords
+  return words.slice(0, 3).join(' ');
+}
+
+/**
+ * Search Unsplash for images
+ */
+async function searchUnsplashImages(query, count = 6) {
+  const apiKey = process.env.UNSPLASH_ACCESS_KEY;
+  
+  if (!apiKey) {
+    throw new Error('UNSPLASH_ACCESS_KEY not found in environment variables');
+  }
+
+  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${count}&orientation=landscape`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Client-ID ${apiKey}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Unsplash API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  
+  if (!data.results || data.results.length === 0) {
+    throw new Error('No images found on Unsplash');
+  }
+
+  // Return image URLs
+  return data.results.map(photo => photo.urls.regular);
+}
+
+/**
+ * Get fallback images from ID library
+ */
+function getFallbackImages(prompt, count = 6) {
+  const topic = detectTopic(prompt);
+  const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
+  
+  // NO SHUFFLING - use images in order for consistency
+  const imageIds = topicData.images.slice(0, count);
+  
+  return imageIds.map(id => getUnsplashUrl(id, 1200, 80));
+}
+
+/**
+ * Main function: Get images (Unsplash API → Fallback to ID Library)
+ */
+async function getImages(prompt, count = 6) {
+  checkAndResetRateLimit();
+  
+  // Check if we should use fallback due to rate limiting
+  const rateLimitStatus = getRateLimitStatus();
+  
+  if (rateLimitStatus.percentUsed >= (RATE_LIMIT_THRESHOLD * 100)) {
+    console.log(`⚠️  Rate limit at ${rateLimitStatus.percentUsed}% - using fallback`);
+    return {
+      images: getFallbackImages(prompt, count),
+      source: 'fallback (rate limit protection)'
+    };
+  }
+
+  try {
+    // Try Unsplash API first
+    console.log(`🔍 Searching Unsplash for: "${extractKeywords(prompt)}"`);
+    
+    const images = await searchUnsplashImages(extractKeywords(prompt), count);
+    
+    unsplashCallCount++;
+    console.log(`✅ Unsplash API success (${unsplashCallCount}/${RATE_LIMIT} calls used)`);
+    
+    return {
+      images: images,
+      source: 'unsplash'
+    };
+    
+  } catch (error) {
+    // Fallback to ID library
+    console.log(`⚠️  Unsplash failed: ${error.message}`);
+    console.log(`🔄 Falling back to ID library`);
+    
+    return {
+      images: getFallbackImages(prompt, count),
+      source: 'fallback (error)'
+    };
+  }
+}
+
+export { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getRateLimitStatus, getImages };
