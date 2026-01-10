@@ -264,5 +264,8 @@ function generateSearchQuery(context, prompt) {
   }
 }
 
-// Import detectTopic from your existing library
-import { detectTopic } from './imageLibrary.js';
+// Import detectTopic from your existing library - DYNAMIC IMPORT
+async function detectTopic(prompt) {
+  const { detectTopic: detectTopicFunc } = await import('./imageLibrary.js');
+  return detectTopicFunc(prompt);
+}
