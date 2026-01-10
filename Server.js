@@ -14,11 +14,11 @@ import logger from './utils/logger.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
-  CHECK: 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦', CROSS: 'ÃƒÂ¢Ã‚ÂÃ…â€™', WARN: 'ÃƒÂ¢Ã…Â¡ ÃƒÂ¯Ã‚Â¸Ã‚Â', CHART: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã… ', LOCK: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â„¢',
+  CHECK: 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦', CROSS: 'ÃƒÂ¢Ã‚ÂÃ…â€™', WARN: 'ÃƒÂ¢Ã…Â¡ ÃƒÂ¯Ã‚Â¸Ã‚Â', CHART: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã… ', LOCK: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€™',
   INBOX: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥', SIREN: 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â¨', REFRESH: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾', UP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€ ', LINK: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€',
-  CARD: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³', STOP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬Ëœ', EMAIL: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â§', INFO: 'ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â', BLUE: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ'
+  CARD: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€™Ã‚Â³', STOP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬Ëœ', EMAIL: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â§', INFO: 'ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â', BLUE: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ'
 };
-import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getImages, getRateLimitStatus } from './imageLibrary.js';
+import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getImages, getContextAwareImages, getRateLimitStatus } from './imageLibrary.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -807,10 +807,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
-   
+  
         if (!error && user) {
           userId = user.id;
-     
+    
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
@@ -826,19 +826,19 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-       
+      
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
-          
+         
             // Ã¢Å“â€ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
             const TESTING_MODE = true; // Ã¢Å¡ Ã¯Â¸Â SET TO FALSE AFTER TESTING
             const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
-          
+         
             // Check if user is admin
             const { data: { user: authUser } } = await supabase.auth.getUser(token);
             const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
-          
+         
             // Check limits (skip for admins in testing mode)
             const tierLimits = {
               free: 2,
@@ -847,7 +847,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               business: 200
             };
             const limit = tierLimits[userTier] || 2;
-          
+         
             if (!TESTING_MODE || !isAdmin) {
               // Normal limit enforcement for non-admins
               if (generationsThisMonth >= limit) {
@@ -885,154 +885,59 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
     system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
-Ã°Å¸Å½Â¯ CRITICAL SUCCESS CRITERIA:
+
+🎯 CRITICAL SUCCESS CRITERIA:
 1. Use placeholders for images: {{IMAGE_1}} {{IMAGE_2}} {{IMAGE_3}} {{IMAGE_4}} {{IMAGE_5}} {{IMAGE_6}}
-2. EVERY section must have proper spacing and visual hierarchy
-3. Modern, professional design with depth and polish
-4. Mobile-responsive by default
-ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â MANDATORY STRUCTURE:
+2. For TEAM MEMBERS or PEOPLE: Place {{IMAGE_X}} near names or titles like "John Smith", "CEO", "Team Member"
+3. For PRODUCTS/SERVICES: Place {{IMAGE_X}} near product names or descriptions
+4. For LOCATIONS: Place {{IMAGE_X}} near addresses or "Visit Us" sections
+5. Make the HTML structure CLEAR about what each image represents
+6. EVERY section must have proper spacing and visual hierarchy
+7. Modern, professional design with depth and polish
+8. Mobile-responsive by default
+
+📐 MANDATORY STRUCTURE:
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Website</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-      
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-      
-        /* HERO GRADIENTS - Use these for hero sections */
-        .hero-gradient-blue {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
-        }
-      
-        .hero-gradient-purple {
-            background: linear-gradient(135deg, #581c87 0%, #a855f7 50%, #c084fc 100%);
-        }
-      
-        .hero-gradient-sunset {
-            background: linear-gradient(135deg, #ea580c 0%, #f59e0b 50%, #fbbf24 100%);
-        }
-      
-        .hero-gradient-ocean {
-            background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%);
-        }
-      
-        /* GLASSMORPHISM EFFECTS */
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-        }
-      
-        .glass-dark {
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-        }
-      
-        /* SMOOTH ANIMATIONS */
-        .fade-in {
-            animation: fadeIn 0.6s ease-out;
-        }
-      
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-      
-        .hover-lift {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-      
-        .hover-lift:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        }
-      
-        /* IMAGE OPTIMIZATION */
-img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    border-radius: 12px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-}
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-img[src] {
-    background: none;
-}
-      
-        /* RESPONSIVE GRID */
-        .grid-auto {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-      
-        /* BUTTONS */
-        .btn {
-            display: inline-block;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-        }
-      
-        .btn-primary {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-        }
-      
-        .btn-primary:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
-        }
-      
-        .btn-secondary {
-            background: white;
-            color: #1e40af;
-            border: 2px solid #1e40af;
-        }
-      
-        .btn-secondary:hover {
-            background: #1e40af;
-            color: white;
-        }
-    </style>
+    <!-- ... -->
 </head>
 <body>
-    <!-- CONTENT GOES HERE -->
+    <!-- Hero Section with background image -->
+    <section class="hero">
+        <!-- Use {{IMAGE_1}} for hero/background images -->
+    </section>
+    
+    <!-- Team Section -->
+    <section class="team">
+        <h2>Our Team</h2>
+        <div class="team-member">
+            <img src="{{IMAGE_2}}" alt="John Smith - CEO">
+            <h3>John Smith</h3>
+            <p>CEO & Founder</p>
+        </div>
+        <!-- More team members -->
+    </section>
+    
+    <!-- Products/Services -->
+    <section class="products">
+        <div class="product">
+            <img src="{{IMAGE_3}}" alt="Premium Coffee">
+            <h3>Premium Coffee</h3>
+            <p>Rich, aromatic blend</p>
+        </div>
+    </section>
+    
+    <!-- Location/Place -->
+    <section class="location">
+        <img src="{{IMAGE_4}}" alt="Our Location">
+        <h3>Visit Our Store</h3>
+        <p>123 Main Street</p>
+    </section>
+    
+    <!-- More sections as needed -->
 </body>
-</html>
-ÃƒÂ°Ã…Â¸Ã…Â½Â¯ QUALITY CHECKLIST:
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Hero section with gradient background
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Navigation bar (if multi-page feel needed)
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ At least 4-6 content sections
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Every section has proper spacing (py-24)
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Hover effects on cards
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Mobile responsive (Tailwind handles this)
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Proper color contrast (dark text on light bg, light text on dark bg)
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Call-to-action buttons in hero
-ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Footer with contact info
-Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...`,
+</html>`,
     messages: [
       {
         role: 'user',
@@ -1052,21 +957,26 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // 🎯 HYBRID APPROACH: Unsplash API → Fallback to ID Library
+      // 🎯 HYBRID APPROACH: Context-Aware → Unsplash API → Fallback to ID Library
       try {
-        console.log('🔍 [IMAGE] Starting image search for:', sanitizedPrompt.substring(0, 50));
+        console.log('🔍 [IMAGE] Starting CONTEXT-AWARE image search');
         
-        const imageResult = await getImages(sanitizedPrompt, 6);
+        const imageResult = await getContextAwareImages(sanitizedPrompt, generatedCode, 6);
         
-        console.log(`📸 [IMAGE] Image source: ${imageResult.source}`);
-        console.log(`📸 [IMAGE] Got ${imageResult.images.length} images`);
+        console.log(`📸 [IMAGE] Image sources: ${imageResult.sources.join(', ')}`);
+        console.log(`📸 [IMAGE] Context types: ${imageResult.contexts?.join(', ') || 'none'}`);
+        console.log(`📸 [IMAGE] Got ${imageResult.images.length} context-aware images`);
         
-        // Replace placeholders with images
+        // Replace placeholders with context-aware images
         for (let i = 1; i <= 6; i++) {
           const placeholder = `{{IMAGE_${i}}}`;
           const imageUrl = imageResult.images[i - 1] || imageResult.images[0];
-          console.log(`📸 [IMAGE] Replacing ${placeholder} with: ${imageUrl.substring(0, 60)}...`);
-          generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+          
+          // Only replace if the placeholder exists
+          if (generatedCode.includes(placeholder)) {
+            console.log(`📸 [IMAGE] Replacing ${placeholder} with context-aware image`);
+            generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+          }
         }
         
         // Log rate limit status
@@ -1074,31 +984,42 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
         console.log(`📊 [IMAGE] Unsplash rate limit: ${rateLimitStatus.used}/${rateLimitStatus.limit} (${rateLimitStatus.percentUsed}%)`);
         
         // ⚠️ ALERT if approaching limit
-        if (rateLimitStatus.percentUsed >= 90) {
+        if (rateLimitStatus.percentUsed >= 80) {
           console.log(`🚨 [IMAGE] ALERT: Unsplash rate limit at ${rateLimitStatus.percentUsed}%`);
+          // You can send yourself an email here
         }
+        
       } catch (imageError) {
-        console.error('❌ [IMAGE] CRITICAL: Image fetching completely failed:', imageError);
-        // Emergency fallback - use business images
-        const fallbackImages = IMAGE_LIBRARY.business.images.slice(0, 6);
-        for (let i = 1; i <= 6; i++) {
-          const placeholder = `{{IMAGE_${i}}}`;
-          const imageUrl = getUnsplashUrl(fallbackImages[i - 1], 1200, 80);
-          generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+        console.error('❌ [IMAGE] CRITICAL: Context-aware search failed:', imageError);
+        
+        // Emergency fallback - use your current system
+        try {
+          const fallbackResult = await getImages(sanitizedPrompt, 6);
+          for (let i = 1; i <= 6; i++) {
+            const placeholder = `{{IMAGE_${i}}}`;
+            const imageUrl = fallbackResult.images[i - 1] || fallbackResult.images[0];
+            generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+          }
+          console.log('📸 [IMAGE] Used emergency fallback');
+        } catch (finalError) {
+          console.error('💀 [IMAGE] All image systems failed');
+          // Don't break the site - use transparent placeholder
+          for (let i = 1; i <= 6; i++) {
+            const placeholder = `{{IMAGE_${i}}}`;
+            generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI4MDAiIHZpZXdCb3g9IjAgMCAxMjAwIDgwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI4MDAiIGZpbGw9IiNGMEYwRjAiLz48dGV4dCB4PSI2MDAiIHk9IjQwMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSIjQ0NDQ0NDIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIj5JbWFnZSBVbmF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=');
+          }
         }
-        console.log('📸 [IMAGE] Used emergency fallback images');
       }
-
       // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
-        
+       
           // Check if we need to reset for new month
           const shouldReset = profile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : (generationsThisMonth + 1);
-        
-          console.log(`Ã°Å¸â€œÅ  TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
+       
+          console.log(`Ã°Å¸â€œÅ TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           // Use await to ensure update completes
           const { data: updateResult, error: updateError } = await supabase
             .from('profiles')
@@ -1109,12 +1030,12 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
             })
             .eq('id', userId)
             .select();
-        
+       
           if (updateError) {
             console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ CRITICAL: Usage update FAILED:', updateError);
           } else {
             console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Usage updated successfully: ${newCount}/${limit}`);
-            console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€  Update confirmed:`, updateResult);
+            console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€ Update confirmed:`, updateResult);
           }
         } catch (error) {
           console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception during usage tracking:', error);
@@ -1142,7 +1063,6 @@ Return ONLY the HTML code. No explanations. No markdown. Just <!DOCTYPE html>...
     } catch (apiError) {
       clearTimeout(timeout);
       console.error('Claude API error:', apiError);
- 
       return res.status(502).json({
         success: false,
         error: 'AI service temporarily unavailable',
