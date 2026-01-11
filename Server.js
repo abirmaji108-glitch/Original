@@ -887,57 +887,44 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
 
 🎯 CRITICAL SUCCESS CRITERIA:
-1. Use placeholders for images: {{IMAGE_1}} {{IMAGE_2}} {{IMAGE_3}} {{IMAGE_4}} {{IMAGE_5}} {{IMAGE_6}}
-2. For TEAM MEMBERS or PEOPLE: Place {{IMAGE_X}} near names or titles like "John Smith", "CEO", "Team Member"
-3. For PRODUCTS/SERVICES: Place {{IMAGE_X}} near product names or descriptions
-4. For LOCATIONS: Place {{IMAGE_X}} near addresses or "Visit Us" sections
-5. Make the HTML structure CLEAR about what each image represents
-6. EVERY section must have proper spacing and visual hierarchy
-7. Modern, professional design with depth and polish
-8. Mobile-responsive by default
+1. Use placeholders for images with DETAILED DESCRIPTIONS:
+   {{IMAGE_1:[EXACT description of what this image should show]}}
+   Example for construction: {{IMAGE_1:construction site with heavy machinery, modern building in progress}}
+   Example for restaurant: {{IMAGE_1:restaurant interior with elegant dining tables and warm lighting}}
+   
+2. For EACH SECTION, analyze what image is needed:
+   - Hero/Header: {{IMAGE_X:[business type] [setting], [mood], [details]}}
+   - Team Members: {{IMAGE_X:[gender] [profession] portrait, [age], [professional setting]}}
+   - Products/Services: {{IMAGE_X:[specific item/service] [angle/view], [style], [context]}}
+   - Location/Place: {{IMAGE_X:[business type] [interior/exterior], [specific features]}}
+   - Portfolio/Gallery: {{IMAGE_X:[project type] [before/after/process], [key elements]}}
+   
+3. MUST match images to content:
+   - If HTML shows "John Mitchell - Project Manager" → {{IMAGE_X:male construction project manager portrait, hard hat, blueprint}}
+   - If HTML shows "Industrial Construction" → {{IMAGE_X:large warehouse construction site, cranes, workers}}
+   - If HTML shows "Client Testimonials" → {{IMAGE_X:diverse happy clients smiling, professional headshots}}
+   - If HTML shows "Premium Coffee" → {{IMAGE_X:coffee cup close-up with latte art, steam, wooden table}}
+   - If HTML shows "Gym Equipment" → {{IMAGE_X:modern gym equipment, clean, people exercising}}
+   
+4. Generate EXACTLY 6 image placeholders with COMPLETE descriptions
+5. Make HTML structure CLEAR about what each image represents
+6. Modern, professional design with depth and polish
+7. Mobile-responsive by default
 
-📐 MANDATORY STRUCTURE:
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!-- ... -->
-</head>
-<body>
-    <!-- Hero Section with background image -->
-    <section class="hero">
-        <!-- Use {{IMAGE_1}} for hero/background images -->
-    </section>
-    
-    <!-- Team Section -->
-    <section class="team">
-        <h2>Our Team</h2>
-        <div class="team-member">
-            <img src="{{IMAGE_2}}" alt="John Smith - CEO">
-            <h3>John Smith</h3>
-            <p>CEO & Founder</p>
-        </div>
-        <!-- More team members -->
-    </section>
-    
-    <!-- Products/Services -->
-    <section class="products">
-        <div class="product">
-            <img src="{{IMAGE_3}}" alt="Premium Coffee">
-            <h3>Premium Coffee</h3>
-            <p>Rich, aromatic blend</p>
-        </div>
-    </section>
-    
-    <!-- Location/Place -->
-    <section class="location">
-        <img src="{{IMAGE_4}}" alt="Our Location">
-        <h3>Visit Our Store</h3>
-        <p>123 Main Street</p>
-    </section>
-    
-    <!-- More sections as needed -->
-</body>
-</html>`,
+📐 EXAMPLE FOR CONSTRUCTION WEBSITE:
+<section class="hero" style="background-image: url('{{IMAGE_1:modern construction site with skyscraper being built, cranes, daytime}}')">
+
+<div class="team-member">
+  <img src="{{IMAGE_2:professional portrait of male construction project manager, 40s, hard hat, smiling}}" alt="John Mitchell">
+</div>
+
+<div class="service">
+  <img src="{{IMAGE_3:large warehouse construction site with steel beams, workers, safety gear}}" alt="Industrial Construction">
+</div>
+
+<div class="portfolio">
+  <img src="{{IMAGE_4:before and after renovation of commercial building, modern transformation}}" alt="Project Showcase">
+</div>`,
     messages: [
       {
         role: 'user',
@@ -957,59 +944,101 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // 🎯 HYBRID APPROACH: Context-Aware → Unsplash API → Fallback to ID Library
+      // 🎯 UNIVERSAL: Extract descriptions and get perfect images for ANY website
+try {
+  console.log('🔍 [IMAGE] Universal image processing for:', sanitizedPrompt.substring(0, 50));
+  
+  // First try: Extract descriptions from HTML (Claude's new format)
+  let imageResult = null;
+  const descriptions = [];
+  const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
+  let match;
+  
+  // Extract all image descriptions from HTML
+  while ((match = regex.exec(generatedCode)) !== null) {
+    const index = parseInt(match[1]);
+    const description = match[2].trim();
+    descriptions.push({
+      index,
+      description,
+      placeholder: match[0]
+    });
+    console.log(`📝 [IMAGE] Extracted description ${index}: "${description}"`);
+  }
+  
+  if (descriptions.length > 0) {
+    console.log(`✅ [IMAGE] Found ${descriptions.length} image descriptions`);
+    
+    // Fetch images for each description
+    const images = [];
+    const sources = [];
+    
+    for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
       try {
-        console.log('🔍 [IMAGE] Starting CONTEXT-AWARE image search');
+        console.log(`🖼️ [IMAGE] Searching Unsplash for: "${desc.description}"`);
+        const imageUrl = await getCachedOrSearch(desc.description, { type: 'description' });
+        images.push(imageUrl);
+        sources.push('unsplash (description)');
+        console.log(`✅ [IMAGE] Found perfect image for "${desc.description.substring(0, 50)}..."`);
+      } catch (error) {
+        console.error(`❌ [IMAGE] Failed for "${desc.description.substring(0, 30)}":`, error.message);
         
-        const imageResult = await getContextAwareImages(sanitizedPrompt, generatedCode, 6);
-        
-        console.log(`📸 [IMAGE] Image sources: ${imageResult.sources.join(', ')}`);
-        console.log(`📸 [IMAGE] Context types: ${imageResult.contexts?.join(', ') || 'none'}`);
-        console.log(`📸 [IMAGE] Got ${imageResult.images.length} context-aware images`);
-        
-        // Replace placeholders with context-aware images
-        for (let i = 1; i <= 6; i++) {
-          const placeholder = `{{IMAGE_${i}}}`;
-          const imageUrl = imageResult.images[i - 1] || imageResult.images[0];
-          
-          // Only replace if the placeholder exists
-          if (generatedCode.includes(placeholder)) {
-            console.log(`📸 [IMAGE] Replacing ${placeholder} with context-aware image`);
-            generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
-          }
-        }
-        
-        // Log rate limit status
-        const rateLimitStatus = getRateLimitStatus();
-        console.log(`📊 [IMAGE] Unsplash rate limit: ${rateLimitStatus.used}/${rateLimitStatus.limit} (${rateLimitStatus.percentUsed}%)`);
-        
-        // ⚠️ ALERT if approaching limit
-        if (rateLimitStatus.percentUsed >= 80) {
-          console.log(`🚨 [IMAGE] ALERT: Unsplash rate limit at ${rateLimitStatus.percentUsed}%`);
-          // You can send yourself an email here
-        }
-        
-      } catch (imageError) {
-        console.error('❌ [IMAGE] CRITICAL: Context-aware search failed:', imageError);
-        
-        // Emergency fallback - use your current system
-        try {
-          const fallbackResult = await getImages(sanitizedPrompt, 6);
-          for (let i = 1; i <= 6; i++) {
-            const placeholder = `{{IMAGE_${i}}}`;
-            const imageUrl = fallbackResult.images[i - 1] || fallbackResult.images[0];
-            generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
-          }
-          console.log('📸 [IMAGE] Used emergency fallback');
-        } catch (finalError) {
-          console.error('💀 [IMAGE] All image systems failed');
-          // Don't break the site - use transparent placeholder
-          for (let i = 1; i <= 6; i++) {
-            const placeholder = `{{IMAGE_${i}}}`;
-            generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI4MDAiIHZpZXdCb3g9IjAgMCAxMjAwIDgwMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI4MDAiIGZpbGw9IiNGMEYwRjAiLz48dGV4dCB4PSI2MDAiIHk9IjQwMCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSIjQ0NDQ0NDIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIj5JbWFnZSBVbmF2YWlsYWJsZTwvdGV4dD48L3N2Zz4=');
-          }
-        }
+        // Smart fallback based on description content
+        const topic = detectTopic(sanitizedPrompt);
+        const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
+        const imageId = topicData.images[Math.min(desc.index - 1, topicData.images.length - 1)];
+        const fallbackUrl = getUnsplashUrl(imageId);
+        images.push(fallbackUrl);
+        sources.push('fallback (description)');
       }
+    }
+    
+    // Replace placeholders with perfect images
+    descriptions.forEach((desc, idx) => {
+      if (desc.placeholder && images[idx]) {
+        generatedCode = generatedCode.replace(
+          new RegExp(desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+          images[idx]
+        );
+        console.log(`🔄 [IMAGE] Replaced ${desc.placeholder.substring(0, 30)}...`);
+      }
+    });
+    
+    console.log(`🎯 [IMAGE] ${images.length} images placed perfectly`);
+    console.log(`📊 [IMAGE] Sources: ${sources.join(', ')}`);
+    
+  } else {
+    // Fallback: Use context-aware if no descriptions (backward compatibility)
+    console.log('🔄 [IMAGE] No descriptions found, using context-aware fallback');
+    imageResult = await getContextAwareImages(sanitizedPrompt, generatedCode, 6);
+    
+    for (let i = 1; i <= 6; i++) {
+      const placeholder = `{{IMAGE_${i}}}`;
+      if (generatedCode.includes(placeholder)) {
+        const imageUrl = imageResult.images[i - 1] || imageResult.images[0];
+        generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
+      }
+    }
+    console.log('📸 [IMAGE] Used context-aware fallback');
+  }
+  
+  // Log rate limit status
+  const rateLimitStatus = getRateLimitStatus();
+  console.log(`📊 [IMAGE] Unsplash rate limit: ${rateLimitStatus.used}/${rateLimitStatus.limit} (${rateLimitStatus.percentUsed}%)`);
+  
+  // ⚠️ ALERT if approaching limit
+  if (rateLimitStatus.percentUsed >= 80) {
+    console.log(`🚨 [IMAGE] ALERT: Unsplash rate limit at ${rateLimitStatus.percentUsed}%`);
+  }
+  
+} catch (imageError) {
+  console.error('❌ [IMAGE] Universal processing failed:', imageError);
+  // Don't break the site - remove placeholders gracefully
+  for (let i = 1; i <= 6; i++) {
+    const placeholderPattern = new RegExp(`\\{\\{IMAGE_${i}[^}]*\\}\\}`, 'g');
+    generatedCode = generatedCode.replace(placeholderPattern, '');
+  }
+}
       // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
