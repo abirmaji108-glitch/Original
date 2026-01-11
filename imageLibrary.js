@@ -639,7 +639,112 @@ async function getImages(prompt, count = 6, html = null) {
     return await getImagesOld(prompt, count);
   }
 }
+/**
+ * Universal image description extractor - works for ANY website type
+ */
+async function getUniversalImagesFromHTML(html, userPrompt) {
+  console.log('🔍 [UNIVERSAL] Extracting image descriptions from HTML');
+  
+  const imageData = [];
+  const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
+  let match;
+  
+  // Extract all descriptions
+  while ((match = regex.exec(html)) !== null) {
+    const index = parseInt(match[1]);
+    const description = match[2].trim();
+    imageData.push({
+      index,
+      description,
+      placeholder: match[0]
+    });
+    console.log(`📝 [UNIVERSAL] Image ${index}: "${description}"`);
+  }
+  
+  if (imageData.length === 0) {
+    console.log('⚠️ [UNIVERSAL] No descriptions found, using fallback');
+    return null;
+  }
+  
+  // Fetch perfect images for each description
+  const images = [];
+  const sources = [];
+  
+  for (const data of imageData.sort((a, b) => a.index - b.index)) {
+    try {
+      console.log(`🖼️ [UNIVERSAL] Searching Unsplash for: "${data.description}"`);
+      const imageUrl = await getCachedOrSearch(data.description, { 
+        type: 'universal',
+        context: data.description 
+      });
+      images.push(imageUrl);
+      sources.push('unsplash (description)');
+      console.log(`✅ [UNIVERSAL] Found perfect image for "${data.description.substring(0, 50)}..."`);
+    } catch (error) {
+      console.error(`❌ [UNIVERSAL] Failed for "${data.description.substring(0, 30)}":`, error.message);
+      
+      // Smart fallback based on description content
+      const fallbackUrl = getSmartFallbackImage(data.description, userPrompt);
+      images.push(fallbackUrl);
+      sources.push('fallback (smart)');
+    }
+  }
+  
+  return { images, sources, descriptions: imageData.map(d => d.description) };
+}
 
+/**
+ * Smart fallback that understands ANY business type
+ */
+function getSmartFallbackImage(description, userPrompt) {
+  const lowerDesc = description.toLowerCase();
+  const topic = detectTopic(userPrompt);
+  
+  // Person detection
+  if (lowerDesc.includes('portrait') || lowerDesc.includes('person') || 
+      lowerDesc.includes('team') || lowerDesc.includes('client') ||
+      lowerDesc.includes('smiling') || lowerDesc.includes('professional')) {
+    
+    if (lowerDesc.includes('construction') || lowerDesc.includes('engineer') || 
+        lowerDesc.includes('architect') || lowerDesc.includes('project')) {
+      return getUnsplashUrl('1661301057249-bd008eebd06a'); // Construction worker
+    } else if (lowerDesc.includes('chef') || lowerDesc.includes('cook') || 
+               lowerDesc.includes('restaurant') || lowerDesc.includes('food')) {
+      return getUnsplashUrl('1556740750-68295fefafc5'); // Chef
+    } else if (lowerDesc.includes('doctor') || lowerDesc.includes('medical') || 
+               lowerDesc.includes('nurse') || lowerDesc.includes('health')) {
+      return getUnsplashUrl('1661767897334-bbfbdfdc4d1a'); // Doctor
+    } else {
+      return getUnsplashUrl('1573497019940-1c28c88b4f3e'); // Generic professional
+    }
+  }
+  
+  // Business/Service detection
+  else if (lowerDesc.includes('construction') || lowerDesc.includes('building') || 
+           lowerDesc.includes('site') || lowerDesc.includes('crane')) {
+    return getUnsplashUrl('1681989486976-9ec9d2eac57a'); // Construction site
+  }
+  
+  else if (lowerDesc.includes('restaurant') || lowerDesc.includes('food') || 
+           lowerDesc.includes('dining') || lowerDesc.includes('meal')) {
+    return getUnsplashUrl('1517248135467-4c7edcad34c4'); // Restaurant interior
+  }
+  
+  else if (lowerDesc.includes('gym') || lowerDesc.includes('fitness') || 
+           lowerDesc.includes('workout') || lowerDesc.includes('exercise')) {
+    return getUnsplashUrl('1534438327276-14e5300c3a48'); // Gym
+  }
+  
+  else if (lowerDesc.includes('office') || lowerDesc.includes('business') || 
+           lowerDesc.includes('corporate') || lowerDesc.includes('meeting')) {
+    return getUnsplashUrl('1661764256397-af154e87b1b3'); // Office
+  }
+  
+  // Default to topic-based image
+  const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
+  const imageId = topicData.images[0];
+  return getUnsplashUrl(imageId);
+}
 export {
   IMAGE_LIBRARY,
   detectTopic,
@@ -648,5 +753,7 @@ export {
   getImagesOld,
   getContextAwareImages,
   getRateLimitStatus,
-  getCachedOrSearch
+  getCachedOrSearch,
+  getUniversalImagesFromHTML,
+  getSmartFallbackImage
 };
