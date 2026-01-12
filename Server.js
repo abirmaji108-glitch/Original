@@ -1046,12 +1046,13 @@ try {
     generatedCode = generatedCode.replace(pattern, '');
   }
   console.log('🚨 [IMAGE] Removed remaining placeholders');
-}
+  
   // Don't break the site - remove placeholders gracefully
   for (let i = 1; i <= 6; i++) {
     const placeholderPattern = new RegExp(`\\{\\{IMAGE_${i}[^}]*\\}\\}`, 'g');
     generatedCode = generatedCode.replace(placeholderPattern, '');
   }
+}
 }
       // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
