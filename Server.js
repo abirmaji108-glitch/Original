@@ -884,56 +884,51 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
+    system: `You are an elite web designer. Generate ONLY complete HTML with embedded CSS and JavaScript.
 
-🎯 CRITICAL IMAGE PLACEHOLDER RULES:
-1. EVERY image MUST use this EXACT format:
-   {{IMAGE_1:[COMPLETE detailed description of what this image should show]}}
-   
-2. Description MUST include:
-   - WHAT: The main subject (person/place/thing/food/etc)
-   - WHO: If person - gender, age range, profession, expression
-   - WHERE: Setting/background/environment
-   - STYLE: Mood, lighting, angle
-   
-3. EXAMPLES - STUDY THESE CAREFULLY:
+🚨 MANDATORY IMAGE RULES - YOU MUST FOLLOW THESE EXACTLY:
 
-   CHARITY/NONPROFIT:
-   {{IMAGE_1:diverse group of volunteers helping children in African village, smiling, outdoor, warm lighting}}
-   {{IMAGE_2:professional portrait of female nonprofit director, 40s, confident smile, office background}}
-   {{IMAGE_3:clean water well installation in rural community, workers in safety gear, equipment visible}}
+1. EVERY SINGLE IMAGE must use this EXACT format (no exceptions):
+   {{IMAGE_1:[detailed description]}}
+   {{IMAGE_2:[detailed description]}}
    
-   RESTAURANT:
-   {{IMAGE_1:elegant restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere}}
-   {{IMAGE_2:professional chef in white uniform cooking in modern kitchen, flames, action shot}}
-   {{IMAGE_3:gourmet dish presentation on white plate, garnished, artistic plating, overhead view}}
-   
-   CONSTRUCTION:
-   {{IMAGE_1:construction site with modern building in progress, cranes, blue sky, daytime}}
-   {{IMAGE_2:male construction project manager portrait, 45, hard hat, blueprints, confident}}
-   {{IMAGE_3:heavy construction equipment excavator on site, workers in background, safety gear}}
-   
-   WINE/LIQUOR:
-   {{IMAGE_1:premium wine bottles on wooden barrel in cellar, dim lighting, atmospheric}}
-   {{IMAGE_2:professional male sommelier portrait, 50s, holding wine glass, formal attire}}
-   {{IMAGE_3:vineyard landscape with rolling hills, rows of grapevines, sunset golden hour}}
-   
-   COFFEE SHOP:
-   {{IMAGE_1:cozy coffee shop interior, wooden furniture, plants, warm lighting, customers}}
-   {{IMAGE_2:barista making latte art, close-up hands, steam, espresso machine}}
-   {{IMAGE_3:coffee cup with latte art on wooden table, overhead view, warm tones}}
+2. Each description MUST be at least 15 words and include:
+   - What the image shows (person/place/thing)
+   - Who (if person: gender, age, role)
+   - Where (setting/background)
+   - Style (mood/lighting)
 
-4. MATCH images to HTML content:
-   - If HTML says "John Mitchell - Project Manager" → {{IMAGE_X:male construction project manager portrait, 40s, hard hat, confident smile}}
-   - If HTML says "Our Restaurant" → {{IMAGE_X:upscale restaurant interior, elegant tables, warm lighting}}
-   - If HTML says "Premium Wine Collection" → {{IMAGE_X:premium wine bottles arranged, cellar background, atmospheric lighting}}
+3. EXAMPLES YOU MUST FOLLOW:
 
-5. Generate EXACTLY 6 image placeholders with COMPLETE descriptions
-6. NEVER use placeholder URLs like picsum.photos or via.placeholder.com
-7. Modern, professional design with depth and polish
-8. Mobile-responsive by default
+CHARITY:
+{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}
+{{IMAGE_2:professional portrait of female nonprofit director, 40s, confident smile, modern office background, business casual attire}}
 
-GENERATE COMPLETE HTML NOW:`,
+RESTAURANT:
+{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}
+{{IMAGE_2:professional male chef in white uniform cooking in modern kitchen, flames visible, action shot, stainless steel equipment}}
+
+CONSTRUCTION:
+{{IMAGE_1:large construction site with modern building in progress, yellow cranes visible, blue sky, daytime, workers in safety gear}}
+{{IMAGE_2:male construction project manager portrait, 45 years old, wearing hard hat, holding blueprints, confident expression}}
+
+WINE SHOP:
+{{IMAGE_1:premium wine bottles displayed on oak wooden barrel in dim cellar, atmospheric moody lighting, brick walls}}
+{{IMAGE_2:professional male sommelier portrait, 50s, holding wine glass up to light, formal black attire, wine cellar background}}
+
+COFFEE SHOP:
+{{IMAGE_1:cozy modern coffee shop interior, wooden furniture, green plants, warm lighting, customers working on laptops}}
+{{IMAGE_2:close-up of barista hands making latte art, steam rising, espresso machine, cafe counter}}
+
+4. CRITICAL RULES:
+   - Generate EXACTLY 6 images with {{IMAGE_X:description}} format
+   - NEVER use picsum.photos or placeholder.com URLs
+   - Match images to your HTML content
+   - If HTML says "Chef Marco" → {{IMAGE_X:male chef portrait, 40s, white uniform, professional kitchen}}
+
+5. Your response MUST be valid HTML with these 6 image placeholders.
+
+GENERATE HTML NOW:`,
     messages: [
       {
         role: 'user',
@@ -1050,14 +1045,21 @@ try {
 // This line below is problematic - it's not inside any block!
 
 
-      // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
+      // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
        
+          // Fetch current profile data first
+          const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('generations_this_month, last_generation_reset')
+            .eq('id', userId)
+            .single();
+       
           // Check if we need to reset for new month
-          const shouldReset = profile?.last_generation_reset !== currentMonth;
-          const newCount = shouldReset ? 1 : (generationsThisMonth + 1);
+          const shouldReset = currentProfile?.last_generation_reset !== currentMonth;
+          const newCount = shouldReset ? 1 : ((currentProfile?.generations_this_month || 0) + 1);
        
           console.log(`Ã°Å¸â€œÅ TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           // Use await to ensure update completes
