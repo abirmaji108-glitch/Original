@@ -1049,7 +1049,7 @@ try {
 }
 // This line below is problematic - it's not inside any block!
 
-}
+
       // Ã¢Å“â€¦ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
