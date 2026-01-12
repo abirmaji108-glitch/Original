@@ -886,45 +886,54 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     max_tokens: 6000,
     system: `You are an elite web designer creating production-ready websites. Generate ONLY complete HTML with embedded CSS and JavaScript.
 
-🎯 CRITICAL SUCCESS CRITERIA:
-1. Use placeholders for images with DETAILED DESCRIPTIONS:
-   {{IMAGE_1:[EXACT description of what this image should show]}}
-   Example for construction: {{IMAGE_1:construction site with heavy machinery, modern building in progress}}
-   Example for restaurant: {{IMAGE_1:restaurant interior with elegant dining tables and warm lighting}}
+🎯 CRITICAL IMAGE PLACEHOLDER RULES:
+1. EVERY image MUST use this EXACT format:
+   {{IMAGE_1:[COMPLETE detailed description of what this image should show]}}
    
-2. For EACH SECTION, analyze what image is needed:
-   - Hero/Header: {{IMAGE_X:[business type] [setting], [mood], [details]}}
-   - Team Members: {{IMAGE_X:[gender] [profession] portrait, [age], [professional setting]}}
-   - Products/Services: {{IMAGE_X:[specific item/service] [angle/view], [style], [context]}}
-   - Location/Place: {{IMAGE_X:[business type] [interior/exterior], [specific features]}}
-   - Portfolio/Gallery: {{IMAGE_X:[project type] [before/after/process], [key elements]}}
+2. Description MUST include:
+   - WHAT: The main subject (person/place/thing/food/etc)
+   - WHO: If person - gender, age range, profession, expression
+   - WHERE: Setting/background/environment
+   - STYLE: Mood, lighting, angle
    
-3. MUST match images to content:
-   - If HTML shows "John Mitchell - Project Manager" → {{IMAGE_X:male construction project manager portrait, hard hat, blueprint}}
-   - If HTML shows "Industrial Construction" → {{IMAGE_X:large warehouse construction site, cranes, workers}}
-   - If HTML shows "Client Testimonials" → {{IMAGE_X:diverse happy clients smiling, professional headshots}}
-   - If HTML shows "Premium Coffee" → {{IMAGE_X:coffee cup close-up with latte art, steam, wooden table}}
-   - If HTML shows "Gym Equipment" → {{IMAGE_X:modern gym equipment, clean, people exercising}}
+3. EXAMPLES - STUDY THESE CAREFULLY:
+
+   CHARITY/NONPROFIT:
+   {{IMAGE_1:diverse group of volunteers helping children in African village, smiling, outdoor, warm lighting}}
+   {{IMAGE_2:professional portrait of female nonprofit director, 40s, confident smile, office background}}
+   {{IMAGE_3:clean water well installation in rural community, workers in safety gear, equipment visible}}
    
-4. Generate EXACTLY 6 image placeholders with COMPLETE descriptions
-5. Make HTML structure CLEAR about what each image represents
-6. Modern, professional design with depth and polish
-7. Mobile-responsive by default
+   RESTAURANT:
+   {{IMAGE_1:elegant restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere}}
+   {{IMAGE_2:professional chef in white uniform cooking in modern kitchen, flames, action shot}}
+   {{IMAGE_3:gourmet dish presentation on white plate, garnished, artistic plating, overhead view}}
+   
+   CONSTRUCTION:
+   {{IMAGE_1:construction site with modern building in progress, cranes, blue sky, daytime}}
+   {{IMAGE_2:male construction project manager portrait, 45, hard hat, blueprints, confident}}
+   {{IMAGE_3:heavy construction equipment excavator on site, workers in background, safety gear}}
+   
+   WINE/LIQUOR:
+   {{IMAGE_1:premium wine bottles on wooden barrel in cellar, dim lighting, atmospheric}}
+   {{IMAGE_2:professional male sommelier portrait, 50s, holding wine glass, formal attire}}
+   {{IMAGE_3:vineyard landscape with rolling hills, rows of grapevines, sunset golden hour}}
+   
+   COFFEE SHOP:
+   {{IMAGE_1:cozy coffee shop interior, wooden furniture, plants, warm lighting, customers}}
+   {{IMAGE_2:barista making latte art, close-up hands, steam, espresso machine}}
+   {{IMAGE_3:coffee cup with latte art on wooden table, overhead view, warm tones}}
 
-📐 EXAMPLE FOR CONSTRUCTION WEBSITE:
-<section class="hero" style="background-image: url('{{IMAGE_1:modern construction site with skyscraper being built, cranes, daytime}}')">
+4. MATCH images to HTML content:
+   - If HTML says "John Mitchell - Project Manager" → {{IMAGE_X:male construction project manager portrait, 40s, hard hat, confident smile}}
+   - If HTML says "Our Restaurant" → {{IMAGE_X:upscale restaurant interior, elegant tables, warm lighting}}
+   - If HTML says "Premium Wine Collection" → {{IMAGE_X:premium wine bottles arranged, cellar background, atmospheric lighting}}
 
-<div class="team-member">
-  <img src="{{IMAGE_2:professional portrait of male construction project manager, 40s, hard hat, smiling}}" alt="John Mitchell">
-</div>
+5. Generate EXACTLY 6 image placeholders with COMPLETE descriptions
+6. NEVER use placeholder URLs like picsum.photos or via.placeholder.com
+7. Modern, professional design with depth and polish
+8. Mobile-responsive by default
 
-<div class="service">
-  <img src="{{IMAGE_3:large warehouse construction site with steel beams, workers, safety gear}}" alt="Industrial Construction">
-</div>
-
-<div class="portfolio">
-  <img src="{{IMAGE_4:before and after renovation of commercial building, modern transformation}}" alt="Project Showcase">
-</div>`,
+GENERATE COMPLETE HTML NOW:`,
     messages: [
       {
         role: 'user',
@@ -944,95 +953,100 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-      // 🎯 UNIVERSAL: Extract descriptions and get perfect images for ANY website
+     // 🎯 UNIVERSAL: Extract descriptions and get perfect images
 try {
-  console.log('🔍 [IMAGE] Universal image processing for:', sanitizedPrompt.substring(0, 50));
+  console.log('🔍 [IMAGE] Processing images for:', sanitizedPrompt.substring(0, 50));
   
-  // First try: Extract descriptions from HTML (Claude's new format)
-  let imageResult = null;
   const descriptions = [];
   const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
   let match;
   
-  // Extract all image descriptions from HTML
+  // Extract all descriptions
   while ((match = regex.exec(generatedCode)) !== null) {
-    const index = parseInt(match[1]);
-    const description = match[2].trim();
     descriptions.push({
-      index,
-      description,
+      index: parseInt(match[1]),
+      description: match[2].trim(),
       placeholder: match[0]
     });
-    console.log(`📝 [IMAGE] Extracted description ${index}: "${description}"`);
   }
   
-  if (descriptions.length > 0) {
-    console.log(`✅ [IMAGE] Found ${descriptions.length} image descriptions`);
-    
-    // Fetch images for each description
-    const images = [];
-    const sources = [];
-    
-    for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
-      try {
-        console.log(`🖼️ [IMAGE] Searching Unsplash for: "${desc.description}"`);
-        const imageUrl = await getCachedOrSearch(desc.description, { type: 'description' });
+  console.log(`📋 [IMAGE] Found ${descriptions.length} image descriptions`);
+  
+  if (descriptions.length === 0) {
+    console.log('⚠️ [IMAGE] No descriptions found - Claude may not have followed instructions');
+    throw new Error('No image descriptions generated');
+  }
+  
+  // Fetch perfect images from Unsplash for each description
+  const images = [];
+  const sources = [];
+  
+  for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
+    try {
+      console.log(`🖼️ [IMAGE ${desc.index}] Searching: "${desc.description.substring(0, 60)}..."`);
+      
+      // Use Unsplash API directly with description
+      const searchResponse = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(desc.description)}&per_page=1&orientation=landscape`,
+        {
+          headers: {
+            'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
+          }
+        }
+      );
+      
+      if (!searchResponse.ok) {
+        throw new Error(`Unsplash API error: ${searchResponse.status}`);
+      }
+      
+      const searchData = await searchResponse.json();
+      
+      if (searchData.results && searchData.results.length > 0) {
+        const imageUrl = searchData.results[0].urls.regular;
         images.push(imageUrl);
-        sources.push('unsplash (description)');
-        console.log(`✅ [IMAGE] Found perfect image for "${desc.description.substring(0, 50)}..."`);
-      } catch (error) {
-        console.error(`❌ [IMAGE] Failed for "${desc.description.substring(0, 30)}":`, error.message);
-        
-        // Smart fallback based on description content
-        const topic = detectTopic(sanitizedPrompt);
-        const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
-        const imageId = topicData.images[Math.min(desc.index - 1, topicData.images.length - 1)];
-        const fallbackUrl = getUnsplashUrl(imageId);
-        images.push(fallbackUrl);
-        sources.push('fallback (description)');
+        sources.push('unsplash');
+        console.log(`✅ [IMAGE ${desc.index}] Found perfect match`);
+      } else {
+        throw new Error('No results from Unsplash');
       }
+      
+    } catch (error) {
+      console.error(`❌ [IMAGE ${desc.index}] Search failed:`, error.message);
+      
+      // Smart fallback based on description
+      const topic = detectTopic(sanitizedPrompt);
+      const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
+      const fallbackId = topicData.images[Math.min(desc.index - 1, topicData.images.length - 1)];
+      const fallbackUrl = getUnsplashUrl(fallbackId);
+      
+      images.push(fallbackUrl);
+      sources.push('fallback');
+      console.log(`🔄 [IMAGE ${desc.index}] Using fallback`);
     }
-    
-    // Replace placeholders with perfect images
-    descriptions.forEach((desc, idx) => {
-      if (desc.placeholder && images[idx]) {
-        generatedCode = generatedCode.replace(
-          new RegExp(desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-          images[idx]
-        );
-        console.log(`🔄 [IMAGE] Replaced ${desc.placeholder.substring(0, 30)}...`);
-      }
-    });
-    
-    console.log(`🎯 [IMAGE] ${images.length} images placed perfectly`);
-    console.log(`📊 [IMAGE] Sources: ${sources.join(', ')}`);
-    
-  } else {
-    // Fallback: Use context-aware if no descriptions (backward compatibility)
-    console.log('🔄 [IMAGE] No descriptions found, using context-aware fallback');
-    imageResult = await getContextAwareImages(sanitizedPrompt, generatedCode, 6);
-    
-    for (let i = 1; i <= 6; i++) {
-      const placeholder = `{{IMAGE_${i}}}`;
-      if (generatedCode.includes(placeholder)) {
-        const imageUrl = imageResult.images[i - 1] || imageResult.images[0];
-        generatedCode = generatedCode.replace(new RegExp(placeholder, 'g'), imageUrl);
-      }
-    }
-    console.log('📸 [IMAGE] Used context-aware fallback');
   }
   
-  // Log rate limit status
-  const rateLimitStatus = getRateLimitStatus();
-  console.log(`📊 [IMAGE] Unsplash rate limit: ${rateLimitStatus.used}/${rateLimitStatus.limit} (${rateLimitStatus.percentUsed}%)`);
+  // Replace all placeholders with fetched images
+  descriptions.forEach((desc, idx) => {
+    if (images[idx]) {
+      const escapedPlaceholder = desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      generatedCode = generatedCode.replace(new RegExp(escapedPlaceholder, 'g'), images[idx]);
+      console.log(`🔄 [IMAGE ${desc.index}] Replaced with ${sources[idx]} image`);
+    }
+  });
   
-  // ⚠️ ALERT if approaching limit
-  if (rateLimitStatus.percentUsed >= 80) {
-    console.log(`🚨 [IMAGE] ALERT: Unsplash rate limit at ${rateLimitStatus.percentUsed}%`);
-  }
+  console.log(`✅ [IMAGE] Successfully placed ${images.length} images`);
+  console.log(`📊 [IMAGE] Sources: ${sources.join(', ')}`);
   
 } catch (imageError) {
-  console.error('❌ [IMAGE] Universal processing failed:', imageError);
+  console.error('❌ [IMAGE] Processing failed:', imageError.message);
+  
+  // Emergency fallback - remove any remaining placeholders
+  for (let i = 1; i <= 10; i++) {
+    const pattern = new RegExp(`\\{\\{IMAGE_${i}[^}]*\\}\\}`, 'g');
+    generatedCode = generatedCode.replace(pattern, '');
+  }
+  console.log('🚨 [IMAGE] Removed remaining placeholders');
+}
   // Don't break the site - remove placeholders gracefully
   for (let i = 1; i <= 6; i++) {
     const placeholderPattern = new RegExp(`\\{\\{IMAGE_${i}[^}]*\\}\\}`, 'g');
