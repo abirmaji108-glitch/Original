@@ -889,8 +889,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
 🚨 MANDATORY IMAGE RULES - YOU MUST FOLLOW THESE EXACTLY:
 
 1. EVERY SINGLE IMAGE must use this EXACT format (no exceptions):
-   {{IMAGE_1:[detailed description]}}
-   {{IMAGE_2:[detailed description]}}
+   <img src="{{IMAGE_1:[detailed description]}}" alt="descriptive text">
    
 2. Each description MUST be at least 15 words and include:
    - What the image shows (person/place/thing)
@@ -898,35 +897,44 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
    - Where (setting/background)
    - Style (mood/lighting)
 
-3. EXAMPLES YOU MUST FOLLOW:
+3. CORRECT FORMAT EXAMPLES:
+
+WEDDING:
+<img src="{{IMAGE_1:romantic couple silhouette against sunset sky, golden hour lighting, dreamy atmosphere, soft focus, wedding portrait style}}" alt="Couple at sunset">
+<img src="{{IMAGE_2:happy couple laughing together in park setting, natural candid moment, warm sunlight, casual outdoor engagement photo}}" alt="Couple in park">
 
 CHARITY:
-{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}
-{{IMAGE_2:professional portrait of female nonprofit director, 40s, confident smile, modern office background, business casual attire}}
+<img src="{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}" alt="Volunteers with children">
+<img src="{{IMAGE_2:professional portrait of female nonprofit director, 40s, confident smile, modern office background, business casual attire}}" alt="Director portrait">
 
 RESTAURANT:
-{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}
-{{IMAGE_2:professional male chef in white uniform cooking in modern kitchen, flames visible, action shot, stainless steel equipment}}
+<img src="{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}" alt="Restaurant interior">
+<img src="{{IMAGE_2:professional male chef in white uniform cooking in modern kitchen, flames visible, action shot, stainless steel equipment}}" alt="Chef cooking">
 
 CONSTRUCTION:
-{{IMAGE_1:large construction site with modern building in progress, yellow cranes visible, blue sky, daytime, workers in safety gear}}
-{{IMAGE_2:male construction project manager portrait, 45 years old, wearing hard hat, holding blueprints, confident expression}}
+<img src="{{IMAGE_1:large construction site with modern building in progress, yellow cranes visible, blue sky, daytime, workers in safety gear}}" alt="Construction site">
+<img src="{{IMAGE_2:male construction project manager portrait, 45 years old, wearing hard hat, holding blueprints, confident expression}}" alt="Project manager">
 
 WINE SHOP:
-{{IMAGE_1:premium wine bottles displayed on oak wooden barrel in dim cellar, atmospheric moody lighting, brick walls}}
-{{IMAGE_2:professional male sommelier portrait, 50s, holding wine glass up to light, formal black attire, wine cellar background}}
+<img src="{{IMAGE_1:premium wine bottles displayed on oak wooden barrel in dim cellar, atmospheric moody lighting, brick walls}}" alt="Wine cellar">
+<img src="{{IMAGE_2:professional male sommelier portrait, 50s, holding wine glass up to light, formal black attire, wine cellar background}}" alt="Sommelier">
 
 COFFEE SHOP:
-{{IMAGE_1:cozy modern coffee shop interior, wooden furniture, green plants, warm lighting, customers working on laptops}}
-{{IMAGE_2:close-up of barista hands making latte art, steam rising, espresso machine, cafe counter}}
+<img src="{{IMAGE_1:cozy modern coffee shop interior, wooden furniture, green plants, warm lighting, customers working on laptops}}" alt="Coffee shop interior">
+<img src="{{IMAGE_2:close-up of barista hands making latte art, steam rising, espresso machine, cafe counter}}" alt="Barista making latte">
+
+HOTEL/RESORT:
+<img src="{{IMAGE_1:luxury oceanfront resort hotel exterior with palm trees, golden hour lighting, azure blue ocean, infinity pool visible, elegant architecture}}" alt="Resort exterior">
+<img src="{{IMAGE_2:elegant hotel room interior with ocean view, king size bed, modern furniture, floor-to-ceiling windows, luxury amenities, bright natural lighting}}" alt="Hotel room">
 
 4. CRITICAL RULES:
    - Generate EXACTLY 6 images with {{IMAGE_X:description}} format
    - NEVER use picsum.photos or placeholder.com URLs
-   - Match images to your HTML content
-   - If HTML says "Chef Marco" → {{IMAGE_X:male chef portrait, 40s, white uniform, professional kitchen}}
+   - Each <img> tag MUST have proper src and alt attributes
+   - Descriptions must match your HTML content
+   - If HTML says "Chef Marco" → use {{IMAGE_X:male chef portrait, 40s, white uniform, professional kitchen}}
 
-5. Your response MUST be valid HTML with these 6 image placeholders.
+5. Your response MUST be valid HTML with these 6 image placeholders inside <img> tags.
 
 GENERATE HTML NOW:`,
     messages: [
