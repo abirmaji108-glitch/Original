@@ -116,7 +116,7 @@ async function logAnalytics(userId, generationsThisMonth, currentMonth, retries 
         .from('usage_tracking')
         .upsert({
           id: userId,
-          generations_this_month: generationsThis_month + 1,
+          generations_this_month: generationsThisMonth + 1,
           last_generation_reset: currentMonth,
           updated_at: new Date().toISOString()
         }, {
@@ -784,7 +784,6 @@ app.get('/api/health', async (req, res) => {
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const startTime = Date.now();
   let userId = null;
-  const isDebug = req.query.debug === '1';
   try {
     const { prompt } = req.body;
     const authHeader = req.headers.authorization;
@@ -808,9 +807,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
+  
         if (!error && user) {
           userId = user.id;
-  
+    
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
@@ -826,19 +826,19 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-    
+      
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
-       
+         
             // Ã¢Å“â€ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
             const TESTING_MODE = true; // Ã¢Å¡ Ã¯Â¸Â SET TO FALSE AFTER TESTING
             const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
-       
+         
             // Check if user is admin
             const { data: { user: authUser } } = await supabase.auth.getUser(token);
             const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
-       
+         
             // Check limits (skip for admins in testing mode)
             const tierLimits = {
               free: 2,
@@ -847,7 +847,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               business: 200
             };
             const limit = tierLimits[userTier] || 2;
-       
+         
             if (!TESTING_MODE || !isAdmin) {
               // Normal limit enforcement for non-admins
               if (generationsThisMonth >= limit) {
@@ -884,7 +884,46 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: 'You are an elite web architect crafting premium, jaw-dropping websites. Generate COMPLETE, self-contained HTML5 code ONLY—no explanations, wrappers, or extras. Base on user prompt; elevate to ultra-luxury: immersive layouts w/ asymmetrical grids, ample whitespace, curved elements. Use TailwindCSS v3 (CDN), Google Fonts (prompt-specified or defaults: Playfair Display headings, Inter body). Core tech: multi-layer parallax (fixed bg w/ overlays), advanced glassmorphism (blur 20px, rgba borders, depth shadows), smooth scroll (behavior: smooth). Animations: fade-in visible (opacity 0->1, translateY 30px->0, 0.8s ease), hover-scale (1->1.05, 0.3s cubic-bezier(0.4,0,0.2,1), shadow lift), floating keyframes (translateY 0->-20px->0, 6s infinite). Gradients: subtle linear (135deg, prompt colors). Responsiveness: Tailwind mobile-first, full viewport. SEO/Perf/Access: meta tags (title, desc, viewport), lazy-load images (loading=lazy), alts (descriptive), ARIA (landmarks, labels), semantics (header/nav/main/footer/section/article). Images: Integrate provided Unsplash URLs thematically (match palette, high-res crop params: ?crop=entropy&fit=max&fm=jpg&q=80&w=1080); add overlays for depth. Polish: Hierarchical typography (h1 5xl bold, p xl), color harmony (subtle contrasts), micro-interactions (btn hovers: translateY -2px, box-shadow 0 10px 25px rgba(0,0,0,0.2)). Make it sexy/professional: exclusive feel, wow factors (particles CSS-only if fits, immersive heroes). Universal: Adapt to any site type (hotel=caldera parallax; ecom=elegant cards; portfolio=animated galleries). Output pure HTML; ensure valid, error-free.',
+    system: `You are an elite web designer. Generate ONLY complete HTML with embedded CSS and JavaScript.
+
+🚨 MANDATORY IMAGE RULES - YOU MUST FOLLOW THESE EXACTLY:
+
+1. EVERY SINGLE IMAGE must use this EXACT format (no exceptions):
+   <img src="{{IMAGE_1:[detailed description]}}" alt="descriptive text">
+   
+2. Each description MUST be at least 15 words and include:
+   - What the image shows (person/place/thing)
+   - Who (if person: gender, age, role)
+   - Where (setting/background)
+   - Style (mood/lighting)
+
+3. CORRECT FORMAT EXAMPLES:
+
+WEDDING:
+<img src="{{IMAGE_1:romantic couple silhouette against sunset sky, golden hour lighting, dreamy atmosphere, soft focus, wedding portrait style}}" alt="Couple at sunset">
+
+CHARITY:
+<img src="{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}" alt="Volunteers with children">
+
+RESTAURANT:
+<img src="{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}" alt="Restaurant interior">
+
+HOTEL/RESORT:
+<img src="{{IMAGE_1:luxury oceanfront resort hotel exterior with palm trees, golden hour lighting, azure blue ocean, infinity pool visible, elegant architecture}}" alt="Resort exterior">
+
+CAR DEALERSHIP:
+<img src="{{IMAGE_1:modern luxury car showroom interior, shiny sports cars on display, bright professional lighting, glass walls, premium atmosphere}}" alt="Car showroom">
+
+4. CRITICAL RULES:
+   - Generate AS MANY images as needed (typically 4-15 depending on site complexity)
+   - Use sequential numbering: {{IMAGE_1:...}}, {{IMAGE_2:...}}, {{IMAGE_3:...}}, etc.
+   - NEVER use picsum.photos or placeholder.com URLs
+   - Each <img> tag MUST have proper src and alt attributes
+   - Descriptions must match your HTML content
+
+5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
+
+GENERATE HTML NOW:`,
     messages: [
       {
         role: 'user',
@@ -904,19 +943,14 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
-function postProcessHtml(html) {
-  html = html.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '').replace(/\s+/g, ' ').trim();
-  html = html.replace(/<img([^>]*src="([^"]*)")([^>]*>)/gi, (m, pre, src, post) => `<img${pre}src="${src.includes('?') ? src + '&q=90&fm=webp' : src + '?q=90&fm=webp'}" loading="lazy" alt="Thematic image"${post.includes('aria') ? '' : ' aria-hidden="true"'}${post}`);
-  html = html.replace(/class="t\.\.\.(truncated")/g, 'class="text-5xl font-bold"');
-  return html;
-}
-generatedCode = postProcessHtml(generatedCode);
      // 🎯 UNIVERSAL: Extract descriptions and get perfect images
 try {
   console.log('🔍 [IMAGE] Processing images for:', sanitizedPrompt.substring(0, 50));
+  
   const descriptions = [];
   const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
   let match;
+  
   // Extract all descriptions
   while ((match = regex.exec(generatedCode)) !== null) {
     descriptions.push({
@@ -925,27 +959,38 @@ try {
       placeholder: match[0]
     });
   }
+  
   console.log(`📋 [IMAGE] Found ${descriptions.length} image descriptions`);
+  
   if (descriptions.length === 0) {
     console.log('⚠️ [IMAGE] No descriptions found - Claude may not have followed instructions');
     throw new Error('No image descriptions generated');
   }
+  
   // Fetch perfect images from Unsplash for each description
   const images = [];
   const sources = [];
+  
   for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
     try {
       console.log(`🖼️ [IMAGE ${desc.index}] Searching: "${desc.description.substring(0, 60)}..."`);
-const palette = sanitizedPrompt.toLowerCase().match(/(navy|blue|white|gold|red|green|black)/gi)?.join(' ') || 'neutral tones';
-const searchQuery = `${desc.description} in ${palette} color scheme high-contrast premium stock`;
-const searchResponse = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=1&orientation=landscape`, { headers: { 'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } });
-    
+      
+      // Use Unsplash API directly with description
+      const searchResponse = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(desc.description)}&per_page=1&orientation=landscape`,
+        {
+          headers: {
+            'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
+          }
+        }
+      );
+      
       if (!searchResponse.ok) {
         throw new Error(`Unsplash API error: ${searchResponse.status}`);
       }
-    
+      
       const searchData = await searchResponse.json();
-    
+      
       if (searchData.results && searchData.results.length > 0) {
         const imageUrl = searchData.results[0].urls.regular;
         images.push(imageUrl);
@@ -954,21 +999,22 @@ const searchResponse = await fetch(`https://api.unsplash.com/search/photos?query
       } else {
         throw new Error('No results from Unsplash');
       }
-    
+      
     } catch (error) {
       console.error(`❌ [IMAGE ${desc.index}] Search failed:`, error.message);
-    
+      
       // Smart fallback based on description
       const topic = detectTopic(sanitizedPrompt);
       const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
       const fallbackId = topicData.images[Math.min(desc.index - 1, topicData.images.length - 1)];
       const fallbackUrl = getUnsplashUrl(fallbackId);
-    
+      
       images.push(fallbackUrl);
       sources.push('fallback');
       console.log(`🔄 [IMAGE ${desc.index}] Using fallback`);
     }
   }
+  
   // Replace all placeholders with fetched images
   descriptions.forEach((desc, idx) => {
     if (images[idx]) {
@@ -977,10 +1023,13 @@ const searchResponse = await fetch(`https://api.unsplash.com/search/photos?query
       console.log(`🔄 [IMAGE ${desc.index}] Replaced with ${sources[idx]} image`);
     }
   });
+  
   console.log(`✅ [IMAGE] Successfully placed ${images.length} images`);
   console.log(`📊 [IMAGE] Sources: ${sources.join(', ')}`);
+  
 } catch (imageError) {
   console.error('❌ [IMAGE] Processing failed:', imageError.message);
+  
   // Emergency fallback - remove any remaining placeholders
   for (let i = 1; i <= 10; i++) {
     const pattern = new RegExp(`\\{\\{IMAGE_${i}[^}]*\\}\\}`, 'g');
@@ -989,22 +1038,24 @@ const searchResponse = await fetch(`https://api.unsplash.com/search/photos?query
   console.log('🚨 [IMAGE] Removed remaining placeholders');
 }
 // This line below is problematic - it's not inside any block!
+
+
       // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
-     
+       
           // Fetch current profile data first
           const { data: currentProfile } = await supabase
             .from('profiles')
             .select('generations_this_month, last_generation_reset')
             .eq('id', userId)
             .single();
-     
+       
           // Check if we need to reset for new month
           const shouldReset = currentProfile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : ((currentProfile?.generations_this_month || 0) + 1);
-     
+       
           console.log(`Ã°Å¸â€œÅ TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           // Use await to ensure update completes
           const { data: updateResult, error: updateError } = await supabase
@@ -1016,7 +1067,7 @@ const searchResponse = await fetch(`https://api.unsplash.com/search/photos?query
             })
             .eq('id', userId)
             .select();
-     
+       
           if (updateError) {
             console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ CRITICAL: Usage update FAILED:', updateError);
           } else {
@@ -1035,7 +1086,6 @@ const searchResponse = await fetch(`https://api.unsplash.com/search/photos?query
       };
       const limit = tierLimits[userTier] || 2;
       console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
-      if (isDebug) { console.log('Debug Prompt:', sanitizedPrompt); console.log('Debug Output:', generatedCode); return res.json({ success: true, htmlCode: 'Debug mode: Check logs' }); }
       return res.json({
         success: true,
         htmlCode: generatedCode,
