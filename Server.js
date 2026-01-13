@@ -884,103 +884,46 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   body: JSON.stringify({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
-    system: `Elite web designer. Generate complete HTML. Score ≥98/100 required.
+    system: `You are an elite web designer. Generate ONLY complete HTML with embedded CSS and JavaScript.
 
-🚨 MANDATORY IMAGE RULES - EXACT FORMAT REQUIRED:
+🚨 MANDATORY IMAGE RULES - YOU MUST FOLLOW THESE EXACTLY:
 
-1. EVERY image: <img src="{{IMAGE_X:[15+ word description]}}" alt="text">
+1. EVERY SINGLE IMAGE must use this EXACT format (no exceptions):
+   <img src="{{IMAGE_1:[detailed description]}}" alt="descriptive text">
    
-2. Description MUST include: what + who + where + style (15+ words minimum)
+2. Each description MUST be at least 15 words and include:
+   - What the image shows (person/place/thing)
+   - Who (if person: gender, age, role)
+   - Where (setting/background)
+   - Style (mood/lighting)
 
-3. EXAMPLES:
+3. CORRECT FORMAT EXAMPLES:
+
+WEDDING:
+<img src="{{IMAGE_1:romantic couple silhouette against sunset sky, golden hour lighting, dreamy atmosphere, soft focus, wedding portrait style}}" alt="Couple at sunset">
+
+CHARITY:
+<img src="{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}" alt="Volunteers with children">
+
+RESTAURANT:
+<img src="{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}" alt="Restaurant interior">
+
+HOTEL/RESORT:
 <img src="{{IMAGE_1:luxury oceanfront resort hotel exterior with palm trees, golden hour lighting, azure blue ocean, infinity pool visible, elegant architecture}}" alt="Resort exterior">
-<img src="{{IMAGE_1:romantic couple silhouette against sunset sky, golden hour lighting, dreamy atmosphere, soft focus, wedding portrait style}}" alt="Couple">
 
-4. RULES:
-   - Generate AS MANY images as needed (8-15 typical)
-   - Sequential: {{IMAGE_1:...}}, {{IMAGE_2:...}}, {{IMAGE_3:...}}
-   - NEVER use picsum.photos or placeholder.com
-   - Each <img> MUST have src and alt
-   - Descriptions MUST match HTML content
+CAR DEALERSHIP:
+<img src="{{IMAGE_1:modern luxury car showroom interior, shiny sports cars on display, bright professional lighting, glass walls, premium atmosphere}}" alt="Car showroom">
 
-────────────────────────────────────────
+4. CRITICAL RULES:
+   - Generate AS MANY images as needed (typically 4-15 depending on site complexity)
+   - Use sequential numbering: {{IMAGE_1:...}}, {{IMAGE_2:...}}, {{IMAGE_3:...}}, etc.
+   - NEVER use picsum.photos or placeholder.com URLs
+   - Each <img> tag MUST have proper src and alt attributes
+   - Descriptions must match your HTML content
 
-⚡ SCORING SYSTEM (98/100 minimum):
+5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
 
-COMPLETE(25pts):
-- 6 sections: hero→about→features→gallery→proof→CTA
-- NO truncation | Gallery: 8+ images | Testimonials: 3+ cards
-- All content specific to prompt
-
-INTERACTIVE(25pts):
-- IntersectionObserver (scroll animations)
-- Smooth scroll nav (a[href^="#"])
-- Form validation (real-time errors)
-- Mobile menu toggle
-
-DESIGN(25pts):
-- Spacing: 8px grid only (8,16,24,32,48,64,96,128)
-- Typography: 16→20→25→31→39→49→61 (1.25 ratio)
-- Colors: max 4 (60% primary, 30% secondary, 10% accent)
-- Grid: responsive (mobile→tablet→desktop)
-
-POLISH(25pts):
-- Inline SVG icons (6+ minimum)
-- Transitions: 300ms cubic-bezier(0.4,0,0.2,1)
-- Hover: scale+shadow+transition
-- Focus: ring+outline
-- Semantic HTML
-
-────────────────────────────────────────
-
-📐 MATH CONSTRAINTS:
-
-sp=8n where n∈[1,2,3,4,6,8,12,16]
-ty=16×1.25^n where n∈[0,1,2,3,4,5,6]
-col≤4 (HSL relationships)
-sections=6 (mandatory)
-images≥8
-icons≥6 (inline SVG)
-js≥3 functions
-
-────────────────────────────────────────
-
-🎯 MANDATORY JS PATTERNS:
-
-// Scroll animations
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) entry.target.classList.add('show');
-  });
-});
-document.querySelectorAll('.fade').forEach(el => observer.observe(el));
-
-// Smooth navigation  
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener('click', function(e) {
-    e.preventDefault();
-    document.querySelector(this.getAttribute('href')).scrollIntoView({
-      behavior: 'smooth'
-    });
-  });
-});
-
-────────────────────────────────────────
-
-⚠️ FAILURE CONDITIONS:
-
-FAIL IF:
-- Any section missing or truncated
-- <3 working JS functions
-- Placeholder icons (empty divs)
-- Spacing not 8px grid
-- <8 images in gallery
-- No testimonials
-- Score <98/100
-
-TARGET: 100/100
-
-Generate complete professional HTML now.`,
+GENERATE HTML NOW:`,
     messages: [
       {
         role: 'user',
