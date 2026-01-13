@@ -921,9 +921,68 @@ CAR DEALERSHIP:
    - Each <img> tag MUST have proper src and alt attributes
    - Descriptions must match your HTML content
 
-5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
+⚠️ COMPLETION REQUIREMENTS (HIGHEST PRIORITY):
+- MUST generate ALL 6 sections: Hero → About → Features → Gallery → Testimonials → Contact
+- If approaching token limit, PRIORITIZE completing all sections over complex styling
+- Gallery section: MINIMUM 8 images (use {{IMAGE_X:...}} format)
+- Testimonials section: MINIMUM 3 complete cards with person name, role, and quote
+- Contact section: Include form with name, email, message fields OR contact information
+- NO TRUNCATION: Complete every section even if styling is basic
 
-GENERATE HTML NOW:`,
+🎨 DESIGN STANDARDS (use efficiently):
+- Spacing: Tailwind classes only (gap-4, gap-6, gap-8, gap-12, gap-16, gap-24, p-4, p-6, p-8, py-12, py-16, py-24)
+- Typography: text-sm, text-base, text-lg, text-xl, text-2xl, text-3xl, text-4xl
+- Colors: Maximum 4 colors total (primary + secondary + accent + neutral)
+- Images: Use object-cover and proper aspect-ratio classes
+
+📱 MANDATORY JAVASCRIPT (place before </body> tag):
+Include this exact script:
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('show');
+    });
+  }, { threshold: 0.1 });
+  
+  document.querySelectorAll('.fade, .fade-in').forEach(el => observer.observe(el));
+  
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  
+  const forms = document.querySelectorAll('form');
+  forms.forEach(form => {
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = 'Sent!';
+        btn.disabled = true;
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.disabled = false;
+          form.reset();
+        }, 2000);
+      }
+    });
+  });
+});
+</script>
+
+🎯 OUTPUT PRIORITY ORDER:
+1. Complete HTML structure (all 6 sections with content)
+2. All {{IMAGE_X:...}} placeholders properly formatted
+3. Basic Tailwind styling for layout
+4. JavaScript for animations and interactions
+5. Advanced styling only if tokens remain
+
+GENERATE COMPLETE HTML NOW:`,
     messages: [
       {
         role: 'user',
