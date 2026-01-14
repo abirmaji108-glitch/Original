@@ -213,19 +213,26 @@ const Pricing = () => {
           return;
         }
 
-        const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            priceId,
-            userId: user.id,
-            email: user.email,
-            planName: plan.name,
-            billingCycle,
-          }),
-        });
+        const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+if (!session?.access_token) {
+  throw new Error("Authentication token missing. Please log in again.");
+}
+
+const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${session.access_token}`,
+  },
+  body: JSON.stringify({
+    tier: plan.id,           // backend expects "tier"
+    interval: billingCycle,  // backend expects "interval"
+  }),
+});
+
 
         const data = await response.json();
         if (!response.ok) {
