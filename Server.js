@@ -476,7 +476,9 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const userId = session.metadata?.userId;
         const subscriptionId = session.subscription;
         const customerId = session.customer;
-        const priceId = session.line_items?.data[0]?.price?.id;
+        const userId = session.metadata?.userId;
+const tier = session.metadata?.tier;
+
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
         if (!customerId) {
           logger.error(`${E.CROSS} No customer ID in session`, {
@@ -489,10 +491,24 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
             message: 'Stripe customer ID missing from session'
           });
         }
-        if (!priceId) {
-          logger.error(`${E.CROSS} No price ID found in session`);
-          return res.status(400).json({ error: 'No price ID in session' });
-        }
+        const priceId =
+  tier === 'basic'
+    ? process.env.STRIPE_BASIC_PRICE_ID
+    : tier === 'pro'
+    ? process.env.STRIPE_PRO_PRICE_ID
+    : tier === 'business'
+    ? process.env.STRIPE_BUSINESS_PRICE_ID
+    : null;
+
+if (!userId || !tier || !priceId) {
+  logger.error(`${E.CROSS} Missing or invalid metadata in checkout session`, {
+    userId,
+    tier,
+    sessionId: session.id
+  });
+  return res.status(400).json({ error: 'Invalid session metadata' });
+}
+
         if (!userId) {
           logger.error(`${E.CROSS} No userId in session metadata`);
           return res.status(400).json({ error: 'No userId in session' });
