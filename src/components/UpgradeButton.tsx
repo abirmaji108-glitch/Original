@@ -1,5 +1,5 @@
-// src/components/UpgradeButton.tsx
 import { Crown, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface UpgradeButtonProps {
   tier: string;
@@ -15,6 +15,8 @@ export function UpgradeButton({
   // Don't show if already Pro/Business
   if (tier === 'pro' || tier === 'business') return null;
 
+  const navigate = useNavigate();
+
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',
@@ -28,8 +30,9 @@ export function UpgradeButton({
   const tierName = tier === 'free' ? 'Basic' : 'Pro';
 
   return (
-    <a
-      href="/pricing"
+    <button
+      type="button"
+      onClick={() => navigate('/pricing')}
       className={`
         inline-flex items-center gap-2 rounded-full font-semibold 
         transition-all duration-200 transform hover:scale-105
@@ -41,6 +44,6 @@ export function UpgradeButton({
       <Crown className="w-4 h-4" />
       <span>Upgrade to {tierName}</span>
       <Sparkles className="w-4 h-4" />
-    </a>
+    </button>
   );
 }
