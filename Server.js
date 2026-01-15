@@ -474,8 +474,9 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         }
         // Continue with existing code...
         const userId = session.metadata?.userId;
-const subscriptionId = session.subscription;
-const customerId = session.customer;
+        const subscriptionId = session.subscription;
+        const customerId = session.customer;
+        const userId = session.metadata?.userId;
 const tier = session.metadata?.tier;
 
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
@@ -508,8 +509,31 @@ if (!userId || !tier || !priceId) {
   return res.status(400).json({ error: 'Invalid session metadata' });
 }
 
-// ✅ REMOVED: Redundant tier validation code (tier is already validated above)
-// The priceId calculation above already validates that tier is correct
+        if (!userId) {
+          logger.error(`${E.CROSS} No userId in session metadata`);
+          return res.status(400).json({ error: 'No userId in session' });
+        }
+        // Determine tier from price ID with strict validation
+        const basicPriceIds = [
+          process.env.STRIPE_BASIC_PRICE_ID,
+          process.env.STRIPE_BASIC_YEARLY_PRICE_ID
+        ].filter(Boolean);
+        const proPriceIds = [
+          process.env.STRIPE_PRO_PRICE_ID,
+          process.env.STRIPE_PRO_YEARLY_PRICE_ID
+        ].filter(Boolean);
+        const businessPriceIds = [
+          process.env.STRIPE_BUSINESS_PRICE_ID,
+          process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
+        ].filter(Boolean);
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Strict validation - reject if price ID doesn't match any tier
+        let tier = null;
+        if (basicPriceIds.includes(priceId)) {
+          tier = 'basic';
+        } else if (proPriceIds.includes(priceId)) {
+          tier = 'pro';
+        } else if (businessPriceIds.includes(priceId)) {
+          tier = 'business';
         }
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: If no tier matched, this is an invalid/unknown price ID
         if (!tier) {
@@ -1029,7 +1053,7 @@ try {
   }
   console.log('🚨 [IMAGE] Removed remaining placeholders');
 }
-
+// This line below is problematic - it's not inside any block!
 
 
       // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
