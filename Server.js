@@ -476,7 +476,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const userId = session.metadata?.userId;
 const subscriptionId = session.subscription;
 const customerId = session.customer;
-const tier = session.metadata?.tier;
+tier = session.metadata?.tier;
+
 
 
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
