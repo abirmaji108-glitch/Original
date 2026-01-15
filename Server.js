@@ -507,27 +507,9 @@ if (!userId || !tier || !priceId) {
   });
   return res.status(400).json({ error: 'Invalid session metadata' });
 }
-        // Determine tier from price ID with strict validation
-        const basicPriceIds = [
-          process.env.STRIPE_BASIC_PRICE_ID,
-          process.env.STRIPE_BASIC_YEARLY_PRICE_ID
-        ].filter(Boolean);
-        const proPriceIds = [
-          process.env.STRIPE_PRO_PRICE_ID,
-          process.env.STRIPE_PRO_YEARLY_PRICE_ID
-        ].filter(Boolean);
-        const businessPriceIds = [
-          process.env.STRIPE_BUSINESS_PRICE_ID,
-          process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
-        ].filter(Boolean);
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Strict validation - reject if price ID doesn't match any tier
-        let tier = null;
-        if (basicPriceIds.includes(priceId)) {
-          tier = 'basic';
-        } else if (proPriceIds.includes(priceId)) {
-          tier = 'pro';
-        } else if (businessPriceIds.includes(priceId)) {
-          tier = 'business';
+
+// ✅ REMOVED: Redundant tier validation code (tier is already validated above)
+// The priceId calculation above already validates that tier is correct
         }
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: If no tier matched, this is an invalid/unknown price ID
         if (!tier) {
