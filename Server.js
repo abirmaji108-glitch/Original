@@ -492,6 +492,7 @@ app.post(
 }
 
 
+
           const session = event.data.object;
           const sessionId = session.id;
           // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Idempotency - check if this session was already processed
