@@ -474,9 +474,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         }
         // Continue with existing code...
         const userId = session.metadata?.userId;
-        const subscriptionId = session.subscription;
-        const customerId = session.customer;
-        const userId = session.metadata?.userId;
+const subscriptionId = session.subscription;
+const customerId = session.customer;
 const tier = session.metadata?.tier;
 
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
@@ -508,11 +507,6 @@ if (!userId || !tier || !priceId) {
   });
   return res.status(400).json({ error: 'Invalid session metadata' });
 }
-
-        if (!userId) {
-          logger.error(`${E.CROSS} No userId in session metadata`);
-          return res.status(400).json({ error: 'No userId in session' });
-        }
         // Determine tier from price ID with strict validation
         const basicPriceIds = [
           process.env.STRIPE_BASIC_PRICE_ID,
@@ -1053,7 +1047,7 @@ try {
   }
   console.log('🚨 [IMAGE] Removed remaining placeholders');
 }
-// This line below is problematic - it's not inside any block!
+
 
 
       // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
