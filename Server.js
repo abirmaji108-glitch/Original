@@ -460,7 +460,7 @@ app.post(
     logger.log(`${E.CHECK} Verified webhook event:`, event.type);
     try {
       switch (event.type) {
-        case 'checkout.session.completed': {case 'invoice.payment_succeeded': {
+        case 'invoice.payment_succeeded': {
   const invoice = event.data.object;
 
   const subscriptionId = invoice.subscription;
@@ -469,7 +469,6 @@ app.post(
     break;
   }
 
-  // Fetch subscription to get metadata
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
   const userId = subscription.metadata?.userId;
@@ -491,6 +490,7 @@ app.post(
   logger.log(`✅ User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
   break;
 }
+
 
           const session = event.data.object;
           const sessionId = session.id;
