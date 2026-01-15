@@ -476,7 +476,8 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async
         const userId = session.metadata?.userId;
 const subscriptionId = session.subscription;
 const customerId = session.customer;
-tier = session.metadata?.tier;
+const tier = session.metadata?.tier;
+
 
 
 
@@ -514,41 +515,7 @@ if (!userId || !tier || !priceId) {
           logger.error(`${E.CROSS} No userId in session metadata`);
           return res.status(400).json({ error: 'No userId in session' });
         }
-        // Determine tier from price ID with strict validation
-        const basicPriceIds = [
-          process.env.STRIPE_BASIC_PRICE_ID,
-          process.env.STRIPE_BASIC_YEARLY_PRICE_ID
-        ].filter(Boolean);
-        const proPriceIds = [
-          process.env.STRIPE_PRO_PRICE_ID,
-          process.env.STRIPE_PRO_YEARLY_PRICE_ID
-        ].filter(Boolean);
-        const businessPriceIds = [
-          process.env.STRIPE_BUSINESS_PRICE_ID,
-          process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
-        ].filter(Boolean);
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Strict validation - reject if price ID doesn't match any tier
-        let tier = null;
-        if (basicPriceIds.includes(priceId)) {
-          tier = 'basic';
-        } else if (proPriceIds.includes(priceId)) {
-          tier = 'pro';
-        } else if (businessPriceIds.includes(priceId)) {
-          tier = 'business';
-        }
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: If no tier matched, this is an invalid/unknown price ID
-        if (!tier) {
-          logger.error(`${E.CROSS} CRITICAL: Unknown price ID received in webhook`, {
-            priceId,
-            userId,
-            sessionId: session.id,
-            timestamp: new Date().toISOString()
-          });
-          return res.status(400).json({
-            error: 'Invalid price ID',
-            message: 'Price ID does not match any configured tier'
-          });
-        }
+        
         logger.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Price ID ${priceId} mapped to tier: ${tier}`);
         // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Use transaction-like approach with rollback capability
         let profileUpdated = false;
