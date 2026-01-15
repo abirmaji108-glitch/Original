@@ -460,7 +460,38 @@ app.post(
     logger.log(`${E.CHECK} Verified webhook event:`, event.type);
     try {
       switch (event.type) {
-        case 'checkout.session.completed': {
+        case 'checkout.session.completed': {case 'invoice.payment_succeeded': {
+  const invoice = event.data.object;
+
+  const subscriptionId = invoice.subscription;
+  if (!subscriptionId) {
+    logger.error('No subscription ID in invoice');
+    break;
+  }
+
+  // Fetch subscription to get metadata
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+  const userId = subscription.metadata?.userId;
+  const tier = subscription.metadata?.tier;
+
+  if (!userId || !tier) {
+    logger.error('Missing userId or tier in subscription metadata', {
+      subscriptionId,
+      metadata: subscription.metadata
+    });
+    break;
+  }
+
+  await supabase
+    .from('profiles')
+    .update({ user_tier: tier })
+    .eq('id', userId);
+
+  logger.log(`✅ User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
+  break;
+}
+
           const session = event.data.object;
           const sessionId = session.id;
           // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Idempotency - check if this session was already processed
