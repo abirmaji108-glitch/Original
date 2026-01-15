@@ -23,6 +23,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.set('trust proxy', 1);
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -391,7 +392,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 // ============================================
 // ADMIN AUTHENTICATION MIDDLEWARE
@@ -439,278 +439,276 @@ async function requireAdmin(req, res, next) {
     });
   }
 }
-// ============================================
-// STRIPE WEBHOOK (must come before other middleware)
-// ============================================
-app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  let event;
-  try {
-    if (!stripe || !webhookSecret) {
-      logger.error('Stripe or webhook secret not configured');
-      return res.status(500).send('Server configuration error');
+// 🔒 Stripe webhook MUST be defined BEFORE any body parser
+app.post(
+  '/api/stripe-webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+      logger.error('Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } catch (err) {
-    logger.error(`${E.CROSS} Webhook signature verification failed:`, err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-  logger.log(`${E.CHECK} Verified webhook event:`, event.type);
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        const sessionId = session.id;
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Idempotency - check if this session was already processed
-        const { data: existingSession, error: checkError } = await supabase
-          .from('processed_webhooks')
-          .select('session_id')
-          .eq('session_id', sessionId)
-          .single();
-        if (existingSession) {
-          logger.log(`ÃƒÂ¢Ã…Â¡ ÃƒÂ¯Ã‚Â¸Ã‚Â Webhook already processed for session ${sessionId} - ignoring duplicate`);
-          return res.json({ received: true, duplicate: true });
-        }
-        // Continue with existing code...
-        const userId = session.metadata?.userId;
+
+    // ✅ KEEP YOUR EXISTING WEBHOOK LOGIC BELOW THIS LINE
+    // (checkout.session.completed, Supabase update, etc.)
+    logger.log(`${E.CHECK} Verified webhook event:`, event.type);
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object;
+          const sessionId = session.id;
+          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Idempotency - check if this session was already processed
+          const { data: existingSession, error: checkError } = await supabase
+            .from('processed_webhooks')
+            .select('session_id')
+            .eq('session_id', sessionId)
+            .single();
+          if (existingSession) {
+            logger.log(`ÃƒÂ¢Ã…Â¡ ÃƒÂ¯Ã‚Â¸Ã‚Â Webhook already processed for session ${sessionId} - ignoring duplicate`);
+            return res.json({ received: true, duplicate: true });
+          }
+          // Continue with existing code...
+          const userId = session.metadata?.userId;
 const subscriptionId = session.subscription;
 const customerId = session.customer;
 const tier = session.metadata?.tier;
-
-
-
-
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
-        if (!customerId) {
-          logger.error(`${E.CROSS} No customer ID in session`, {
-            sessionId: session.id,
-            userId,
-            timestamp: new Date().toISOString()
+          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
+          if (!customerId) {
+            logger.error(`${E.CROSS} No customer ID in session`, {
+              sessionId: session.id,
+              userId,
+              timestamp: new Date().toISOString()
+            });
+            return res.status(400).json({
+              error: 'No customer ID',
+              message: 'Stripe customer ID missing from session'
+            });
+          }
+          const priceId =
+    tier === 'basic'
+      ? process.env.STRIPE_BASIC_PRICE_ID
+      : tier === 'pro'
+      ? process.env.STRIPE_PRO_PRICE_ID
+      : tier === 'business'
+      ? process.env.STRIPE_BUSINESS_PRICE_ID
+      : null;
+  if (!userId || !tier || !priceId) {
+    logger.error(`${E.CROSS} Missing or invalid metadata in checkout session`, {
+      userId,
+      tier,
+      sessionId: session.id
+    });
+    return res.status(400).json({ error: 'Invalid session metadata' });
+  }
+          if (!userId) {
+            logger.error(`${E.CROSS} No userId in session metadata`);
+            return res.status(400).json({ error: 'No userId in session' });
+          }
+         
+          logger.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Price ID ${priceId} mapped to tier: ${tier}`);
+          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Use transaction-like approach with rollback capability
+          let profileUpdated = false;
+          let subscriptionUpdated = false;
+          try {
+            // Step 1: Update profile
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({
+                user_tier: tier,
+                stripe_customer_id: customerId,
+                warning_email_sent_at: null
+              })
+              .eq('id', userId);
+            if (profileError) {
+              logger.error(`${E.CROSS} Profile update failed:`, profileError);
+              throw new Error(`Profile update failed: ${profileError.message}`);
+            }
+            profileUpdated = true;
+            logger.log(`${E.CHECK} Profile updated successfully`);
+            // Step 2: Upsert subscription
+            const { error: subError } = await supabase
+              .from('subscriptions')
+              .upsert({
+                user_id: userId,
+                stripe_subscription_id: subscriptionId,
+                stripe_customer_id: customerId,
+                status: 'active',
+                current_period_end: new Date(session.expires_at * 1000).toISOString(),
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'stripe_subscription_id'
+              });
+            if (subError) {
+              logger.error(`${E.CROSS} Subscription upsert failed:`, subError);
+              throw new Error(`Subscription upsert failed: ${subError.message}`);
+            }
+            subscriptionUpdated = true;
+            logger.log(`${E.CHECK} Subscription created/updated successfully`);
+          } catch (error) {
+            logger.error(`${E.CROSS} CRITICAL: Database operation failed in webhook`, {
+              error: error.message,
+              profileUpdated,
+              subscriptionUpdated,
+              userId,
+              tier,
+              sessionId: session.id
+            });
+            // If profile updated but subscription failed, try to rollback
+            if (profileUpdated && !subscriptionUpdated) {
+              logger.log(`${E.WARN} Attempting rollback of profile tier...`);
+              await supabase
+                .from('profiles')
+                .update({ user_tier: 'free' })
+                .eq('id', userId)
+                .then(() => logger.log(`${E.CHECK} Rollback successful`))
+                .catch(err => logger.error(`${E.CROSS} Rollback failed:`, err));
+            }
+            return res.status(500).json({
+              error: 'Database operation failed',
+              message: error.message
+            });
+          }
+          logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
+          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #11 & #12: Log successful upgrade
+          await logSecurityEvent({
+            user_id: userId,
+            event_type: 'tier_upgraded',
+            attempted_tier: tier,
+            actual_tier: tier,
+            endpoint: '/api/stripe-webhook',
+            request_details: {
+              priceId,
+              customerId: session.customer,
+              subscriptionId: session.subscription
+            }
           });
-          return res.status(400).json({
-            error: 'No customer ID',
-            message: 'Stripe customer ID missing from session'
-          });
+          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Mark webhook as processed (idempotency)
+          const { error: trackError } = await supabase
+            .from('processed_webhooks')
+            .insert({
+              session_id: sessionId,
+              event_type: 'checkout.session.completed',
+              user_id: userId,
+              processed_at: new Date().toISOString()
+            });
+          if (trackError) {
+            logger.error(`${E.WARN} Failed to track webhook idempotency:`, trackError);
+            // Don't fail the request - tier already updated successfully
+          }
+          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Send welcome email asynchronously (non-blocking)
+          supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', userId)
+            .single()
+            .then(({ data: userProfile }) => {
+              if (userProfile?.email && isValidEmail(userProfile.email)) {
+                sendWelcomeEmail(
+                  userProfile.email,
+                  userProfile.full_name || 'there',
+                  tier
+                )
+                  .then(() => logger.log(`${E.EMAIL} Welcome email sent successfully`))
+                  .catch(err => logger.error(`${E.WARN} Email sending failed (non-critical):`, err));
+              }
+            })
+            .catch(err => logger.error(`${E.WARN} Failed to fetch user profile for email:`, err));
+          break;
         }
-        const priceId =
-  tier === 'basic'
-    ? process.env.STRIPE_BASIC_PRICE_ID
-    : tier === 'pro'
-    ? process.env.STRIPE_PRO_PRICE_ID
-    : tier === 'business'
-    ? process.env.STRIPE_BUSINESS_PRICE_ID
-    : null;
-
-if (!userId || !tier || !priceId) {
-  logger.error(`${E.CROSS} Missing or invalid metadata in checkout session`, {
-    userId,
-    tier,
-    sessionId: session.id
-  });
-  return res.status(400).json({ error: 'Invalid session metadata' });
-}
-
-        if (!userId) {
-          logger.error(`${E.CROSS} No userId in session metadata`);
-          return res.status(400).json({ error: 'No userId in session' });
-        }
-        
-        logger.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Price ID ${priceId} mapped to tier: ${tier}`);
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Use transaction-like approach with rollback capability
-        let profileUpdated = false;
-        let subscriptionUpdated = false;
-        try {
-          // Step 1: Update profile
-          const { error: profileError } = await supabase
+        case 'customer.subscription.deleted': {
+          const subscription = event.data.object;
+          const customerId = subscription.customer;
+          // Find user by stripe_customer_id
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, user_tier')
+            .eq('stripe_customer_id', customerId)
+            .single();
+          if (profileError || !profile) {
+            logger.error(`${E.CROSS} Could not find user for canceled subscription`, {
+              customerId,
+              error: profileError?.message
+            });
+            break;
+          }
+          // Downgrade user to free tier
+          const { error: updateError } = await supabase
             .from('profiles')
             .update({
-              user_tier: tier,
-              stripe_customer_id: customerId,
-              warning_email_sent_at: null
+              user_tier: 'free',
+              stripe_customer_id: null
             })
-            .eq('id', userId);
-          if (profileError) {
-            logger.error(`${E.CROSS} Profile update failed:`, profileError);
-            throw new Error(`Profile update failed: ${profileError.message}`);
-          }
-          profileUpdated = true;
-          logger.log(`${E.CHECK} Profile updated successfully`);
-          // Step 2: Upsert subscription
-          const { error: subError } = await supabase
-            .from('subscriptions')
-            .upsert({
-              user_id: userId,
-              stripe_subscription_id: subscriptionId,
-              stripe_customer_id: customerId,
-              status: 'active',
-              current_period_end: new Date(session.expires_at * 1000).toISOString(),
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'stripe_subscription_id'
+            .eq('id', profile.id);
+          if (updateError) {
+            logger.error(`${E.CROSS} Failed to downgrade user after subscription cancellation`, {
+              userId: profile.id,
+              error: updateError.message
             });
-          if (subError) {
-            logger.error(`${E.CROSS} Subscription upsert failed:`, subError);
-            throw new Error(`Subscription upsert failed: ${subError.message}`);
+            break;
           }
-          subscriptionUpdated = true;
-          logger.log(`${E.CHECK} Subscription created/updated successfully`);
-        } catch (error) {
-          logger.error(`${E.CROSS} CRITICAL: Database operation failed in webhook`, {
-            error: error.message,
-            profileUpdated,
-            subscriptionUpdated,
-            userId,
-            tier,
-            sessionId: session.id
-          });
-          // If profile updated but subscription failed, try to rollback
-          if (profileUpdated && !subscriptionUpdated) {
-            logger.log(`${E.WARN} Attempting rollback of profile tier...`);
-            await supabase
-              .from('profiles')
-              .update({ user_tier: 'free' })
-              .eq('id', userId)
-              .then(() => logger.log(`${E.CHECK} Rollback successful`))
-              .catch(err => logger.error(`${E.CROSS} Rollback failed:`, err));
-          }
-          return res.status(500).json({
-            error: 'Database operation failed',
-            message: error.message
-          });
-        }
-        logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #11 & #12: Log successful upgrade
-        await logSecurityEvent({
-          user_id: userId,
-          event_type: 'tier_upgraded',
-          attempted_tier: tier,
-          actual_tier: tier,
-          endpoint: '/api/stripe-webhook',
-          request_details: {
-            priceId,
-            customerId: session.customer,
-            subscriptionId: session.subscription
-          }
-        });
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Mark webhook as processed (idempotency)
-        const { error: trackError } = await supabase
-          .from('processed_webhooks')
-          .insert({
-            session_id: sessionId,
-            event_type: 'checkout.session.completed',
-            user_id: userId,
-            processed_at: new Date().toISOString()
-          });
-        if (trackError) {
-          logger.error(`${E.WARN} Failed to track webhook idempotency:`, trackError);
-          // Don't fail the request - tier already updated successfully
-        }
-        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Send welcome email asynchronously (non-blocking)
-        supabase
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', userId)
-          .single()
-          .then(({ data: userProfile }) => {
-            if (userProfile?.email && isValidEmail(userProfile.email)) {
-              sendWelcomeEmail(
-                userProfile.email,
-                userProfile.full_name || 'there',
-                tier
-              )
-                .then(() => logger.log(`${E.EMAIL} Welcome email sent successfully`))
-                .catch(err => logger.error(`${E.WARN} Email sending failed (non-critical):`, err));
-            }
-          })
-          .catch(err => logger.error(`${E.WARN} Failed to fetch user profile for email:`, err));
-        break;
-      }
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const customerId = subscription.customer;
-        // Find user by stripe_customer_id
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, user_tier')
-          .eq('stripe_customer_id', customerId)
-          .single();
-        if (profileError || !profile) {
-          logger.error(`${E.CROSS} Could not find user for canceled subscription`, {
-            customerId,
-            error: profileError?.message
-          });
-          break;
-        }
-        // Downgrade user to free tier
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            user_tier: 'free',
-            stripe_customer_id: null
-          })
-          .eq('id', profile.id);
-        if (updateError) {
-          logger.error(`${E.CROSS} Failed to downgrade user after subscription cancellation`, {
-            userId: profile.id,
-            error: updateError.message
-          });
-          break;
-        }
-        logger.log(`${E.CHECK} User ${profile.id} downgraded to free after subscription cancellation`);
-        // Update subscription status
-        await supabase
-          .from('subscriptions')
-          .update({
-            status: 'canceled',
-            updated_at: new Date().toISOString()
-          })
-          .eq('stripe_customer_id', customerId);
-        // Log security event
-        await logSecurityEvent({
-          user_id: profile.id,
-          event_type: 'tier_downgraded',
-          attempted_tier: 'free',
-          actual_tier: 'free',
-          endpoint: '/api/stripe-webhook',
-          request_details: {
-            subscriptionId: subscription.id,
-            customerId
-          }
-        });
-        break;
-      }
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const customerId = subscription.customer;
-        // Find user
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('stripe_customer_id', customerId)
-          .single();
-        if (profile) {
+          logger.log(`${E.CHECK} User ${profile.id} downgraded to free after subscription cancellation`);
+          // Update subscription status
           await supabase
             .from('subscriptions')
             .update({
-              status: subscription.status,
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              status: 'canceled',
               updated_at: new Date().toISOString()
             })
-            .eq('stripe_subscription_id', subscription.id);
-          logger.log(`${E.CHECK} Subscription ${subscription.id} updated to status: ${subscription.status}`);
+            .eq('stripe_customer_id', customerId);
+          // Log security event
+          await logSecurityEvent({
+            user_id: profile.id,
+            event_type: 'tier_downgraded',
+            attempted_tier: 'free',
+            actual_tier: 'free',
+            endpoint: '/api/stripe-webhook',
+            request_details: {
+              subscriptionId: subscription.id,
+              customerId
+            }
+          });
+          break;
         }
-        break;
+        case 'customer.subscription.updated': {
+          const subscription = event.data.object;
+          const customerId = subscription.customer;
+          // Find user
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('stripe_customer_id', customerId)
+            .single();
+          if (profile) {
+            await supabase
+              .from('subscriptions')
+              .update({
+                status: subscription.status,
+                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('stripe_subscription_id', subscription.id);
+            logger.log(`${E.CHECK} Subscription ${subscription.id} updated to status: ${subscription.status}`);
+          }
+          break;
+        }
+        default:
+          logger.log(`${E.INFO} Unhandled event type: ${event.type}`);
       }
-      default:
-        logger.log(`${E.INFO} Unhandled event type: ${event.type}`);
+      res.json({ received: true });
+    } catch (error) {
+      logger.error(`${E.CROSS} Webhook handler error:`, error);
+      res.status(500).send('Internal server error');
     }
-    res.json({ received: true });
-  } catch (error) {
-    logger.error(`${E.CROSS} Webhook handler error:`, error);
-    res.status(500).send('Internal server error');
   }
-});
+);
+// ✅ JSON body parsing for ALL other routes
+app.use(express.json({ limit: '10mb' }));
 // ============================================
 // HEALTH CHECK ENDPOINT (FIX #27)
 // ============================================
@@ -791,10 +789,10 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       try {
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error } = await supabase.auth.getUser(token);
-  
+ 
         if (!error && user) {
           userId = user.id;
-    
+   
           // Get profile with timeout
           const profilePromise = supabase
             .from('profiles')
@@ -810,19 +808,19 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
           if (profile) {
             userTier = profile.user_tier || 'free';
             const currentMonth = new Date().toISOString().slice(0, 7);
-      
+     
             if (profile.last_generation_reset === currentMonth) {
               generationsThisMonth = profile.generations_this_month || 0;
             }
-         
+        
             // Ã¢Å“â€ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
             const TESTING_MODE = true; // Ã¢Å¡ Ã¯Â¸Â SET TO FALSE AFTER TESTING
             const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
-         
+        
             // Check if user is admin
             const { data: { user: authUser } } = await supabase.auth.getUser(token);
             const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email);
-         
+        
             // Check limits (skip for admins in testing mode)
             const tierLimits = {
               free: 2,
@@ -831,7 +829,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               business: 200
             };
             const limit = tierLimits[userTier] || 2;
-         
+        
             if (!TESTING_MODE || !isAdmin) {
               // Normal limit enforcement for non-admins
               if (generationsThisMonth >= limit) {
@@ -869,44 +867,33 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
     system: `You are an elite web designer. Generate ONLY complete HTML with embedded CSS and JavaScript.
-
 🚨 MANDATORY IMAGE RULES - YOU MUST FOLLOW THESE EXACTLY:
-
 1. EVERY SINGLE IMAGE must use this EXACT format (no exceptions):
    <img src="{{IMAGE_1:[detailed description]}}" alt="descriptive text">
-   
+  
 2. Each description MUST be at least 15 words and include:
    - What the image shows (person/place/thing)
    - Who (if person: gender, age, role)
    - Where (setting/background)
    - Style (mood/lighting)
-
 3. CORRECT FORMAT EXAMPLES:
-
 WEDDING:
 <img src="{{IMAGE_1:romantic couple silhouette against sunset sky, golden hour lighting, dreamy atmosphere, soft focus, wedding portrait style}}" alt="Couple at sunset">
-
 CHARITY:
 <img src="{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}" alt="Volunteers with children">
-
 RESTAURANT:
 <img src="{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}" alt="Restaurant interior">
-
 HOTEL/RESORT:
 <img src="{{IMAGE_1:luxury oceanfront resort hotel exterior with palm trees, golden hour lighting, azure blue ocean, infinity pool visible, elegant architecture}}" alt="Resort exterior">
-
 CAR DEALERSHIP:
 <img src="{{IMAGE_1:modern luxury car showroom interior, shiny sports cars on display, bright professional lighting, glass walls, premium atmosphere}}" alt="Car showroom">
-
 4. CRITICAL RULES:
    - Generate AS MANY images as needed (typically 4-15 depending on site complexity)
    - Use sequential numbering: {{IMAGE_1:...}}, {{IMAGE_2:...}}, {{IMAGE_3:...}}, etc.
    - NEVER use picsum.photos or placeholder.com URLs
    - Each <img> tag MUST have proper src and alt attributes
    - Descriptions must match your HTML content
-
 5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
-
 GENERATE HTML NOW:`,
     messages: [
       {
@@ -930,11 +917,11 @@ GENERATE HTML NOW:`,
      // 🎯 UNIVERSAL: Extract descriptions and get perfect images
 try {
   console.log('🔍 [IMAGE] Processing images for:', sanitizedPrompt.substring(0, 50));
-  
+ 
   const descriptions = [];
   const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
   let match;
-  
+ 
   // Extract all descriptions
   while ((match = regex.exec(generatedCode)) !== null) {
     descriptions.push({
@@ -943,22 +930,22 @@ try {
       placeholder: match[0]
     });
   }
-  
+ 
   console.log(`📋 [IMAGE] Found ${descriptions.length} image descriptions`);
-  
+ 
   if (descriptions.length === 0) {
     console.log('⚠️ [IMAGE] No descriptions found - Claude may not have followed instructions');
     throw new Error('No image descriptions generated');
   }
-  
+ 
   // Fetch perfect images from Unsplash for each description
   const images = [];
   const sources = [];
-  
+ 
   for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
     try {
       console.log(`🖼️ [IMAGE ${desc.index}] Searching: "${desc.description.substring(0, 60)}..."`);
-      
+     
       // Use Unsplash API directly with description
       const searchResponse = await fetch(
         `https://api.unsplash.com/search/photos?query=${encodeURIComponent(desc.description)}&per_page=1&orientation=landscape`,
@@ -968,13 +955,13 @@ try {
           }
         }
       );
-      
+     
       if (!searchResponse.ok) {
         throw new Error(`Unsplash API error: ${searchResponse.status}`);
       }
-      
+     
       const searchData = await searchResponse.json();
-      
+     
       if (searchData.results && searchData.results.length > 0) {
         const imageUrl = searchData.results[0].urls.regular;
         images.push(imageUrl);
@@ -983,22 +970,22 @@ try {
       } else {
         throw new Error('No results from Unsplash');
       }
-      
+     
     } catch (error) {
       console.error(`❌ [IMAGE ${desc.index}] Search failed:`, error.message);
-      
+     
       // Smart fallback based on description
       const topic = detectTopic(sanitizedPrompt);
       const topicData = IMAGE_LIBRARY[topic] || IMAGE_LIBRARY['business'];
       const fallbackId = topicData.images[Math.min(desc.index - 1, topicData.images.length - 1)];
       const fallbackUrl = getUnsplashUrl(fallbackId);
-      
+     
       images.push(fallbackUrl);
       sources.push('fallback');
       console.log(`🔄 [IMAGE ${desc.index}] Using fallback`);
     }
   }
-  
+ 
   // Replace all placeholders with fetched images
   descriptions.forEach((desc, idx) => {
     if (images[idx]) {
@@ -1007,13 +994,13 @@ try {
       console.log(`🔄 [IMAGE ${desc.index}] Replaced with ${sources[idx]} image`);
     }
   });
-  
+ 
   console.log(`✅ [IMAGE] Successfully placed ${images.length} images`);
   console.log(`📊 [IMAGE] Sources: ${sources.join(', ')}`);
-  
+ 
 } catch (imageError) {
   console.error('❌ [IMAGE] Processing failed:', imageError.message);
-  
+ 
   // Emergency fallback - remove any remaining placeholders
   for (let i = 1; i <= 10; i++) {
     const pattern = new RegExp(`\\{\\{IMAGE_${i}[^}]*\\}\\}`, 'g');
@@ -1022,24 +1009,22 @@ try {
   console.log('🚨 [IMAGE] Removed remaining placeholders');
 }
 // This line below is problematic - it's not inside any block!
-
-
       // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
       if (userId) {
         try {
           const currentMonth = new Date().toISOString().slice(0, 7);
-       
+      
           // Fetch current profile data first
           const { data: currentProfile } = await supabase
             .from('profiles')
             .select('generations_this_month, last_generation_reset')
             .eq('id', userId)
             .single();
-       
+      
           // Check if we need to reset for new month
           const shouldReset = currentProfile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : ((currentProfile?.generations_this_month || 0) + 1);
-       
+      
           console.log(`Ã°Å¸â€œÅ TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
           // Use await to ensure update completes
           const { data: updateResult, error: updateError } = await supabase
@@ -1051,7 +1036,7 @@ try {
             })
             .eq('id', userId)
             .select();
-       
+      
           if (updateError) {
             console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ CRITICAL: Usage update FAILED:', updateError);
           } else {
