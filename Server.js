@@ -447,11 +447,22 @@ app.post(
     const sig = req.headers['stripe-signature'];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+    // 🆕 Enhanced logging before verification
+    logger.log(`${E.INBOX} [WEBHOOK] Received Stripe webhook`);
+    logger.log(`${E.INFO} [WEBHOOK] Signature present: ${!!sig}`);
+    logger.log(`${E.INFO} [WEBHOOK] Secret configured: ${!!webhookSecret}`);
+    logger.log(`${E.INFO} [WEBHOOK] Body type: ${typeof req.body}, Length: ${req.body?.length || 0}`);
+
     let event;
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      // Use trimmed secret to avoid whitespace issues
+      const cleanSecret = webhookSecret?.trim() || webhookSecret;
+      event = stripe.webhooks.constructEvent(req.body, sig, cleanSecret);
+      logger.log(`${E.CHECK} [WEBHOOK] ✅ Signature verified successfully!`);
     } catch (err) {
-      logger.error('Webhook signature verification failed:', err.message);
+      logger.error(`${E.CROSS} [WEBHOOK] ❌ Signature verification FAILED`);
+      logger.error(`${E.CROSS} [WEBHOOK] Error: ${err.message}`);
+      logger.error(`${E.CROSS} [WEBHOOK] Error type: ${err.type || 'unknown'}`);
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
