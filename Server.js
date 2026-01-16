@@ -477,7 +477,7 @@ app.post(
   if (!userId || !tier) {
     logger.error('Missing userId or tier in subscription metadata', {
       subscriptionId,
-      metadata: subscription.metadata
+      metadata: subscription.metadata,
     });
     break;
   }
@@ -490,6 +490,7 @@ app.post(
   logger.log(`✅ User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
   break;
 }
+
 
 
 
