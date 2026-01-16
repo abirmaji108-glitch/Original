@@ -471,8 +471,8 @@ app.post(
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-  const userId = subscription.metadata?.userId;
-  const tier = subscription.metadata?.tier;
+  const userId = subscription.metadata && subscription.metadata.userId;
+  const tier = subscription.metadata && subscription.metadata.tier;
 
   if (!userId || !tier) {
     logger.error('Missing userId or tier in subscription metadata', {
@@ -487,9 +487,10 @@ app.post(
     .update({ user_tier: tier })
     .eq('id', userId);
 
-  logger.log(`✅ User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
+  logger.log(`User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
   break;
 }
+
 
 
 
