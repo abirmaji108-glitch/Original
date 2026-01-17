@@ -1369,15 +1369,13 @@ notifyUsageUpdate();
   await saveWebsite(htmlCode);
   
   // ✅ FIX: Force immediate refresh of usage data
-  const freshUsage = await refreshUsage();
-  
-  // ✅ FIX: Update local state to trigger re-render
-  if (freshUsage) {
-    setIsGenerating(false);
-    setShowSuccess(false);
-    setProgress(0);
-    setProgressStage("");
-  }
+await refreshUsage();
+
+// ✅ FIX: Update local state to trigger re-render
+setIsGenerating(false);
+setShowSuccess(false);
+setProgress(0);
+setProgressStage("");
   
   toast({
     title: "Success! 🎉",
