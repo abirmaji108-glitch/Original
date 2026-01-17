@@ -4,26 +4,24 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null); // Track which plan is loading
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-
   const pricingTiers = [
     {
       id: 'free',
       name: 'Free',
-      description: 'Perfect for trying out Revenue Rocket',
+      description: 'Perfect for trying out Sento',
       price: { monthly: 0, yearly: 0 },
       icon: Sparkles,
       features: [
-        '2 website previews per month',
-        'Landing pages (3-5 sections max)',
-        'Basic templates only',
-        'Watermarked exports',
+        '2 website generations (lifetime)',
+        'Landing pages (1-3 sections)',
+        '20 basic templates',
+        'Preview only (no downloads)',
         'Community support'
       ],
       cta: 'Get Started',
@@ -37,15 +35,12 @@ const Pricing = () => {
       price: { monthly: 9, yearly: 89 },
       icon: Zap,
       features: [
-        'Download 5 websites per month',
+        '10 generations & 10 downloads per month',
         'Landing pages (1-3 sections)',
-        '1 custom domain connection',
         'Remove watermark',
         'HTML/CSS export',
-        '20+ basic templates',
-        'Save up to 10 projects',
-        'Basic SEO optimization',
-        'Email support (48h)'
+        '35 templates (20 basic + 15 premium)',
+        'Unlimited saved projects'
       ],
       cta: 'Start Basic',
       highlighted: false,
@@ -59,19 +54,12 @@ const Pricing = () => {
       price: { monthly: 22, yearly: 219 },
       icon: Zap,
       features: [
-        'Download 12 websites per month',
+        '25 generations & 20 downloads per month',
         'Multi-page websites (up to 8 pages)',
-        '3 custom domains',
         'Remove watermark',
         'HTML/CSS/React export',
-        '50+ premium templates',
-        'Unlimited projects',
-        'Advanced SEO tools',
-        'AI chat support (10 iterations)',
-        'Priority support (24h)',
-        'Custom code injection',
-        'Version history (3 versions)',
-        'GitHub sync'
+        'All 50 templates',
+        'Unlimited saved projects'
       ],
       cta: 'Start Pro',
       highlighted: true,
@@ -86,39 +74,29 @@ const Pricing = () => {
       price: { monthly: 49, yearly: 489 },
       icon: Building2,
       features: [
-        'Download 40 websites per month',
+        '100 generations & 40 downloads per month',
         'Complex websites (up to 20 pages)',
-        '3 team members included',
-        'Unlimited custom domains',
-        'White-label solution',
-        'Custom templates',
-        'API access (100 calls/month)',
-        'Dedicated support',
-        'SLA guarantee',
-        'Custom integrations',
-        'Priority generation queue',
-        'Unlimited AI iterations',
-        'Team collaboration',
-        'Advanced analytics'
+        'Remove watermark',
+        'All export formats',
+        'All 50 templates',
+        'Unlimited saved projects',
+        'Priority generation queue'
       ],
       cta: 'Contact Sales',
       highlighted: false,
       color: 'from-orange-500 to-orange-600'
     }
   ];
-
   const handleStartPlan = async (plan: typeof pricingTiers[0]) => {
     // Prevent double-clicks
     if (loadingPlan) {
       return; // Already processing a payment
     }
-
     // Validate user and user.id exist
     if (!user) {
       navigate('/signup');
       return;
     }
-
     if (!user.id) {
       toast({
         title: "Authentication Error",
@@ -128,10 +106,8 @@ const Pricing = () => {
       navigate('/login');
       return;
     }
-
     // Set loading state
     setLoadingPlan(plan.id);
-
     // Free plan - just update tier in database
     if (plan.id === 'free') {
       try {
@@ -140,7 +116,6 @@ const Pricing = () => {
           .update({ user_tier: 'free' })
           .eq('id', user.id);
         if (error) throw error;
-
         toast({
           title: "Welcome to Free Plan!",
           description: "You're all set to start creating.",
@@ -158,20 +133,17 @@ const Pricing = () => {
       }
       return;
     }
-
     // Business plan - contact sales
     if (plan.id === 'business') {
       window.location.href = 'mailto:sales@sento.ai?subject=Business Plan Inquiry';
       setLoadingPlan(null);
       return;
     }
-
     // Paid plans (Basic & Pro) - redirect to Stripe checkout
     if (plan.stripeLink) {
       try {
         // Determine correct price ID based on billing cycle and plan
         let priceId;
-
         // Add support for Business plan
         if (billingCycle === 'monthly') {
           // Monthly pricing
@@ -192,16 +164,12 @@ const Pricing = () => {
             priceId = import.meta.env.VITE_STRIPE_BUSINESS_YEARLY_PRICE_ID;
           }
         }
-
         if (!priceId) {
           throw new Error(`Stripe price ID not configured for ${plan.id} ${billingCycle}`);
         }
-
         console.log(`💳 Starting checkout: ${plan.name} (${billingCycle}) - Price ID: ${priceId}`);
-
         // Never fallback to localhost in production
         const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
         if (!backendUrl) {
           console.error('❌ VITE_BACKEND_URL not configured!');
           toast({
@@ -212,15 +180,12 @@ const Pricing = () => {
           setLoadingPlan(null); // ← ADD THIS LINE
           return;
         }
-
         const {
   data: { session },
 } = await supabase.auth.getSession();
-
 if (!session?.access_token) {
   throw new Error("Authentication token missing. Please log in again.");
 }
-
 const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
   method: 'POST',
   headers: {
@@ -228,38 +193,29 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
     'Authorization': `Bearer ${session.access_token}`,
   },
   body: JSON.stringify({
-    tier: plan.id,           // backend expects "tier"
-    interval: billingCycle,  // backend expects "interval"
+    tier: plan.id, // backend expects "tier"
+    interval: billingCycle, // backend expects "interval"
   }),
 });
-
-
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || 'Failed to create checkout session');
         }
-
         // Better validation and error messages
         const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-
         if (!stripePublishableKey) {
           throw new Error('Stripe publishable key not configured. Please contact support.');
         }
-
         if (!(window as any).Stripe) {
           throw new Error('Stripe.js failed to load. Please check your internet connection and try again.');
         }
-
         const stripe = (window as any).Stripe(stripePublishableKey);
-
         if (!stripe) {
           throw new Error('Failed to initialize Stripe. Please refresh the page and try again.');
         }
-
         const { error } = await stripe.redirectToCheckout({
           sessionId: data.sessionId,
         });
-
         if (error) {
           throw error;
         }
@@ -273,26 +229,21 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
         setLoadingPlan(null); // Reset loading state
       }
     }
-
     // Reset loading state if we didn't redirect
     setLoadingPlan(null);
   };
-
   const savings = {
     basic: 9 * 12 - 89,
     pro: 22 * 12 - 219,
     business: 49 * 12 - 489
   };
-
   const comparisonFeatures = [
-    { name: 'Monthly Downloads', free: '2 previews', basic: '5 sites', pro: '12 sites', business: '40 sites' },
+    { name: 'Monthly Generations', free: '2 lifetime', basic: '10', pro: '25', business: '100' },
+    { name: 'Monthly Downloads', free: '0', basic: '10', pro: '20', business: '40' },
     { name: 'Website Complexity', free: '3-5 sections', basic: '1-3 sections', pro: 'Up to 8 pages', business: 'Up to 20 pages' },
     { name: 'Custom Domains', free: '0', basic: '1', pro: '3', business: 'Unlimited' },
-    { name: 'Templates', free: 'Basic only', basic: '20+', pro: '50+ premium', business: 'Custom' },
-    { name: 'AI Support', free: 'None', basic: 'None', pro: '10 iterations', business: 'Unlimited' },
-    { name: 'Support', free: 'Community', basic: '48h email', pro: '24h priority', business: 'Dedicated' }
+    { name: 'Templates', free: '20 basic', basic: '35 (20+15)', pro: 'All 50', business: 'All 50' }
   ];
-
   const faqs = [
     {
       question: 'Can I change plans anytime?',
@@ -307,7 +258,6 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
       answer: 'Yes, we offer a 14-day money-back guarantee on all paid plans. If you\'re not satisfied, contact us for a full refund.'
     }
   ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white">
       <div className="container mx-auto px-6 py-20">
@@ -344,14 +294,12 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
             </button>
           </div>
         </div>
-
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto mb-20">
           {pricingTiers.map((plan, index) => {
             const Icon = plan.icon;
             const price = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly;
             const displayPrice = billingCycle === 'yearly' && plan.id !== 'free' ? Math.round(price / 12) : price;
-
             return (
               <div
                 key={index}
@@ -410,7 +358,6 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
             );
           })}
         </div>
-
         {/* Comparison Table */}
         <div className="max-w-7xl mx-auto mb-20">
           <h2 className="text-3xl font-bold text-center mb-8">Compare Plans</h2>
@@ -439,7 +386,6 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
             </table>
           </div>
         </div>
-
         {/* FAQ Section */}
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
@@ -453,7 +399,6 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
           </div>
         </div>
       </div>
-
       <style>{`
         @keyframes slideUp {
           from {
@@ -465,16 +410,16 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
             transform: translateY(0);
           }
         }
-       
+      
         .animate-slide-up {
           animation: slideUp 0.5s ease-out forwards;
         }
-       
+      
         .pricing-card {
           position: relative;
           transition: all 0.3s ease;
         }
-       
+      
         .pricing-card::before {
           content: '';
           position: absolute;
@@ -486,7 +431,7 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
           transition: opacity 0.3s ease;
           filter: blur(8px);
         }
-       
+      
         .pricing-card:hover::before {
           opacity: 0.4;
         }
@@ -494,5 +439,4 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
     </div>
   );
 };
-
 export default Pricing;
