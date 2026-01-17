@@ -250,6 +250,7 @@ export function useFeatureGate() {
   return {
     ...state,
     refreshUsage: fetchUserData,
+    refreshLimits: fetchUserData, // ✅ ADD: Alias for refreshUsage
     incrementGeneration
   };
 }
