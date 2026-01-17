@@ -1325,12 +1325,12 @@ app.post('/api/track-download', downloadLimiter, async (req, res) => {
         .eq('id', user.id);
     }
     // Check download limits
-    const downloadLimits = {
-      'free': 0, // Free users cannot download
-      'basic': 10,
-      'pro': 50,
-      'business': 200
-    };
+const downloadLimits = {
+  'free': 0, // Free users cannot download
+  'basic': 10,
+  'pro': 20,   // ✅ CHANGED from 50 to 20
+  'business': 40  // ✅ CHANGED from 200 to 40
+};
     const limit = downloadLimits[userTier] || 0;
     if (userTier === 'free') {
       await logSecurityEvent({
