@@ -474,18 +474,24 @@ export const getBasicTemplates = () => basicTemplates;
 export const getPremiumTemplates = () => premiumTemplates;
 export const getAllTemplates = () => allTemplates;
 export const getTemplatesByTier = (tier: 'free' | 'basic' | 'pro' | 'business') => {
-  if (tier === 'free' || tier === 'basic') {
+  if (tier === 'free') {
+    // Free users: 20 basic templates only
     return basicTemplates;
   }
+  if (tier === 'basic') {
+    // Basic users: 20 basic + first 15 premium = 35 total
+    return [...basicTemplates, ...premiumTemplates.slice(0, 15)];
+  }
+  // Pro & Business users: All 50 templates
   return allTemplates;
 };
 export const getTemplateById = (id: string): Template | undefined => {
   const template = allTemplates.find(t => t.id === id);
-  
+ 
   // ✅ FIX: Log warning if template not found
   if (!template) {
     console.warn(`[Templates] Template not found: "${id}". Available IDs:`, allTemplates.map(t => t.id));
   }
-  
+ 
   return template;
 };
