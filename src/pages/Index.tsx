@@ -320,12 +320,13 @@ const Index = () => {
   
   // Feature gating
   const { 
-    canGenerate: canGenerateMore, 
-    generationsToday, 
-    tierLimits,
-    isPro,
-    isFree
-  } = useFeatureGate();
+  canGenerate: canGenerateMore, 
+  generationsToday, 
+  tierLimits,
+  isPro,
+  isFree,
+  refreshLimits // ✅ ADD: Get refresh function from hook
+} = useFeatureGate();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
@@ -1354,24 +1355,37 @@ const newWebsite = {
       if (data.success) {
         // Refresh usage data from server
         await refreshUsage();
-        
-        // Notify other tabs of usage update
-        notifyUsageUpdate();
+
+// ✅ FIX: Also refresh limits from useFeatureGate
+if (typeof refreshLimits === 'function') {
+  await refreshLimits();
+}
+
+// Notify other tabs of usage update
+notifyUsageUpdate();
         
         // Show success state for 2 seconds
         setShowSuccess(true);
         setTimeout(async () => {
-          setGeneratedCode(htmlCode);
-          await saveWebsite(htmlCode);
-          setIsGenerating(false);
-          setShowSuccess(false);
-          setProgress(0);
-          setProgressStage("");
-          toast({
-            title: "Success! 🎉",
-            description: `🎉 Your professional website is ready! ${data.usage?.remaining || 0} generations remaining this month.`,
-          });
-        }, 2000);
+  setGeneratedCode(htmlCode);
+  await saveWebsite(htmlCode);
+  
+  // ✅ FIX: Force immediate refresh of usage data
+  const freshUsage = await refreshUsage();
+  
+  // ✅ FIX: Update local state to trigger re-render
+  if (freshUsage) {
+    setIsGenerating(false);
+    setShowSuccess(false);
+    setProgress(0);
+    setProgressStage("");
+  }
+  
+  toast({
+    title: "Success! 🎉",
+    description: `🎉 Your professional website is ready! Check your updated generation count above.`,
+  });
+}, 2000);
       }
     } catch (error) {
       // Cleanup intervals
@@ -1846,7 +1860,11 @@ ${new Date().toLocaleDateString()}
   const handleTemplateClick = (prompt: string) => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setInput(prompt);
-  // Don't auto-generate - let user review and edit the prompt first
+  // Auto-fill input and scroll to top for user review
+  toast({
+    title: "Template Loaded!",
+    description: "Review the prompt and click 'Generate Website' when ready.",
+  });
 };
   const getAspectRatio = () => {
     switch (viewMode) {
