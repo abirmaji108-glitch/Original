@@ -1140,7 +1140,6 @@ const sanitizedPrompt = sanitizeInput(actualInput);
     }, 150);
 
     try {
-      try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
 const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
 ${sanitizedPrompt}
