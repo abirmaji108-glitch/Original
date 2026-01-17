@@ -859,8 +859,8 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
               generationsThisMonth = profile.generations_this_month || 0;
             }
         
-            // Ã¢Å“â€ TEMPORARY: Admin bypass for testing (REMOVE AFTER TESTING)
-            const TESTING_MODE = true; // Ã¢Å¡ Ã¯Â¸Â SET TO FALSE AFTER TESTING
+            // ✅ PRODUCTION MODE: Admin bypass disabled
+            const TESTING_MODE = false; // ✅ SET TO FALSE FOR PRODUCTION
             const ADMIN_EMAILS = ['abirmaji108@gmail.com']; // Your admin email
         
             // Check if user is admin
@@ -1106,8 +1106,8 @@ if (userId) {
       const tierLimits = {
         free: 2,
         basic: 10,
-        pro: 50,
-        business: 200
+        pro: 25,
+        business: 100
       };
       const limit = tierLimits[userTier] || 2;
       console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
@@ -1228,8 +1228,8 @@ app.get('/api/profile', async (req, res) => {
     const tierLimits = {
       'free': 2,
       'basic': 10,
-      'pro': 50,
-      'business': 200
+      'pro': 25,
+      'business': 100
     };
     const downloadLimits = {
   'free': 0,
