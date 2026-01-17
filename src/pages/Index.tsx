@@ -1428,6 +1428,9 @@ notifyUsageUpdate();
       setProgress(0);
       setProgressStage("");
       setShowSuccess(false);
+    }
+    } catch (error) {
+      // This is the outer catch block - keep it as is
     } finally {
       // Only clear if this is still the active request
       if (generateRequestId.current === requestId) {
