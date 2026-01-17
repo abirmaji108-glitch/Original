@@ -1023,13 +1023,14 @@ Generated on: ${new Date().toLocaleDateString()}
   const handleGenerate = async (directPrompt?: string) => {
   // Use directPrompt if provided, otherwise use input state
   const actualInput = directPrompt || input;
-    // Debug logging
-    console.log('🔵 Generate called with input:', {
-      inputLength: input.length,
-      inputValue: input.substring(0, 100),
-      tier: tier,
-      canGenerateMore: canGenerateMore
-    });
+  
+  // Debug logging
+  console.log('🔵 Generate called with input:', {
+    inputLength: actualInput.length,
+    inputValue: actualInput.substring(0, 100),
+    tier: tier,
+    canGenerateMore: canGenerateMore
+  });
     
     // ✅ ADD #13: Rate limiting check
     const now = Date.now();
@@ -1140,8 +1141,9 @@ const sanitizedPrompt = sanitizeInput(actualInput);
 
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
+const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
 const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
-${trimmedPrompt}
+${sanitizedPrompt}
 
 DESIGN STYLE: ${selectedStyle.toUpperCase()}
 ${styleInstruction}
