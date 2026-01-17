@@ -1025,9 +1025,9 @@ Generated on: ${new Date().toLocaleDateString()}
   const actualInput = directPrompt || input;
   
   // Debug logging
-  console.log('🔵 Generate called with input:', {
-    inputLength: actualInput.length,
-    inputValue: actualInput.substring(0, 100),
+    console.log('🔵 Generate called with input:', {
+      inputLength: actualInput.length,
+      inputValue: actualInput.substring(0, 100),
     tier: tier,
     canGenerateMore: canGenerateMore
   });
@@ -1140,11 +1140,10 @@ const sanitizedPrompt = sanitizeInput(actualInput);
     }, 150);
 
     try {
+      try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
-const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
 const prompt = `Generate a complete, production-ready, single-file HTML website based on this description:
 ${sanitizedPrompt}
-
 DESIGN STYLE: ${selectedStyle.toUpperCase()}
 ${styleInstruction}
 Apply this design style consistently throughout the website.
