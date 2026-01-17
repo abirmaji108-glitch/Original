@@ -869,11 +869,11 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
         
             // Check limits (skip for admins in testing mode)
             const tierLimits = {
-              free: 2,
-              basic: 10,
-              pro: 50,
-              business: 200
-            };
+  free: 2,
+  basic: 10,
+  pro: 25,      // ✅ CHANGED from 50 to 25
+  business: 100 // ✅ CHANGED from 200 to 100
+};
             const limit = tierLimits[userTier] || 2;
         
             if (!TESTING_MODE || !isAdmin) {
@@ -1056,32 +1056,42 @@ try {
 }
 // This line below is problematic - it's not inside any block!
       // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
-      if (userId) {
-        try {
-          const currentMonth = new Date().toISOString().slice(0, 7);
-      
-          // Fetch current profile data first
-          const { data: currentProfile } = await supabase
-            .from('profiles')
-            .select('generations_this_month, last_generation_reset')
-            .eq('id', userId)
-            .single();
-      
-          // Check if we need to reset for new month
-          const shouldReset = currentProfile?.last_generation_reset !== currentMonth;
+if (userId) {
+  try {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+
+    // Fetch current profile data first
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('user_tier, generations_this_month, last_generation_reset')
+      .eq('id', userId)
+      .single();
+
+    const userTier = currentProfile?.user_tier || 'free';
+
+    // ✅ FIX: Only reset for PAID tiers (NOT free)
+    const shouldReset = userTier !== 'free' && 
+                        currentProfile?.last_generation_reset !== currentMonth;
           const newCount = shouldReset ? 1 : ((currentProfile?.generations_this_month || 0) + 1);
       
           console.log(`Ã°Å¸â€œÅ TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
-          // Use await to ensure update completes
-          const { data: updateResult, error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              generations_this_month: newCount,
-              last_generation_reset: currentMonth,
-              last_generation_at: new Date().toISOString()
-            })
-            .eq('id', userId)
-            .select();
+          // ✅ FIX: For free users, never update last_generation_reset
+    const updateData = {
+      generations_this_month: newCount,
+      last_generation_at: new Date().toISOString()
+    };
+
+    // Only update reset date for paid tiers
+    if (userTier !== 'free') {
+      updateData.last_generation_reset = currentMonth;
+    }
+
+    // Use await to ensure update completes
+    const { data: updateResult, error: updateError } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId)
+      .select();
       
           if (updateError) {
             console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ CRITICAL: Usage update FAILED:', updateError);
@@ -1222,11 +1232,11 @@ app.get('/api/profile', async (req, res) => {
       'business': 200
     };
     const downloadLimits = {
-      'free': 0,
-      'basic': 10,
-      'pro': 50,
-      'business': 200
-    };
+  'free': 0,
+  'basic': 10,
+  'pro': 20,   // ✅ CHANGED from 50 to 20
+  'business': 40  // ✅ CHANGED from 200 to 40
+};
     const limit = tierLimits[profile.user_tier] || 2;
     const downloadLimit = downloadLimits[profile.user_tier] || 0;
     const generationsThisMonth = profile.last_generation_reset === currentMonth
