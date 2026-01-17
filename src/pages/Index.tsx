@@ -1357,9 +1357,7 @@ const newWebsite = {
         await refreshUsage();
 
 // ✅ FIX: Also refresh limits from useFeatureGate
-if (typeof refreshLimits === 'function') {
-  await refreshLimits();
-}
+await refreshLimits();
 
 // Notify other tabs of usage update
 notifyUsageUpdate();
