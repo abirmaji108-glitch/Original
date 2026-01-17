@@ -373,9 +373,10 @@ const Landing = () => {
                 </div>
                 <Button onClick={() => navigate('/signup')} className="w-full bg-gray-800 hover:bg-gray-900 mb-6">Get Started</Button>
                 <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>2 website previews/month</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>2 website generations (lifetime)</span></li>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Basic templates</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Watermarked exports</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Preview only (no downloads)</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>20 basic templates</span></li>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Community support</span></li>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Mobile responsive</span></li>
                 </ul>
@@ -395,11 +396,9 @@ const Landing = () => {
                 </div>
                 <Button onClick={() => navigate('/pricing')} className="w-full bg-cyan-600 hover:bg-cyan-700 mb-6">Start Basic</Button>
                 <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>5 downloads/month</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>20+ premium templates</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>10 generations & 10 downloads/month</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>35 templates (20 basic + 15 premium)</span></li>
                   <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>No watermark</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Email support (48h)</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Custom colors & fonts</span></li>
                 </ul>
               </div>
             </div>
@@ -418,10 +417,10 @@ const Landing = () => {
                 </div>
                 <Button onClick={() => navigate('/pricing')} className="w-full bg-white text-purple-600 hover:bg-gray-100 mb-6">Start Pro</Button>
                 <ul className="space-y-3 text-sm text-white">
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>12 downloads/month</span></li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>25 generations & 20 downloads/month</span></li>
                   <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>50+ premium templates</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>AI chat support</span></li>
-                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>Priority generation</span></li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>Multi-page websites (up to 8 pages)</span></li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-yellow-300 mt-0.5 flex-shrink-0" /><span>Unlimited saved projects</span></li>
                 </ul>
               </div>
             </div>
@@ -439,11 +438,10 @@ const Landing = () => {
                 </div>
                 <Button onClick={() => navigate('/pricing')} className="w-full bg-orange-600 hover:bg-orange-700 mb-6">Contact Sales</Button>
                 <ul style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>40 downloads/month</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Custom templates</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>API access</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Dedicated account manager</span></li>
-                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>White-label options</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>100 generations & 40 downloads/month</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Complex websites (up to 20 pages)</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>All 50 templates</span></li>
+                  <li style={{display: 'flex', alignItems: 'start', gap: '8px', fontSize: '14px', color: '#000'}}><Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" /><span style={{color: '#000', fontWeight: '500'}}>Unlimited saved projects</span></li>
                 </ul>
               </div>
             </div>
@@ -486,7 +484,6 @@ const Landing = () => {
           <div className="max-w-4xl mx-auto space-y-6">
             {/* FAQ Items (unchanged – kept as-is) */}
             {/* ... (all FAQ items remain exactly as in your original code) */}
-            {/* For brevity they are omitted here but they are still present in the full file */}
           </div>
           {/* CTA at bottom */}
           <div className="mt-16 text-center">
