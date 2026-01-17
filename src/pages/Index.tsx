@@ -1428,7 +1428,7 @@ notifyUsageUpdate();
       setProgress(0);
       setProgressStage("");
       setShowSuccess(false);
-    } catch (error) {
+    } finally {
       // Only clear if this is still the active request
       if (generateRequestId.current === requestId) {
         setIsGenerating(false);
