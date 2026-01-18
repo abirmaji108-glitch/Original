@@ -319,14 +319,15 @@ const Index = () => {
   const tier = (userTier || 'free') as UserTier;
   
   // Feature gating
-  const { 
-  canGenerate: canGenerateMore, 
-  generationsToday, 
+  const {
+  canGenerate: canGenerateMore,
+  generationsToday,
   tierLimits,
   isPro,
   isFree,
-  refreshLimits // ✅ ADD: Get refresh function from hook
+  refreshLimits
 } = useFeatureGate();
+
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
@@ -1681,9 +1682,15 @@ setWebsiteHistory(currentUserHistory);
       if (data.success) {
         // Refresh usage data from server
         await refreshUsage();
-        
-        // Notify other tabs of usage update
-        notifyUsageUpdate();
+
+// ✅ FIX: Also refresh limits from useFeatureGate
+if (typeof refreshLimits === 'function') {
+  await refreshLimits();
+}
+
+// Notify other tabs of usage update
+notifyUsageUpdate();
+
         
         setShowSuccess(true);
         setTimeout(async () => {
