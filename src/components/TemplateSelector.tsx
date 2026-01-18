@@ -32,11 +32,28 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
   const premiumTemplates = filteredTemplates.filter(t => t.isPremium);
 
   const handleTemplateClick = (template: Template) => {
-    if (template.isPremium && (userTier === 'free' || userTier === 'basic')) {
-      // ✅ FIX: Show clear error message
-      alert(`This is a premium template. Upgrade to Pro or Business to unlock!`);
+    // ✅ FIX: Basic users can use only FIRST 15 premium templates
+const allowedPremiumCountForBasic = 15;
+
+if (template.isPremium) {
+  // Free users cannot use any premium template
+  if (userTier === 'free') {
+    alert(`This is a premium template. Upgrade to Basic/Pro/Business to unlock!`);
+    return;
+  }
+
+  // Basic users can only use first 15 premium templates
+  if (userTier === 'basic') {
+    const premiumTemplates = templates.filter(t => t.isPremium);
+    const allowedPremiumIds = premiumTemplates.slice(0, allowedPremiumCountForBasic).map(t => t.id);
+
+    if (!allowedPremiumIds.includes(template.id)) {
+      alert(`Upgrade to Pro or Business to unlock all premium templates!`);
       return;
     }
+  }
+}
+
     
     // ✅ FIX: Close dropdown immediately
     setIsOpen(false);
