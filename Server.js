@@ -1055,54 +1055,105 @@ try {
   console.log('🚨 [IMAGE] Removed remaining placeholders');
 }
 // This line below is problematic - it's not inside any block!
-      // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
+      // ✅ FINAL FIX: Proper usage tracking with correct reset logic
 if (userId) {
   try {
-    const currentMonth = new Date().toISOString().slice(0, 7);
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2026-01"
 
-    // Fetch current profile data first
-    const { data: currentProfile } = await supabase
+    // Fetch FRESH profile data from database
+    const { data: currentProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('user_tier, generations_this_month, last_generation_reset')
       .eq('id', userId)
       .single();
 
-    const userTier = currentProfile?.user_tier || 'free';
+    if (fetchError || !currentProfile) {
+      console.error('❌ CRITICAL: Failed to fetch profile:', fetchError);
+      throw new Error('Profile not found');
+    }
 
-    // ✅ FIX: Only reset for PAID tiers (NOT free)
-    const shouldReset = userTier !== 'free' && 
-                        currentProfile?.last_generation_reset !== currentMonth;
-          const newCount = shouldReset ? 1 : ((currentProfile?.generations_this_month || 0) + 1);
+    const userTier = currentProfile.user_tier || 'free';
+    const currentCount = currentProfile.generations_this_month || 0;
+    const lastReset = currentProfile.last_generation_reset;
+
+    console.log('📊 BEFORE UPDATE:', {
+      userId,
+      userTier,
+      currentCount,
+      lastReset,
+      currentMonth
+    });
+
+    // ✅ CORE LOGIC:
+    // FREE users: Never reset, just increment (0→1→2, then blocked)
+    // PAID users: Reset to 1 if new month, otherwise increment
+    let newCount;
+    let shouldUpdateResetDate = false;
+
+    if (userTier === 'free') {
+      // Free users: NEVER reset, just increment
+      newCount = currentCount + 1;
+      // DO NOT update last_generation_reset for free users
+    } else {
+      // Paid users: Check if new month
+      const isNewMonth = !lastReset || lastReset !== currentMonth;
       
-          console.log(`Ã°Å¸â€œÅ TRACKING: User ${userId} - Current: ${generationsThisMonth} Ã¢â€ â€™ New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
-          // ✅ FIX: For free users, never update last_generation_reset
+      if (isNewMonth) {
+        // New month - reset to 1
+        newCount = 1;
+        shouldUpdateResetDate = true;
+      } else {
+        // Same month - increment
+        newCount = currentCount + 1;
+      }
+    }
+
+    console.log('🔄 CALCULATED:', {
+      userTier,
+      oldCount: currentCount,
+      newCount,
+      shouldUpdateResetDate
+    });
+
+    // Build update object
     const updateData = {
       generations_this_month: newCount,
       last_generation_at: new Date().toISOString()
     };
 
-    // Only update reset date for paid tiers
-    if (userTier !== 'free') {
+    // Only update reset date for PAID users in new month
+    if (shouldUpdateResetDate) {
       updateData.last_generation_reset = currentMonth;
     }
 
-    // Use await to ensure update completes
+    console.log('📝 UPDATING DATABASE:', updateData);
+
+    // CRITICAL: Execute update and VERIFY it worked
     const { data: updateResult, error: updateError } = await supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
-      .select();
+      .select('id, user_tier, generations_this_month, last_generation_reset');
       
-          if (updateError) {
-            console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ CRITICAL: Usage update FAILED:', updateError);
-          } else {
-            console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Usage updated successfully: ${newCount}/${limit}`);
-            console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€ Update confirmed:`, updateResult);
-          }
-        } catch (error) {
-          console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception during usage tracking:', error);
-        }
-      }
+    if (updateError) {
+      console.error('❌ DATABASE UPDATE FAILED:', updateError);
+      throw new Error(`Update failed: ${updateError.message}`);
+    }
+    
+    if (!updateResult || updateResult.length === 0) {
+      console.error('❌ UPDATE RETURNED EMPTY');
+      throw new Error('Update returned no results');
+    }
+
+    // ✅ SUCCESS - Log the result
+    console.log('✅ UPDATE SUCCESS:', updateResult[0]);
+    console.log(`📈 Count updated: ${currentCount} → ${updateResult[0].generations_this_month}`);
+
+  } catch (error) {
+    console.error('❌ EXCEPTION in usage tracking:', error);
+    // Don't fail the request, but log the error
+  }
+}
       const tierLimits = {
         free: 2,
         basic: 10,
