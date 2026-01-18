@@ -2158,18 +2158,18 @@ ${new Date().toLocaleDateString()}
                 <User className="w-4 h-4" />
               </div>
               <div className="flex items-center gap-3">
-                <div className={`text-xs ${dynamicSubtleClass}`}>
-                  {isPro ? (
-                    <>
-                      <ProBadge className="inline-flex mr-1" />
-                      Unlimited Generations
-                    </>
-                  ) : (
-                    <>
-                      {generationsToday}/{tierLimits.monthlyGenerations} this month
-                    </>
-                  )}
-                </div>
+                <div className={`text-xs ${dynamicSubtleClass}`} key={`gen-${generationsToday}-${Date.now()}`}>
+                {isPro ? (
+                  <>
+                    <ProBadge className="inline-flex mr-1" />
+                    Unlimited Generations
+                  </>
+                ) : (
+                  <>
+                    {generationsToday}/{tierLimits.monthlyGenerations} {tier === 'free' ? 'lifetime' : 'this month'}
+                  </>
+                )}
+              </div>
                 <UpgradeButton tier={tier} size="sm" />
               </div>
             </div>
