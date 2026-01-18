@@ -325,7 +325,8 @@ const Index = () => {
   tierLimits,
   isPro,
   isFree,
-  refreshLimits
+  refreshLimits,
+  loading  // ✅ ADD THIS LINE
 } = useFeatureGate();
 
 
@@ -615,7 +616,7 @@ useEffect(() => {
 
   // ✅ REMOVED: useUsageTracking - using useFeatureGate instead
 // const { usage, loading: usageLoading, refreshUsage } = useUsageTracking(userId);
-// ✅ FIX: Map loading from useFeatureGate
+// ✅ FIX: Map loading from useFeatureGate for backward compatibility
   const usageLoading = loading;
   const calculateAnalytics = () => {
     const history = websiteHistory;
