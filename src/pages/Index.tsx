@@ -615,7 +615,8 @@ useEffect(() => {
 
   // ✅ REMOVED: useUsageTracking - using useFeatureGate instead
 // const { usage, loading: usageLoading, refreshUsage } = useUsageTracking(userId);
-
+// ✅ FIX: Map loading from useFeatureGate
+  const usageLoading = loading;
   const calculateAnalytics = () => {
     const history = websiteHistory;
     const totalGenerated = history.length;
