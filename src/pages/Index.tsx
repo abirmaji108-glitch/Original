@@ -1360,7 +1360,12 @@ const newWebsite = {
 await refreshLimits();
 
 // Notify other tabs of usage update
+if (typeof refreshLimits === 'function') {
+  await refreshLimits();
+}
+
 notifyUsageUpdate();
+
         
         // Show success state for 2 seconds
         setShowSuccess(true);
