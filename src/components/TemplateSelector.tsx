@@ -171,7 +171,19 @@ if (template.isPremium) {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {premiumTemplates.map(template => {
-                  const isLocked = userTier === 'free' || userTier === 'basic';
+                  const allowedPremiumCountForBasic = 15;
+
+const isLocked =
+  userTier === 'free'
+    ? true
+    : userTier === 'basic'
+    ? !templates
+        .filter(t => t.isPremium)
+        .slice(0, allowedPremiumCountForBasic)
+        .map(t => t.id)
+        .includes(template.id)
+    : false;
+
                 
                   return (
                     <button
