@@ -407,7 +407,7 @@ useEffect(() => {
           // Load usage stats
           (async () => {
             try {
-              await refreshUsage();
+              await refreshLimits();
               console.log('✅ Usage stats loaded');
             } catch (error) {
               console.error('Failed to load usage stats:', error);
@@ -613,7 +613,8 @@ useEffect(() => {
     };
   }, []);
 
-  const { usage, loading: usageLoading, refreshUsage } = useUsageTracking(userId);
+  // ✅ REMOVED: useUsageTracking - using useFeatureGate instead
+// const { usage, loading: usageLoading, refreshUsage } = useUsageTracking(userId);
 
   const calculateAnalytics = () => {
     const history = websiteHistory;
@@ -1355,9 +1356,9 @@ const newWebsite = {
       // ✅ CORRECTED: SUCCESS HANDLER - Refresh usage data from server
       if (data.success) {
         // Refresh usage data from server
-        await refreshUsage();
-
-// ✅ FIX: Also refresh limits from useFeatureGate
+        await refreshLimits();
+        
+        // ✅ FIX: Also refresh limits from useFeatureGate
 await refreshLimits();
 
 // Notify other tabs of usage update
@@ -1374,8 +1375,8 @@ notifyUsageUpdate();
   setGeneratedCode(htmlCode);
   await saveWebsite(htmlCode);
   
-  // ✅ FIX: Force immediate refresh of usage data
-  await refreshUsage();
+ // ✅ FIX: Force immediate refresh of usage data
+        await refreshLimits();
   
   // ✅ FIX: Also refresh limits from useFeatureGate
   if (typeof refreshLimits === 'function') {
@@ -1689,9 +1690,9 @@ setWebsiteHistory(currentUserHistory);
       // ✅ CORRECTED: SUCCESS HANDLER - Refresh usage data from server
       if (data.success) {
         // Refresh usage data from server
-        await refreshUsage();
+      await refreshLimits();
 
-// ✅ FIX: Also refresh limits from useFeatureGate
+      // ✅ FIX: Also refresh limits from useFeatureGate
 if (typeof refreshLimits === 'function') {
   await refreshLimits();
 }
@@ -1706,9 +1707,9 @@ notifyUsageUpdate();
           await saveWebsite(htmlCode);
           
           // ✅ FIX: Refresh usage after regenerate too
-          await refreshUsage();
-          
-          if (typeof refreshLimits === 'function') {
+        await refreshLimits();
+        
+        if (typeof refreshLimits === 'function') {
             await refreshLimits();
           }
           
