@@ -1375,17 +1375,25 @@ notifyUsageUpdate();
   await saveWebsite(htmlCode);
   
   // ✅ FIX: Force immediate refresh of usage data
-await refreshUsage();
+  await refreshUsage();
+  
+  // ✅ FIX: Also refresh limits from useFeatureGate
+  if (typeof refreshLimits === 'function') {
+    await refreshLimits();
+  }
+  
+  // ✅ FIX: Notify other components to update
+  notifyUsageUpdate();
 
-// ✅ FIX: Update local state to trigger re-render
-setIsGenerating(false);
-setShowSuccess(false);
-setProgress(0);
-setProgressStage("");
+  // ✅ FIX: Update local state to trigger re-render
+  setIsGenerating(false);
+  setShowSuccess(false);
+  setProgress(0);
+  setProgressStage("");
   
   toast({
     title: "Success! 🎉",
-    description: `🎉 Your professional website is ready! Check your updated generation count above.`,
+    description: `🎉 Your professional website is ready! Usage count updated.`,
   });
 }, 2000);
       }
@@ -1696,13 +1704,23 @@ notifyUsageUpdate();
         setTimeout(async () => {
           setGeneratedCode(htmlCode);
           await saveWebsite(htmlCode);
+          
+          // ✅ FIX: Refresh usage after regenerate too
+          await refreshUsage();
+          
+          if (typeof refreshLimits === 'function') {
+            await refreshLimits();
+          }
+          
+          notifyUsageUpdate();
+          
           setIsGenerating(false);
           setShowSuccess(false);
           setProgress(0);
           setProgressStage("");
           toast({
             title: "Regenerated! 🎉",
-            description: `✨ Fresh version generated! ${data.usage?.remaining || 0} generations remaining this month.`,
+            description: `✨ Fresh version generated! Usage count updated.`,
           });
         }, 2000);
       }
