@@ -1075,10 +1075,9 @@ if (userId) {
     const newCount = shouldReset ? 1 : ((currentProfile?.generations_this_month || 0) + 1);
       
     console.log(`🔄 TRACKING: User ${userId} - Current: ${generationsThisMonth} → New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
-    // ✅ FIX: For free users, never update last_generation_reset
+    // ✅ FIX: Update only existing columns
     const updateData = {
-      generations_this_month: newCount,
-      last_generation_at: new Date().toISOString()
+      generations_this_month: newCount
     };
 
     // Only update reset date for paid tiers
@@ -1086,21 +1085,26 @@ if (userId) {
       updateData.last_generation_reset = currentMonth;
     }
 
+    console.log('📝 Attempting to update:', updateData);
+
     // Use await to ensure update completes
     const { data: updateResult, error: updateError } = await supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
-      .select();
+      .select('generations_this_month, last_generation_reset');
       
     if (updateError) {
       console.error('❌ CRITICAL: Usage update FAILED:', updateError);
+      console.error('❌ Error details:', JSON.stringify(updateError));
     } else {
-      console.log(`✅ Usage updated successfully: ${newCount}/${limit}`);
-      console.log(`📊 Update confirmed:`, updateResult);
+      console.log(`✅ Usage updated successfully!`);
+      console.log(`✅ New count in DB: ${updateResult[0]?.generations_this_month}`);
+      console.log(`✅ Full result:`, updateResult);
     }
   } catch (error) {
     console.error('❌ Exception during usage tracking:', error);
+    console.error('❌ Stack:', error.stack);
   }
 }
       const tierLimits = {
