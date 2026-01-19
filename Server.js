@@ -720,7 +720,41 @@ const tier = session.metadata?.tier;
             }
           });
           break;
-        }
+        }case 'invoice.payment_failed': {
+  const invoice = event.data.object;
+  const customerId = invoice.customer;
+  
+  console.log('❌ Payment failed for customer:', customerId);
+  
+  // Find user
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, user_tier, email')
+    .eq('stripe_customer_id', customerId)
+    .single();
+  
+  if (profile) {
+    // Downgrade to free
+    await supabase
+      .from('profiles')
+      .update({ 
+        user_tier: 'free',
+        stripe_customer_id: null 
+      })
+      .eq('id', profile.id);
+    
+    // Update subscription status
+    await supabase
+      .from('subscriptions')
+      .update({ status: 'payment_failed' })
+      .eq('stripe_customer_id', customerId);
+    
+    console.log(`⬇️ User ${profile.id} downgraded to free - payment failed`);
+    
+    // TODO: Send email notification to user
+  }
+  break;
+}
         case 'customer.subscription.updated': {
           const subscription = event.data.object;
           const customerId = subscription.customer;
@@ -1055,58 +1089,155 @@ try {
   console.log('🚨 [IMAGE] Removed remaining placeholders');
 }
 // This line below is problematic - it's not inside any block!
-      // ✅ CRITICAL: Force synchronous usage tracking with proper month reset
+      // ✅ BILLION-DOLLAR SAAS TIER LOGIC: Smart usage tracking with payment verification
 if (userId) {
   try {
     const currentMonth = new Date().toISOString().slice(0, 7);
 
-    // Fetch current profile data first
+    // Fetch current profile AND subscription status
     const { data: currentProfile } = await supabase
       .from('profiles')
-      .select('user_tier, generations_this_month, last_generation_reset')
+      .select('user_tier, generations_this_month, last_generation_reset, stripe_customer_id')
       .eq('id', userId)
       .single();
 
-    const userTier = currentProfile?.user_tier || 'free';
+    if (!currentProfile) {
+      console.error('❌ Profile not found for user:', userId);
+      throw new Error('Profile not found');
+    }
 
-    // ✅ FIX: Only reset for PAID tiers (NOT free)
-    const shouldReset = userTier !== 'free' && 
-                        currentProfile?.last_generation_reset !== currentMonth;
-    const newCount = shouldReset ? 1 : ((currentProfile?.generations_this_month || 0) + 1);
+    let userTier = currentProfile.user_tier || 'free';
+    const lastReset = currentProfile.last_generation_reset;
+    const isNewMonth = lastReset !== currentMonth;
+
+    console.log('🔍 TIER CHECK:', {
+      userId,
+      userTier,
+      currentMonth,
+      lastReset,
+      isNewMonth,
+      hasStripeCustomer: !!currentProfile.stripe_customer_id
+    });
+
+    // 🎯 CRITICAL: For paid users entering new month, verify active subscription
+    if (userTier !== 'free' && isNewMonth && currentProfile.stripe_customer_id) {
+      console.log('🔍 New month detected for paid user - verifying subscription...');
       
-    console.log(`🔄 TRACKING: User ${userId} - Current: ${generationsThisMonth} → New: ${newCount} (Month: ${currentMonth}, Reset: ${shouldReset})`);
-    // ✅ FIX: Update only existing columns
+      // Check if subscription is still active
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('status, stripe_subscription_id, current_period_end')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      if (subError || !subscription) {
+        // No active subscription - DOWNGRADE TO FREE
+        console.log('❌ No active subscription found - downgrading to free');
+        
+        await supabase
+          .from('profiles')
+          .update({ 
+            user_tier: 'free',
+            stripe_customer_id: null 
+          })
+          .eq('id', userId);
+        
+        userTier = 'free'; // Update local variable
+        
+        console.log('⬇️ User downgraded to free tier due to no active subscription');
+      } else {
+        // Verify subscription hasn't expired
+        const periodEnd = new Date(subscription.current_period_end);
+        const now = new Date();
+        
+        if (periodEnd < now) {
+          console.log('❌ Subscription expired - downgrading to free');
+          
+          await supabase
+            .from('profiles')
+            .update({ 
+              user_tier: 'free',
+              stripe_customer_id: null 
+            })
+            .eq('id', userId);
+          
+          await supabase
+            .from('subscriptions')
+            .update({ status: 'expired' })
+            .eq('stripe_subscription_id', subscription.stripe_subscription_id);
+          
+          userTier = 'free';
+          
+          console.log('⬇️ User downgraded to free tier - subscription expired');
+        } else {
+          console.log('✅ Active subscription verified - maintaining paid tier');
+        }
+      }
+    }
+
+    // 🎯 Calculate new count based on tier and month
+    let newCount;
+    let shouldUpdateResetDate = false;
+
+    if (userTier === 'free') {
+      // Free users: NEVER reset, just increment (lifetime limit)
+      newCount = (currentProfile.generations_this_month || 0) + 1;
+      console.log('📊 FREE user - no reset, incrementing:', newCount);
+    } else {
+      // Paid users: Reset on new month (already verified subscription above)
+      if (isNewMonth) {
+        newCount = 1;
+        shouldUpdateResetDate = true;
+        console.log('🔄 PAID user - new month, resetting to 1');
+      } else {
+        newCount = (currentProfile.generations_this_month || 0) + 1;
+        console.log('📊 PAID user - same month, incrementing:', newCount);
+      }
+    }
+
+    // Build update data
     const updateData = {
       generations_this_month: newCount
     };
 
-    // Only update reset date for paid tiers
-    if (userTier !== 'free') {
+    // Only update reset date for paid users in new month
+    if (shouldUpdateResetDate) {
       updateData.last_generation_reset = currentMonth;
     }
 
-    console.log('📝 Attempting to update:', updateData);
+    console.log('📝 Updating database:', updateData);
 
-    // Use await to ensure update completes
+    // Execute update
     const { data: updateResult, error: updateError } = await supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
-      .select('generations_this_month, last_generation_reset');
+      .select('generations_this_month, last_generation_reset, user_tier');
       
     if (updateError) {
-      console.error('❌ CRITICAL: Usage update FAILED:', updateError);
-      console.error('❌ Error details:', JSON.stringify(updateError));
-    } else {
-      console.log(`✅ Usage updated successfully!`);
-      console.log(`✅ New count in DB: ${updateResult[0]?.generations_this_month}`);
-      console.log(`✅ Full result:`, updateResult);
+      console.error('❌ Database update FAILED:', updateError);
+      throw new Error(`Update failed: ${updateError.message}`);
     }
+    
+    if (!updateResult || updateResult.length === 0) {
+      console.error('❌ Update returned empty result');
+      throw new Error('Update returned no results');
+    }
+
+    console.log('✅ TIER SYSTEM SUCCESS:', {
+      tier: updateResult[0].user_tier,
+      count: updateResult[0].generations_this_month,
+      reset: updateResult[0].last_generation_reset
+    });
+
   } catch (error) {
-    console.error('❌ Exception during usage tracking:', error);
+    console.error('❌ TIER SYSTEM ERROR:', error);
     console.error('❌ Stack:', error.stack);
   }
 }
+      
+
       const tierLimits = {
         free: 2,
         basic: 10,
