@@ -1134,166 +1134,135 @@ try {
   console.log('🚨 [IMAGE] Removed remaining placeholders');
 }
 // This line below is problematic - it's not inside any block!
-      // ✅ BILLION-DOLLAR SAAS: Complete tier system with ALL scenarios covered
+     // âœ… BILLION-DOLLAR SAAS: Update subscriptions table, trigger syncs to profiles
 if (userId) {
   try {
     const currentMonth = new Date().toISOString().slice(0, 7);
 
-    // Step 1: Get current profile (or create if missing)
-    let { data: currentProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_tier, generations_this_month, last_generation_reset, stripe_customer_id')
-      .eq('id', userId)
+    // Step 1: Get current subscription (subscriptions = source of truth)
+    let { data: currentSubscription, error: subError } = await supabase
+      .from('subscriptions')
+      .select('tier, websites_used_this_month, last_reset_date, status')
+      .eq('user_id', userId)
       .maybeSingle();
 
-    // 🆕 FIX #1: Auto-create profile if missing (safety net for existing users)
-    if (!currentProfile) {
-      console.log(`⚠️ No profile found for ${userId} - creating default profile`);
+    // ðŸ†• FIX #1: Auto-create subscription if missing (safety net)
+    if (!currentSubscription) {
+      console.log(`âš ï¸ No subscription found for ${userId} - creating default subscription`);
       
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
+      const { data: newSub, error: createError } = await supabase
+        .from('subscriptions')
         .insert({
-          id: userId,
-          user_tier: 'free',
-          generations_this_month: 0,
-          last_generation_reset: currentMonth
+          user_id: userId,
+          tier: 'free',
+          websites_used_this_month: 0,
+          websites_limit: 2,
+          last_reset_date: new Date().toISOString(),
+          status: 'active'
         })
         .select()
         .single();
 
       if (createError) {
-        console.error('❌ Failed to create profile:', createError);
-        throw new Error('Profile creation failed');
+        console.error('âŒ Failed to create subscription:', createError);
+        throw new Error('Subscription creation failed');
       }
 
-      currentProfile = newProfile;
-      console.log('✅ Default profile created');
+      currentSubscription = newSub;
+      console.log('âœ… Default subscription created');
     }
 
-    let userTier = currentProfile.user_tier || 'free';
-    const lastReset = currentProfile.last_generation_reset;
+    let userTier = currentSubscription.tier || 'free';
+    const lastReset = currentSubscription.last_reset_date 
+      ? new Date(currentSubscription.last_reset_date).toISOString().slice(0, 7)
+      : null;
     const isNewMonth = lastReset !== currentMonth;
 
-    console.log('🔍 TIER CHECK:', {
+    console.log('ðŸ" TIER CHECK:', {
       userId,
       userTier,
       currentMonth,
       lastReset,
       isNewMonth,
-      hasStripeId: !!currentProfile.stripe_customer_id
+      currentUsage: currentSubscription.websites_used_this_month
     });
 
-    // 🔥 FIX #2: CRITICAL - Verify active subscription for paid users
-    if (userTier !== 'free' && currentProfile.stripe_customer_id) {
-      console.log('🔍 Paid user detected - verifying subscription...');
+    // ðŸ"¥ FIX #2: Verify active subscription for paid users
+    if (userTier !== 'free' && currentSubscription.status !== 'active') {
+      console.log(`â¬‡ï¸ DOWNGRADING user ${userId}: subscription status is ${currentSubscription.status}`);
       
-      const { data: subscription, error: subError } = await supabase
+      await supabase
         .from('subscriptions')
-        .select('status, current_period_end, stripe_subscription_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      let shouldDowngrade = false;
-      let downgradeReason = '';
-
-      if (subError || !subscription) {
-        shouldDowngrade = true;
-        downgradeReason = 'No subscription record found';
-      } else if (subscription.status !== 'active') {
-        shouldDowngrade = true;
-        downgradeReason = `Subscription status is ${subscription.status}`;
-      } else {
-        const periodEnd = new Date(subscription.current_period_end);
-        const now = new Date();
-        
-        if (periodEnd < now) {
-          shouldDowngrade = true;
-          downgradeReason = `Subscription expired on ${periodEnd.toISOString()}`;
-          
-          // Mark subscription as expired
-          await supabase
-            .from('subscriptions')
-            .update({ status: 'expired' })
-            .eq('stripe_subscription_id', subscription.stripe_subscription_id);
-        }
-      }
-
-      // Execute downgrade if needed
-      if (shouldDowngrade) {
-        console.log(`⬇️ DOWNGRADING user ${userId}: ${downgradeReason}`);
-        
-        await supabase
-          .from('profiles')
-          .update({ 
-            user_tier: 'free',
-            stripe_customer_id: null 
-          })
-          .eq('id', userId);
-        
-        userTier = 'free';
-        console.log('✅ User downgraded to free tier');
-      } else {
-        console.log('✅ Active subscription verified');
-      }
+        .update({ 
+          tier: 'free',
+          websites_limit: 2,
+          status: 'inactive'
+        })
+        .eq('user_id', userId);
+      
+      userTier = 'free';
+      console.log('âœ… User downgraded to free tier');
     }
 
-    // 🎯 Calculate new generation count
+    // ðŸŽ¯ Calculate new usage count
     let newCount;
     let shouldUpdateResetDate = false;
 
     if (userTier === 'free') {
       // Free users: NEVER reset, just increment (lifetime limit)
-      newCount = (currentProfile.generations_this_month || 0) + 1;
-      console.log(`📊 FREE user - no reset, incrementing: ${newCount}`);
+      newCount = (currentSubscription.websites_used_this_month || 0) + 1;
+      console.log(`ðŸ"Š FREE user - no reset, incrementing: ${newCount}`);
     } else {
       // Paid users: Reset on new month
       if (isNewMonth) {
         newCount = 1;
         shouldUpdateResetDate = true;
-        console.log(`🔄 PAID user - new month, resetting to 1`);
+        console.log(`ðŸ"„ PAID user - new month, resetting to 1`);
       } else {
-        newCount = (currentProfile.generations_this_month || 0) + 1;
-        console.log(`📊 PAID user - same month, incrementing: ${newCount}`);
+        newCount = (currentSubscription.websites_used_this_month || 0) + 1;
+        console.log(`ðŸ"Š PAID user - same month, incrementing: ${newCount}`);
       }
     }
 
-    // Build update data
+    // âœ… Build update data for SUBSCRIPTIONS table
     const updateData = {
-      generations_this_month: newCount
+      websites_used_this_month: newCount
     };
 
     // Only update reset date for paid users in new month
     if (shouldUpdateResetDate) {
-      updateData.last_generation_reset = currentMonth;
+      updateData.last_reset_date = new Date().toISOString();
     }
 
-    console.log('📝 Updating database:', updateData);
+    console.log('ðŸ" Updating SUBSCRIPTIONS table:', updateData);
 
-    // Execute update with error handling
+    // âœ… Execute update on SUBSCRIPTIONS table (trigger will sync to profiles)
     const { data: updateResult, error: updateError } = await supabase
-      .from('profiles')
+      .from('subscriptions')  // ✅ UPDATE SUBSCRIPTIONS, NOT PROFILES
       .update(updateData)
-      .eq('id', userId)
-      .select('generations_this_month, last_generation_reset, user_tier');
+      .eq('user_id', userId)
+      .select('websites_used_this_month, last_reset_date, tier');
       
     if (updateError) {
-      console.error('❌ Database update FAILED:', updateError);
+      console.error('âŒ Database update FAILED:', updateError);
       throw new Error(`Update failed: ${updateError.message}`);
     }
     
     if (!updateResult || updateResult.length === 0) {
-      console.error('❌ Update returned empty result');
+      console.error('âŒ Update returned empty result');
       throw new Error('Update returned no results');
     }
 
-    console.log('✅ TIER SYSTEM SUCCESS:', {
-      tier: updateResult[0].user_tier,
-      count: updateResult[0].generations_this_month,
-      reset: updateResult[0].last_generation_reset
+    console.log('âœ… SUBSCRIPTIONS TABLE UPDATED:', {
+      tier: updateResult[0].tier,
+      usage: updateResult[0].websites_used_this_month,
+      reset: updateResult[0].last_reset_date
     });
+    
+    console.log('ðŸ"„ Trigger will auto-sync to profiles table');
 
   } catch (error) {
-    console.error('❌ TIER SYSTEM ERROR:', error.message);
+    console.error('âŒ TIER SYSTEM ERROR:', error.message);
     console.error('Stack:', error.stack);
     // Don't fail the request - just log the error
   }
