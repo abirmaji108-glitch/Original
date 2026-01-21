@@ -612,7 +612,7 @@ app.post(
                   stripe_subscription_id: subscriptionId,
                   stripe_customer_id: customerId,
                   status: 'active',
-                  current_period_end: new Date(session.expires_at * 1000).toISOString(),
+                  current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Default: 30 days from now
                   updated_at: new Date().toISOString()
                 }, {
                   onConflict: 'user_id'
