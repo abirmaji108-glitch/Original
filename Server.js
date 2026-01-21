@@ -829,6 +829,9 @@ app.post(
       logger.error(`${E.CROSS} Webhook handler error:`, error);
       res.status(500).send('Internal server error');
     }
+  }
+);
+
 // ✅ JSON body parsing for ALL other routes
 app.use(express.json({ limit: '10mb' }));
 // ============================================
