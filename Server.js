@@ -18,6 +18,13 @@ const E = {
   INBOX: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥', SIREN: 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â¨', REFRESH: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾', UP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€ ', LINK: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€',
   CARD: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€™Ã‚Â³', STOP: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬Ëœ', EMAIL: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â§', INFO: 'ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â', BLUE: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ'
 };
+// TIER LIMITS - Single source of truth
+const TIER_LIMITS = {
+  free: 2,
+  basic: 10,
+  pro: 25,
+  business: 100
+};
 import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getImages, getContextAwareImages, getRateLimitStatus } from './imageLibrary.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -469,62 +476,95 @@ app.post(
     // ✅ KEEP YOUR EXISTING WEBHOOK LOGIC BELOW THIS LINE
     // (checkout.session.completed, Supabase update, etc.)
     logger.log(`${E.CHECK} Verified webhook event:`, event.type);
+   // ============================================
+    // BILLION DOLLAR SAAS: WEBHOOK HANDLER
+    // This code syncs BOTH profiles and subscriptions tables
+    // ============================================
     try {
       switch (event.type) {
+        // ============================================
+        // INVOICE PAYMENT SUCCEEDED
+        // ============================================
         case 'invoice.payment_succeeded': {
-  const invoice = event.data.object;
+          const invoice = event.data.object;
+          const subscriptionId = invoice.subscription;
+          
+          if (!subscriptionId) {
+            logger.error('No subscription ID in invoice');
+            break;
+          }
 
-  const subscriptionId = invoice.subscription;
-  if (!subscriptionId) {
-    logger.error('No subscription ID in invoice');
-    break;
-  }
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const userId = subscription.metadata?.userId;
+          const tier = subscription.metadata?.tier;
 
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          if (!userId || !tier) {
+            logger.error('Missing userId or tier in subscription metadata', {
+              subscriptionId,
+              metadata: subscription.metadata,
+            });
+            break;
+          }
 
-  const userId = subscription.metadata?.userId;
-  const tier = subscription.metadata?.tier;
+          // ✅ SYNC BOTH TABLES
+          await Promise.all([
+            // Update profiles
+            supabase
+              .from('profiles')
+              .update({ 
+                user_tier: tier,
+                websites_limit: TIER_LIMITS[tier] || 2,
+                stripe_subscription_id: subscriptionId,
+                stripe_customer_id: subscription.customer,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', userId),
+            
+            // Update subscriptions
+            supabase
+              .from('subscriptions')
+              .upsert({
+                user_id: userId,
+                tier: tier,
+                websites_limit: TIER_LIMITS[tier] || 2,
+                status: 'active',
+                stripe_customer_id: subscription.customer,
+                stripe_subscription_id: subscriptionId,
+                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id'
+              })
+          ]);
 
-  if (!userId || !tier) {
-    logger.error('Missing userId or tier in subscription metadata', {
-      subscriptionId,
-      metadata: subscription.metadata,
-    });
-    break;
-  }
+          logger.log(`✅ User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
+          break;
+        }
 
-  await supabase
-    .from('profiles')
-    .update({ user_tier: tier })
-    .eq('id', userId);
-
-  logger.log(`✅ User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
-  break;
-}
-
-
-
-
-
-case 'checkout.session.completed': {
+        // ============================================
+        // CHECKOUT SESSION COMPLETED
+        // ============================================
+        case 'checkout.session.completed': {
           const session = event.data.object;
           const sessionId = session.id;
-          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Idempotency - check if this session was already processed
-          const { data: existingSession, error: checkError } = await supabase
+          
+          // Check if already processed (idempotency)
+          const { data: existingSession } = await supabase
             .from('processed_webhooks')
             .select('session_id')
             .eq('session_id', sessionId)
             .single();
+
           if (existingSession) {
-            logger.log(`ÃƒÂ¢Ã…Â¡ ÃƒÂ¯Ã‚Â¸Ã‚Â Webhook already processed for session ${sessionId} - ignoring duplicate`);
+            logger.log(`⚠️ Webhook already processed for session ${sessionId} - ignoring duplicate`);
             return res.json({ received: true, duplicate: true });
           }
-          // Continue with existing code...
+
           const userId = session.metadata?.userId;
-const subscriptionId = session.subscription;
-const customerId = session.customer;
-const tier = session.metadata?.tier;
-          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate customer ID exists
+          const subscriptionId = session.subscription;
+          const customerId = session.customer;
+          const tier = session.metadata?.tier;
+
           if (!customerId) {
             logger.error(`${E.CROSS} No customer ID in session`, {
               sessionId: session.id,
@@ -536,92 +576,64 @@ const tier = session.metadata?.tier;
               message: 'Stripe customer ID missing from session'
             });
           }
-          const priceId =
-    tier === 'basic'
-      ? process.env.STRIPE_BASIC_PRICE_ID
-      : tier === 'pro'
-      ? process.env.STRIPE_PRO_PRICE_ID
-      : tier === 'business'
-      ? process.env.STRIPE_BUSINESS_PRICE_ID
-      : null;
-  if (!userId || !tier || !priceId) {
-    logger.error(`${E.CROSS} Missing or invalid metadata in checkout session`, {
-      userId,
-      tier,
-      sessionId: session.id
-    });
-    return res.status(400).json({ error: 'Invalid session metadata' });
-  }
-          if (!userId) {
-            logger.error(`${E.CROSS} No userId in session metadata`);
-            return res.status(400).json({ error: 'No userId in session' });
-          }
-         
-          logger.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Price ID ${priceId} mapped to tier: ${tier}`);
-          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Use transaction-like approach with rollback capability
-          let profileUpdated = false;
-          let subscriptionUpdated = false;
-          try {
-            // Step 1: Update profile
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .update({
-                user_tier: tier,
-                stripe_customer_id: customerId,
-                warning_email_sent_at: null
-              })
-              .eq('id', userId);
-            if (profileError) {
-              logger.error(`${E.CROSS} Profile update failed:`, profileError);
-              throw new Error(`Profile update failed: ${profileError.message}`);
-            }
-            profileUpdated = true;
-            logger.log(`${E.CHECK} Profile updated successfully`);
-            // Step 2: Upsert subscription
-            const { error: subError } = await supabase
-              .from('subscriptions')
-              .upsert({
-                user_id: userId,
-                stripe_subscription_id: subscriptionId,
-                stripe_customer_id: customerId,
-                status: 'active',
-                current_period_end: new Date(session.expires_at * 1000).toISOString(),
-                updated_at: new Date().toISOString()
-              }, {
-                onConflict: 'stripe_subscription_id'
-              });
-            if (subError) {
-              logger.error(`${E.CROSS} Subscription upsert failed:`, subError);
-              throw new Error(`Subscription upsert failed: ${subError.message}`);
-            }
-            subscriptionUpdated = true;
-            logger.log(`${E.CHECK} Subscription created/updated successfully`);
-          } catch (error) {
-            logger.error(`${E.CROSS} CRITICAL: Database operation failed in webhook`, {
-              error: error.message,
-              profileUpdated,
-              subscriptionUpdated,
+
+          if (!userId || !tier) {
+            logger.error(`${E.CROSS} Missing metadata in checkout session`, {
               userId,
               tier,
               sessionId: session.id
             });
-            // If profile updated but subscription failed, try to rollback
-            if (profileUpdated && !subscriptionUpdated) {
-              logger.log(`${E.WARN} Attempting rollback of profile tier...`);
-              await supabase
+            return res.status(400).json({ error: 'Invalid session metadata' });
+          }
+
+          // ✅ SYNC BOTH TABLES ATOMICALLY
+          try {
+            await Promise.all([
+              // Update profiles
+              supabase
                 .from('profiles')
-                .update({ user_tier: 'free' })
-                .eq('id', userId)
-                .then(() => logger.log(`${E.CHECK} Rollback successful`))
-                .catch(err => logger.error(`${E.CROSS} Rollback failed:`, err));
-            }
+                .update({
+                  user_tier: tier,
+                  websites_limit: TIER_LIMITS[tier] || 2,
+                  stripe_customer_id: customerId,
+                  stripe_subscription_id: subscriptionId,
+                  warning_email_sent_at: null,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', userId),
+              
+              // Update subscriptions
+              supabase
+                .from('subscriptions')
+                .upsert({
+                  user_id: userId,
+                  tier: tier,
+                  websites_limit: TIER_LIMITS[tier] || 2,
+                  stripe_subscription_id: subscriptionId,
+                  stripe_customer_id: customerId,
+                  status: 'active',
+                  current_period_end: new Date(session.expires_at * 1000).toISOString(),
+                  updated_at: new Date().toISOString()
+                }, {
+                  onConflict: 'user_id'
+                })
+            ]);
+
+            logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
+          } catch (error) {
+            logger.error(`${E.CROSS} CRITICAL: Database sync failed`, {
+              error: error.message,
+              userId,
+              tier,
+              sessionId: session.id
+            });
             return res.status(500).json({
               error: 'Database operation failed',
               message: error.message
             });
           }
-          logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
-          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #11 & #12: Log successful upgrade
+
+          // Log security event
           await logSecurityEvent({
             user_id: userId,
             event_type: 'tier_upgraded',
@@ -629,13 +641,13 @@ const tier = session.metadata?.tier;
             actual_tier: tier,
             endpoint: '/api/stripe-webhook',
             request_details: {
-              priceId,
               customerId: session.customer,
               subscriptionId: session.subscription
             }
           });
-          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Mark webhook as processed (idempotency)
-          const { error: trackError } = await supabase
+
+          // Mark webhook as processed
+          await supabase
             .from('processed_webhooks')
             .insert({
               session_id: sessionId,
@@ -643,11 +655,8 @@ const tier = session.metadata?.tier;
               user_id: userId,
               processed_at: new Date().toISOString()
             });
-          if (trackError) {
-            logger.error(`${E.WARN} Failed to track webhook idempotency:`, trackError);
-            // Don't fail the request - tier already updated successfully
-          }
-          // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Send welcome email asynchronously (non-blocking)
+
+          // Send welcome email asynchronously
           supabase
             .from('profiles')
             .select('email, full_name')
@@ -665,17 +674,24 @@ const tier = session.metadata?.tier;
               }
             })
             .catch(err => logger.error(`${E.WARN} Failed to fetch user profile for email:`, err));
+
           break;
         }
+
+        // ============================================
+        // SUBSCRIPTION DELETED
+        // ============================================
         case 'customer.subscription.deleted': {
           const subscription = event.data.object;
           const customerId = subscription.customer;
+
           // Find user by stripe_customer_id
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id, user_tier')
             .eq('stripe_customer_id', customerId)
             .single();
+
           if (profileError || !profile) {
             logger.error(`${E.CROSS} Could not find user for canceled subscription`, {
               customerId,
@@ -683,30 +699,36 @@ const tier = session.metadata?.tier;
             });
             break;
           }
-          // Downgrade user to free tier
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              user_tier: 'free',
-              stripe_customer_id: null
-            })
-            .eq('id', profile.id);
-          if (updateError) {
-            logger.error(`${E.CROSS} Failed to downgrade user after subscription cancellation`, {
-              userId: profile.id,
-              error: updateError.message
-            });
-            break;
-          }
+
+          // ✅ DOWNGRADE BOTH TABLES
+          await Promise.all([
+            // Downgrade profile
+            supabase
+              .from('profiles')
+              .update({
+                user_tier: 'free',
+                websites_limit: 2,
+                stripe_customer_id: null,
+                stripe_subscription_id: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', profile.id),
+            
+            // Update subscription status
+            supabase
+              .from('subscriptions')
+              .update({
+                tier: 'free',
+                websites_limit: 2,
+                status: 'canceled',
+                stripe_subscription_id: null,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', profile.id)
+          ]);
+
           logger.log(`${E.CHECK} User ${profile.id} downgraded to free after subscription cancellation`);
-          // Update subscription status
-          await supabase
-            .from('subscriptions')
-            .update({
-              status: 'canceled',
-              updated_at: new Date().toISOString()
-            })
-            .eq('stripe_customer_id', customerId);
+
           // Log security event
           await logSecurityEvent({
             user_id: profile.id,
@@ -719,51 +741,70 @@ const tier = session.metadata?.tier;
               customerId
             }
           });
+
           break;
-        }case 'invoice.payment_failed': {
-  const invoice = event.data.object;
-  const customerId = invoice.customer;
-  
-  console.log('❌ Payment failed for customer:', customerId);
-  
-  // Find user
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, user_tier, email')
-    .eq('stripe_customer_id', customerId)
-    .single();
-  
-  if (profile) {
-    // Downgrade to free
-    await supabase
-      .from('profiles')
-      .update({ 
-        user_tier: 'free',
-        stripe_customer_id: null 
-      })
-      .eq('id', profile.id);
-    
-    // Update subscription status
-    await supabase
-      .from('subscriptions')
-      .update({ status: 'payment_failed' })
-      .eq('stripe_customer_id', customerId);
-    
-    console.log(`⬇️ User ${profile.id} downgraded to free - payment failed`);
-    
-    // TODO: Send email notification to user
-  }
-  break;
-}
+        }
+
+        // ============================================
+        // PAYMENT FAILED
+        // ============================================
+        case 'invoice.payment_failed': {
+          const invoice = event.data.object;
+          const customerId = invoice.customer;
+          
+          console.log('❌ Payment failed for customer:', customerId);
+          
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, user_tier, email')
+            .eq('stripe_customer_id', customerId)
+            .single();
+          
+          if (profile) {
+            // ✅ DOWNGRADE BOTH TABLES
+            await Promise.all([
+              // Downgrade profile
+              supabase
+                .from('profiles')
+                .update({ 
+                  user_tier: 'free',
+                  websites_limit: 2,
+                  stripe_customer_id: null,
+                  stripe_subscription_id: null,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', profile.id),
+              
+              // Update subscription
+              supabase
+                .from('subscriptions')
+                .update({ 
+                  tier: 'free',
+                  websites_limit: 2,
+                  status: 'payment_failed',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('stripe_customer_id', customerId)
+            ]);
+            
+            console.log(`⬇️ User ${profile.id} downgraded to free - payment failed`);
+          }
+          break;
+        }
+
+        // ============================================
+        // SUBSCRIPTION UPDATED
+        // ============================================
         case 'customer.subscription.updated': {
           const subscription = event.data.object;
           const customerId = subscription.customer;
-          // Find user
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('id')
             .eq('stripe_customer_id', customerId)
             .single();
+
           if (profile) {
             await supabase
               .from('subscriptions')
@@ -773,20 +814,21 @@ const tier = session.metadata?.tier;
                 updated_at: new Date().toISOString()
               })
               .eq('stripe_subscription_id', subscription.id);
+
             logger.log(`${E.CHECK} Subscription ${subscription.id} updated to status: ${subscription.status}`);
           }
           break;
         }
+
         default:
           logger.log(`${E.INFO} Unhandled event type: ${event.type}`);
       }
+
       res.json({ received: true });
     } catch (error) {
       logger.error(`${E.CROSS} Webhook handler error:`, error);
       res.status(500).send('Internal server error');
     }
-  }
-);
 // ✅ JSON body parsing for ALL other routes
 app.use(express.json({ limit: '10mb' }));
 // ============================================
