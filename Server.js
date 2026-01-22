@@ -542,141 +542,159 @@ app.post(
         }
 
         // ============================================
-        // CHECKOUT SESSION COMPLETED
-        // ============================================
-        case 'checkout.session.completed': {
-          const session = event.data.object;
-          const sessionId = session.id;
-          
-          // Check if already processed (idempotency)
-          const { data: existingSession } = await supabase
-            .from('processed_webhooks')
-            .select('session_id')
-            .eq('session_id', sessionId)
-            .single();
+// CHECKOUT SESSION COMPLETED - FIXED VERSION
+// Replace lines 509-644 in your Server.js
+// ============================================
+case 'checkout.session.completed': {
+  const session = event.data.object;
+  const sessionId = session.id;
+  
+  // Check if already processed (idempotency)
+  const { data: existingSession } = await supabase
+    .from('processed_webhooks')
+    .select('session_id')
+    .eq('session_id', sessionId)
+    .single();
 
-          if (existingSession) {
-            logger.log(`⚠️ Webhook already processed for session ${sessionId} - ignoring duplicate`);
-            return res.json({ received: true, duplicate: true });
-          }
+  if (existingSession) {
+    logger.log(`⚠️ Webhook already processed for session ${sessionId} - ignoring duplicate`);
+    return res.json({ received: true, duplicate: true });
+  }
 
-          const userId = session.metadata?.userId;
-          const subscriptionId = session.subscription;
-          const customerId = session.customer;
-          const tier = session.metadata?.tier;
+  const userId = session.metadata?.userId;
+  const subscriptionId = session.subscription;
+  const customerId = session.customer;
+  const tier = session.metadata?.tier;
 
-          if (!customerId) {
-            logger.error(`${E.CROSS} No customer ID in session`, {
-              sessionId: session.id,
-              userId,
-              timestamp: new Date().toISOString()
-            });
-            return res.status(400).json({
-              error: 'No customer ID',
-              message: 'Stripe customer ID missing from session'
-            });
-          }
+  if (!customerId) {
+    logger.error(`${E.CROSS} No customer ID in session`, {
+      sessionId: session.id,
+      userId,
+      timestamp: new Date().toISOString()
+    });
+    return res.status(400).json({
+      error: 'No customer ID',
+      message: 'Stripe customer ID missing from session'
+    });
+  }
 
-          if (!userId || !tier) {
-            logger.error(`${E.CROSS} Missing metadata in checkout session`, {
-              userId,
-              tier,
-              sessionId: session.id
-            });
-            return res.status(400).json({ error: 'Invalid session metadata' });
-          }
+  if (!userId || !tier) {
+    logger.error(`${E.CROSS} Missing metadata in checkout session`, {
+      userId,
+      tier,
+      sessionId: session.id
+    });
+    return res.status(400).json({ error: 'Invalid session metadata' });
+  }
 
-          // ✅ SYNC BOTH TABLES ATOMICALLY
-          try {
-            await Promise.all([
-              // Update profiles
-              supabase
-                .from('profiles')
-                .update({
-                  user_tier: tier,
-                  websites_limit: TIER_LIMITS[tier] || 2,
-                  stripe_customer_id: customerId,
-                  stripe_subscription_id: subscriptionId,
-                  warning_email_sent_at: null,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', userId),
-              
-              // Update subscriptions
-              supabase
-                .from('subscriptions')
-                .upsert({
-                  user_id: userId,
-                  tier: tier,
-                  websites_limit: TIER_LIMITS[tier] || 2,
-                  stripe_subscription_id: subscriptionId,
-                  stripe_customer_id: customerId,
-                  status: 'active',
-                  current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Default: 30 days from now
-                  updated_at: new Date().toISOString()
-                }, {
-                  onConflict: 'user_id'
-                })
-            ]);
+  // ✅ FIX: Get ACTUAL subscription period from Stripe
+  let periodEnd;
+  try {
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      logger.log(`✅ Retrieved subscription period: ${periodEnd}`);
+    } else {
+      // Fallback for one-time payments
+      periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      logger.warn(`⚠️ No subscription ID - using default 30-day period`);
+    }
+  } catch (stripeError) {
+    logger.error(`${E.CROSS} Failed to retrieve subscription from Stripe:`, stripeError);
+    periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  }
 
-            logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
-          } catch (error) {
-            logger.error(`${E.CROSS} CRITICAL: Database sync failed`, {
-              error: error.message,
-              userId,
-              tier,
-              sessionId: session.id
-            });
-            return res.status(500).json({
-              error: 'Database operation failed',
-              message: error.message
-            });
-          }
+  // ✅ SYNC BOTH TABLES ATOMICALLY
+  try {
+    await Promise.all([
+      // Update profiles
+      supabase
+        .from('profiles')
+        .update({
+          user_tier: tier,
+          websites_limit: TIER_LIMITS[tier] || 2,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+          warning_email_sent_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId),
+      
+      // Update subscriptions
+      supabase
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          tier: tier,
+          websites_limit: TIER_LIMITS[tier] || 2,
+          stripe_subscription_id: subscriptionId,
+          stripe_customer_id: customerId,
+          status: 'active',
+          current_period_end: periodEnd, // ✅ CORRECT PERIOD FROM STRIPE
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+    ]);
 
-          // Log security event
-          await logSecurityEvent({
-            user_id: userId,
-            event_type: 'tier_upgraded',
-            attempted_tier: tier,
-            actual_tier: tier,
-            endpoint: '/api/stripe-webhook',
-            request_details: {
-              customerId: session.customer,
-              subscriptionId: session.subscription
-            }
-          });
+    logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
+  } catch (error) {
+    logger.error(`${E.CROSS} CRITICAL: Database sync failed`, {
+      error: error.message,
+      userId,
+      tier,
+      sessionId: session.id
+    });
+    return res.status(500).json({
+      error: 'Database operation failed',
+      message: error.message
+    });
+  }
 
-          // Mark webhook as processed
-          await supabase
-            .from('processed_webhooks')
-            .insert({
-              session_id: sessionId,
-              event_type: 'checkout.session.completed',
-              user_id: userId,
-              processed_at: new Date().toISOString()
-            });
+  // Log security event
+  await logSecurityEvent({
+    user_id: userId,
+    event_type: 'tier_upgraded',
+    attempted_tier: tier,
+    actual_tier: tier,
+    endpoint: '/api/stripe-webhook',
+    request_details: {
+      customerId: session.customer,
+      subscriptionId: session.subscription
+    }
+  });
 
-          // Send welcome email asynchronously
-          supabase
-            .from('profiles')
-            .select('email, full_name')
-            .eq('id', userId)
-            .single()
-            .then(({ data: userProfile }) => {
-              if (userProfile?.email && isValidEmail(userProfile.email)) {
-                sendWelcomeEmail(
-                  userProfile.email,
-                  userProfile.full_name || 'there',
-                  tier
-                )
-                  .then(() => logger.log(`${E.EMAIL} Welcome email sent successfully`))
-                  .catch(err => logger.error(`${E.WARN} Email sending failed (non-critical):`, err));
-              }
-            })
-            .catch(err => logger.error(`${E.WARN} Failed to fetch user profile for email:`, err));
+  // Mark webhook as processed
+  await supabase
+    .from('processed_webhooks')
+    .insert({
+      session_id: sessionId,
+      event_type: 'checkout.session.completed',
+      user_id: userId,
+      processed_at: new Date().toISOString()
+    });
 
-          break;
-        }
+  // Send welcome email asynchronously
+  supabase
+    .from('profiles')
+    .select('email, full_name')
+    .eq('id', userId)
+    .single()
+    .then(({ data: userProfile }) => {
+      if (userProfile?.email && isValidEmail(userProfile.email)) {
+        sendWelcomeEmail(
+          userProfile.email,
+          userProfile.full_name || 'there',
+          tier
+        )
+          .then(() => logger.log(`${E.EMAIL} Welcome email sent successfully`))
+          .catch(err => logger.error(`${E.WARN} Email sending failed (non-critical):`, err));
+      }
+    })
+    .catch(err => logger.error(`${E.WARN} Failed to fetch user profile for email:`, err));
+
+  break;
+}
 
         // ============================================
         // SUBSCRIPTION DELETED
@@ -793,32 +811,38 @@ app.post(
         }
 
         // ============================================
-        // SUBSCRIPTION UPDATED
-        // ============================================
-        case 'customer.subscription.updated': {
-          const subscription = event.data.object;
-          const customerId = subscription.customer;
+// SUBSCRIPTION UPDATED - FIXED VERSION
+// Replace lines 750-774 in your Server.js
+// ============================================
+case 'customer.subscription.updated': {
+  const subscription = event.data.object;
+  const customerId = subscription.customer;
 
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('stripe_customer_id', customerId)
-            .single();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .single();
 
-          if (profile) {
-            await supabase
-              .from('subscriptions')
-              .update({
-                status: subscription.status,
-                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Default: 30 days from now
-                updated_at: new Date().toISOString()
-              })
-              .eq('stripe_subscription_id', subscription.id);
+  if (profile) {
+    // ✅ FIX: Get ACTUAL period from the subscription object (already included in event)
+    const periodEnd = subscription.current_period_end 
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-            logger.log(`${E.CHECK} Subscription ${subscription.id} updated to status: ${subscription.status}`);
-          }
-          break;
-        }
+    await supabase
+      .from('subscriptions')
+      .update({
+        status: subscription.status,
+        current_period_end: periodEnd, // ✅ CORRECT PERIOD FROM EVENT
+        updated_at: new Date().toISOString()
+      })
+      .eq('stripe_subscription_id', subscription.id);
+
+    logger.log(`${E.CHECK} Subscription ${subscription.id} updated to status: ${subscription.status}`);
+  }
+  break;
+}
 
         default:
           logger.log(`${E.INFO} Unhandled event type: ${event.type}`);
