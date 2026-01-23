@@ -509,16 +509,16 @@ app.post(
           // ✅ SYNC BOTH TABLES
           await Promise.all([
             // Update profiles
-            supabase
-              .from('profiles')
-              .update({ 
-                user_tier: tier,
-                websites_limit: TIER_LIMITS[tier] || 2,
-                stripe_subscription_id: subscriptionId,
-                stripe_customer_id: subscription.customer,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', userId),
+supabase
+  .from('profiles')
+  .update({
+    user_tier: tier,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
+    warning_email_sent_at: null,
+    updated_at: new Date().toISOString()
+  })
+  .eq('id', userId),
             
             // Update subscriptions
             supabase
