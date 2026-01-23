@@ -604,9 +604,9 @@ case 'checkout.session.completed': {
     periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   }
 
-  // ✅ SYNC BOTH TABLES ATOMICALLY
+// ✅ SYNC BOTH TABLES WITH ERROR CHECKING
   try {
-    await Promise.all([
+    const [profileResult, subscriptionResult] = await Promise.all([
       // Update profiles
       supabase
         .from('profiles')
@@ -630,20 +630,35 @@ case 'checkout.session.completed': {
           stripe_subscription_id: subscriptionId,
           stripe_customer_id: customerId,
           status: 'active',
-          current_period_end: periodEnd, // ✅ CORRECT PERIOD FROM STRIPE
+          current_period_end: periodEnd,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
         })
     ]);
 
+    // ✅ CHECK FOR ERRORS EXPLICITLY
+    if (profileResult.error) {
+      logger.error(`${E.CROSS} PROFILE UPDATE FAILED:`, profileResult.error);
+      throw new Error(`Profile update failed: ${profileResult.error.message}`);
+    }
+
+    if (subscriptionResult.error) {
+      logger.error(`${E.CROSS} SUBSCRIPTION UPDATE FAILED:`, subscriptionResult.error);
+      throw new Error(`Subscription update failed: ${subscriptionResult.error.message}`);
+    }
+
     logger.log(`${E.CHECK} Payment successful - User ${userId} upgraded to ${tier}`);
+    logger.log(`${E.CHECK} Profile update affected ${profileResult.data?.length || 0} rows`);
+    logger.log(`${E.CHECK} Subscription update affected ${subscriptionResult.data?.length || 0} rows`);
+
   } catch (error) {
     logger.error(`${E.CROSS} CRITICAL: Database sync failed`, {
       error: error.message,
       userId,
       tier,
-      sessionId: session.id
+      sessionId: session.id,
+      stack: error.stack
     });
     return res.status(500).json({
       error: 'Database operation failed',
