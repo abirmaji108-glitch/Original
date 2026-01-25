@@ -54,9 +54,9 @@ const FEATURE_CONTENT = {
     description: 'Create more websites every month without limits.',
     lockedMessage: 'You\'ve used all your free generations this month',
     benefits: [
-      'Basic: 5 generations/month',
-      'Pro: 12 generations/month',
-      'Business: 40 generations/month',
+      'Basic: 10 generations/month',  // ✅ FIXED
+      'Pro: 25 generations/month',    // ✅ FIXED
+      'Business: 100 generations/month',  // ✅ FIXED
       'Never run out of creativity'
     ]
   }
@@ -70,7 +70,7 @@ const TIER_PRICING = {
   },
   'basic': {
     upgrade: 'pro',
-    price: '$24',
+    price: '$22',  // ✅ FIXED
     period: 'month'
   },
   'pro': {
