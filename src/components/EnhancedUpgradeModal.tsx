@@ -23,41 +23,42 @@ export function EnhancedUpgradeModal({
       name: 'Basic',
       price: '$9',
       period: '/month',
-      generations: '5 generations/month',
+      generations: '10 generations/month',  // ✅ FIXED
       features: [
-        '5 website generations per month',
-        'All templates included',
-        'Basic customization',
-        'Export as HTML/CSS'
+        '10 generations & 10 downloads per month',  // ✅ FIXED - matches Pricing.tsx
+        'Landing pages (1-3 sections)',
+        'Remove watermark',
+        'HTML/CSS export',
+        '35 templates (20 basic + 15 premium)'
       ],
       highlight: currentTier === 'free'
     },
     {
       name: 'Pro',
-      price: '$19',
+      price: '$22',  // ✅ FIXED
       period: '/month',
-      generations: '12 generations/month',
+      generations: '25 generations/month',  // ✅ FIXED
       features: [
-        '12 website generations per month',
-        'All templates + Premium designs',
-        'Advanced customization',
-        'Priority generation speed',
-        'Remove watermark'
+        '25 generations & 20 downloads per month',  // ✅ FIXED - matches Pricing.tsx
+        'Multi-page websites (up to 8 pages)',
+        'Remove watermark',
+        'HTML/CSS/React export',
+        'All 50 templates'
       ],
       highlight: true,
       popular: true
     },
     {
       name: 'Business',
-      price: '$39',
+      price: '$49',  // ✅ FIXED
       period: '/month',
-      generations: '40 generations/month',
+      generations: '100 generations/month',  // ✅ FIXED
       features: [
-        '40 website generations per month',
-        'Everything in Pro',
-        'White-label options',
-        'Custom branding',
-        'Priority support'
+        '100 generations & 40 downloads per month',  // ✅ FIXED - matches Pricing.tsx
+        'Complex websites (up to 20 pages)',
+        'All export formats',
+        'All 50 templates',
+        'Priority generation queue'
       ],
       highlight: false
     }
