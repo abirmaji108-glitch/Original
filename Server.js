@@ -946,7 +946,8 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       .trim()
       .slice(0, 5000); // Hard limit
     let userTier = 'free';
-    let generationsThisMonth = 0;
+let generationsThisMonth = 0;
+let generatedCode = null; // ✅ ADD THIS
     
     // 🔒 SECURE AUTH WITH ATOMIC INCREMENT
     if (authHeader?.startsWith('Bearer ')) {
@@ -1050,7 +1051,7 @@ GENERATE HTML NOW:`,
         throw new Error(`API error ${response.status}: ${errorText}`);
       }
       const data = await response.json();
-      let generatedCode = data.content[0].text.trim()
+      generatedCode = data.content[0].text.trim() // ✅ REMOVE 'let'
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
