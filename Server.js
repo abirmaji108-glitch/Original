@@ -1284,7 +1284,29 @@ if (userId) {
   }
 }
  */     
+// ✅ SAVE WEBSITE TO DATABASE
+if (userId) {
+  try {
+    const { data: websiteData, error: insertError } = await supabase
+      .from('websites')
+      .insert({
+        user_id: userId,
+        title: sanitizedPrompt.substring(0, 100),
+        html_code: generatedCode,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
+    if (insertError) {
+      console.error('Failed to save website:', insertError);
+    } else {
+      console.log(`✅ Website saved: ${websiteData.id}`);
+    }
+  } catch (saveError) {
+    console.error('Website save error:', saveError);
+  }
+}
       const tierLimits = {
         free: 2,
         basic: 10,
