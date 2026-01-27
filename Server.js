@@ -1286,13 +1286,14 @@ if (userId) {
 }
  */     
 // ✅ SAVE WEBSITE TO DATABASE
-if (userId) {
+if (userId && generatedCode) {
   try {
     const { data: websiteData, error: insertError } = await supabase
       .from('websites')
       .insert({
         user_id: userId,
-        title: sanitizedPrompt.substring(0, 100),
+        name: sanitizedPrompt.substring(0, 100),  // ✅ CORRECT - using 'name' column
+        prompt: sanitizedPrompt,                   // ✅ ADDED - save full prompt
         html_code: generatedCode,
         created_at: new Date().toISOString()
       })
@@ -1300,12 +1301,19 @@ if (userId) {
       .single();
 
     if (insertError) {
-      console.error('Failed to save website:', insertError);
+      console.error('❌ Failed to save website:', insertError);
+      console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+      // Don't throw - let user still get their generated code
     } else {
-      console.log(`✅ Website saved: ${websiteData.id}`);
+      console.log(`✅ Website saved successfully`);
+      console.log(`   - ID: ${websiteData.id}`);
+      console.log(`   - User: ${userId}`);
+      console.log(`   - Name: ${websiteData.name}`);
     }
   } catch (saveError) {
-    console.error('Website save error:', saveError);
+    console.error('❌ Website save exception:', saveError.message);
+    console.error('Stack trace:', saveError.stack);
+    // Don't throw - let user still get their generated code
   }
 }
       const tierLimits = {
