@@ -1328,9 +1328,9 @@ if (userId && generatedCode) {
         success: true,
         htmlCode: generatedCode,
         usage: {
-          used: generationsThisMonth + 1,
+          used: generationsThisMonth,  // ✅ FIX: Don't add 1 - it's already incremented
           limit,
-          remaining: limit - (generationsThisMonth + 1)
+          remaining: limit - generationsThisMonth  // ✅ FIX: Use correct value
         },
         tier: userTier,
         generationTime: `${Date.now() - startTime}ms`
