@@ -217,31 +217,7 @@ const saveToHistory = async (userId: string | undefined, prompt: string, code: s
 };
 
 // ✅ CORRECTED #1: Remove userTier === 'free' condition
-const deductGenerationCredit = async (userId: string | undefined) => {
-  if (!userId) return;
 
-  try {
-    // Get current credits
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('generations_used, generations_limit')
-      .eq('id', userId)
-      .single();
-
-    if (profile) {
-      // Increment usage
-      await supabase
-        .from('profiles')
-        .update({ 
-          generations_used: (profile.generations_used || 0) + 1,
-          last_generation_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-    }
-  } catch (error) {
-    console.error('Error deducting generation credit:', error);
-  }
-};
 
 const Index = () => {
   const navigate = useNavigate();
@@ -1329,8 +1305,7 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
 
       htmlCode = sanitizedCode;
 
-      // ✅ CORRECTED #1: Call deductGenerationCredit with only userId
-      await deductGenerationCredit(userId);
+      // ✅ Server already incremented counter atomically - no client-side increment needed
 
       // ✅ ADD #14: Save generation to history
       await saveToHistory(userId, prompt, htmlCode);
@@ -1660,8 +1635,7 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
 
       htmlCode = sanitizedCode;
 
-      // ✅ CORRECTED #1: Call deductGenerationCredit with only userId
-      await deductGenerationCredit(userId);
+      // ✅ Server already incremented counter atomically - no client-side increment needed
 
       // ✅ ADD #14: Save generation to history
       await saveToHistory(userId, lastPrompt, htmlCode);
