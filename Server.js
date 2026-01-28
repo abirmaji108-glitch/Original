@@ -969,22 +969,22 @@ let generatedCode = null; // ✅ ADD THIS
             userTier = 'free';
             generationsThisMonth = 0;
           } else if (result && result.length > 0) {
-            const txResult = result[0];
-            userTier = txResult.tier;
-            generationsThisMonth = txResult.new_count;
-            const limit = txResult.tier_limit;
-            
-            // 🔒 CHECK IF OVER LIMIT
-            if (generationsThisMonth > limit) {
-              return res.status(429).json({
-                success: false,
-                error: 'Monthly limit reached',
-                limit_reached: true,
-                used: generationsThisMonth - 1,
-                limit
-              });
-            }
-          }
+  const txResult = result[0];
+  userTier = txResult.tier;
+  generationsThisMonth = txResult.new_count;
+  const limit = txResult.tier_limit;
+  
+  // 🔒 CHECK IF LIMIT WAS REACHED (SQL function already checked this)
+  if (txResult.limit_reached === true) {
+    return res.status(429).json({
+      success: false,
+      error: 'Monthly limit reached',
+      limit_reached: true,
+      used: generationsThisMonth,  // ✅ Changed: Don't subtract 1 (counter didn't increment)
+      limit
+    });
+  }
+}
         }
       } catch (authError) {
         console.error('Auth error:', authError);
