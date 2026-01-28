@@ -1308,7 +1308,7 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
       // ✅ Server already incremented counter atomically - no client-side increment needed
 
       // ✅ ADD #14: Save generation to history
-      await saveToHistory(userId, prompt, htmlCode);
+      
 
       // Save to history WITH userId
 const newWebsite = {
@@ -1638,7 +1638,7 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
       // ✅ Server already incremented counter atomically - no client-side increment needed
 
       // ✅ ADD #14: Save generation to history
-      await saveToHistory(userId, lastPrompt, htmlCode);
+     
 
       const newWebsite = {
   id: Date.now().toString(),
