@@ -824,16 +824,15 @@ Generated on: ${new Date().toLocaleDateString()}
       
       const name = input.split('\n')[0].slice(0, 50) || 'Untitled Website';
       
-      const { data, error } = await supabase
-        .from('websites')
-        .insert({
-          user_id: userId,
-          name: name,
-          prompt: input,
-          html_code: htmlCode,
-        })
-        .select()
-        .single();
+      // ✅ Website is already saved by Server.js - no need to save again!
+// Just use the htmlCode directly for localStorage
+const data = {
+  id: crypto.randomUUID(), // Generate ID for localStorage only
+  name,
+  prompt: input,
+  html_code: htmlCode
+};
+const error = null; // No error since we're not inserting
         
       if (error) {
         console.error('❌ FULL SUPABASE ERROR:', {
