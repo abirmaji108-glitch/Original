@@ -932,63 +932,92 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   try {
     const { prompt } = req.body;
     const authHeader = req.headers.authorization;
-    // Quick validation
+    
+    // 🔒 STEP 1: CHECK AUTHENTICATION FIRST (BEFORE ANYTHING ELSE)
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+        message: 'Please provide a valid authentication token'
+      });
+    }
+    
+    // 🔒 STEP 2: VERIFY TOKEN VALIDITY
+    let token;
+    try {
+      token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      
+      if (error || !user) {
+        console.error('Token verification failed:', error);
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid authentication token',
+          message: 'Your session has expired or token is invalid'
+        });
+      }
+      
+      userId = user.id;
+      console.log(`✅ Authenticated user: ${userId}`);
+      
+    } catch (authError) {
+      console.error('Auth error:', authError);
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication failed',
+        message: 'Could not verify your identity'
+      });
+    }
+    
+    // ✅ STEP 3: NOW validate prompt (AFTER auth passes)
     if (!prompt || prompt.length < 50) {
       return res.status(400).json({
         success: false,
         error: 'Prompt must be at least 50 characters'
       });
     }
-    // Sanitize prompt quickly
+    
+    // ✅ STEP 4: Sanitize prompt
     const sanitizedPrompt = prompt
       .replace(/IGNORE\s+.*/gi, '')
       .replace(/SYSTEM\s*:/gi, '')
       .trim()
       .slice(0, 5000); // Hard limit
-    let userTier = 'free';
-let generationsThisMonth = 0;
-let generatedCode = null; // ✅ ADD THIS
     
-    // 🔒 SECURE AUTH WITH ATOMIC INCREMENT
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user }, error } = await supabase.auth.getUser(token);
- 
-        if (!error && user) {
-          userId = user.id;
-   
-          // 🔒 ATOMIC INCREMENT (prevents race condition)
-          const { data: result, error: txError } = await supabase.rpc(
-            'safe_increment_generation',
-            { p_user_id: userId }
-          );
-          
-          if (txError) {
-            console.error('Transaction error:', txError);
-            userTier = 'free';
-            generationsThisMonth = 0;
-          } else if (result && result.length > 0) {
-  const txResult = result[0];
-  userTier = txResult.tier;
-  generationsThisMonth = txResult.new_count;
-  const limit = txResult.tier_limit;
-  
-  // 🔒 CHECK IF LIMIT WAS REACHED (SQL function already checked this)
-  if (txResult.limit_reached === true) {
-    return res.status(429).json({
-      success: false,
-      error: 'Monthly limit reached',
-      limit_reached: true,
-      used: generationsThisMonth,  // ✅ Changed: Don't subtract 1 (counter didn't increment)
-      limit
-    });
-  }
-}
-        }
-      } catch (authError) {
-        console.error('Auth error:', authError);
-        // Continue as free user - don't delete this comment
+    let userTier = 'free';
+    let generationsThisMonth = 0;
+    let generatedCode = null;
+    
+    // 🔒 STEP 5: ATOMIC INCREMENT (your existing perfect code - UNCHANGED)
+    const { data: result, error: txError } = await supabase.rpc(
+      'safe_increment_generation',
+      { p_user_id: userId }
+    );
+    
+    if (txError) {
+      console.error('Transaction error:', txError);
+      return res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: 'Could not process your request'
+      });
+    }
+    
+    if (result && result.length > 0) {
+      const txResult = result[0];
+      userTier = txResult.tier;
+      generationsThisMonth = txResult.new_count;
+      const limit = txResult.tier_limit;
+      
+      // 🔒 CHECK IF LIMIT WAS REACHED (SQL function already checked this)
+      if (txResult.limit_reached === true) {
+        return res.status(429).json({
+          success: false,
+          error: 'Monthly limit reached',
+          limit_reached: true,
+          used: generationsThisMonth,
+          limit
+        });
       }
     }
 
