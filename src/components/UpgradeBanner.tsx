@@ -45,13 +45,13 @@ export function UpgradeBanner({
   if (percentUsed < 50 && !isCritical) return null;
 
   return (
-    <div className={`sticky top-16 z-40 backdrop-blur-md border-b ${
-      isCritical 
-        ? 'bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500' 
-        : isWarning
-        ? 'bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400'
-        : 'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500'
-    } text-white shadow-lg`}>
+  <div className={`sticky top-16 z-40 backdrop-blur-md border-b animate-in fade-in slide-in-from-top-4 duration-500 ${
+    isCritical 
+      ? 'bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500' 
+      : isWarning
+      ? 'bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400'
+      : 'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500'
+  } text-white shadow-lg`}>
       <div className="container mx-auto px-4 py-3">
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left: Message */}
