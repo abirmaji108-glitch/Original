@@ -2230,11 +2230,13 @@ ${new Date().toLocaleDateString()}
 
       {/* Upgrade Banner - Shows AFTER website is displayed */}
 {showUsageBanner && (
-  <UpgradeBanner 
-    generationsUsed={generationsToday} 
-    generationsLimit={tierLimits.monthlyGenerations}
-    tier={tier}
-  />
+  <div className="animate-in fade-in duration-500 ease-in-out">
+    <UpgradeBanner 
+      generationsUsed={generationsToday}
+      generationsLimit={tierLimits.monthlyGenerations}
+      tier={tier}
+    />
+  </div>
 )}
 
       {/* Main Content */}
