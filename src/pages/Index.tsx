@@ -277,7 +277,7 @@ const Index = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [monthlyDownloads, setMonthlyDownloads] = useState(0);
-  
+  const [showUsageBanner, setShowUsageBanner] = useState(false);
   // ✅ ADD #13: Rate limiting state
   const [lastGenerationTime, setLastGenerationTime] = useState<number>(0);
   const GENERATION_COOLDOWN = 5000; // 5 seconds
@@ -1095,9 +1095,10 @@ const sanitizedPrompt = sanitizeInput(actualInput);
     generateRequestId.current = requestId;
 
     setIsGenerating(true);
-    setProgress(0);
-    setGeneratedCode(null);
-    setShowSuccess(false);
+setProgress(0);
+setGeneratedCode(null);
+setShowSuccess(false);
+setShowUsageBanner(false); // ✅ ADD THIS
     
     // Create abort controller
     abortControllerRef.current = new AbortController();
@@ -1329,51 +1330,37 @@ const newWebsite = {
       setProgress(100);
       setProgressStage("✅ Complete! Your website is ready.");
 
-      // ✅ CORRECTED: SUCCESS HANDLER - Refresh usage data from server
-      if (data.success) {
-        // Refresh usage data from server
-        await refreshLimits();
-        
-        // ✅ FIX: Also refresh limits from useFeatureGate
-await refreshLimits();
-
-// Notify other tabs of usage update
-if (typeof refreshLimits === 'function') {
-  await refreshLimits();
-}
-
-notifyUsageUpdate();
-
-        
-        // Show success state for 2 seconds
-        setShowSuccess(true);
-        setTimeout(async () => {
-  setGeneratedCode(htmlCode);
-  await saveWebsite(htmlCode);
+      // ✅ FIXED: SUCCESS HANDLER - Show banner AFTER website displays
+if (data.success) {
+  // Show success state for 2 seconds
+  setShowSuccess(true);
   
- // ✅ FIX: Force immediate refresh of usage data
-        await refreshLimits();
-  
-  // ✅ FIX: Also refresh limits from useFeatureGate
-  if (typeof refreshLimits === 'function') {
+  setTimeout(async () => {
+    // 1. Display the website FIRST
+    setGeneratedCode(htmlCode);
+    await saveWebsite(htmlCode);
+    
+    // 2. Update state
+    setIsGenerating(false);
+    setShowSuccess(false);
+    setProgress(0);
+    setProgressStage("");
+    
+    // 3. THEN refresh usage data
     await refreshLimits();
-  }
-  
-  // ✅ FIX: Notify other components to update
-  notifyUsageUpdate();
-
-  // ✅ FIX: Update local state to trigger re-render
-  setIsGenerating(false);
-  setShowSuccess(false);
-  setProgress(0);
-  setProgressStage("");
-  
-  toast({
-    title: "Success! 🎉",
-    description: `🎉 Your professional website is ready! Usage count updated.`,
-  });
-}, 2000);
-      }
+    notifyUsageUpdate();
+    
+    // 4. FINALLY show the usage banner (after website is visible)
+    setTimeout(() => {
+      setShowUsageBanner(true);
+    }, 500); // Small delay to ensure website renders first
+    
+    toast({
+      title: "Success! 🎉",
+      description: `🎉 Your professional website is ready!`,
+    });
+  }, 2000);
+}
     } catch (error) {
       // Cleanup intervals
       if (progressIntervalRef.current) {
@@ -1472,9 +1459,10 @@ notifyUsageUpdate();
     generateRequestId.current = requestId;
 
     setIsGenerating(true);
-    setProgress(0);
-    setGeneratedCode(null);
-    setShowSuccess(false);
+setProgress(0);
+setGeneratedCode(null);
+setShowSuccess(false);
+setShowUsageBanner(false); // ✅ ADD THIS
     
     abortControllerRef.current = new AbortController();
     
@@ -2240,12 +2228,14 @@ ${new Date().toLocaleDateString()}
         )}
       </nav>
 
-      {/* Upgrade Banner - Shows when limit reached */}
-      <UpgradeBanner 
-        generationsUsed={generationsToday} 
-        generationsLimit={tierLimits.monthlyGenerations}
-        tier={tier}
-      />
+      {/* Upgrade Banner - Shows AFTER website is displayed */}
+{showUsageBanner && (
+  <UpgradeBanner 
+    generationsUsed={generationsToday} 
+    generationsLimit={tierLimits.monthlyGenerations}
+    tier={tier}
+  />
+)}
 
       {/* Main Content */}
       <main className="relative pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
