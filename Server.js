@@ -839,21 +839,25 @@ case 'customer.subscription.updated': {
     .single();
 
   if (profile) {
-    // ✅ FIX: Get ACTUAL period from the subscription object (already included in event)
     const periodEnd = subscription.current_period_end 
       ? new Date(subscription.current_period_end * 1000).toISOString()
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
+    // ✅ FIXED: Added cancel_at_period_end + enhanced logging
     await supabase
       .from('subscriptions')
       .update({
         status: subscription.status,
-        current_period_end: periodEnd, // ✅ CORRECT PERIOD FROM EVENT
+        cancel_at_period_end: subscription.cancel_at_period_end, // 🔴 ADD THIS LINE!
+        current_period_end: periodEnd,
         updated_at: new Date().toISOString()
       })
       .eq('stripe_subscription_id', subscription.id);
 
-    logger.log(`${E.CHECK} Subscription ${subscription.id} updated to status: ${subscription.status}`);
+    logger.log(`${E.CHECK} Subscription ${subscription.id} updated:`);
+    logger.log(`  - Status: ${subscription.status}`);
+    logger.log(`  - Cancel at period end: ${subscription.cancel_at_period_end}`);
+    logger.log(`  - Period end: ${periodEnd}`);
   }
   break;
 }
