@@ -45,8 +45,8 @@ export const TIER_LIMITS = {
   },
   pro: {
     maxPromptLength: 2000,
-    monthlyGenerations: 50,
-    generationsPerMonth: 50,
+    monthlyGenerations: 25,
+generationsPerMonth: 25,
     // ✅ FIX: All templates (basic + premium = 50 total)
     templatesAccess: [
       // Basic templates
@@ -89,7 +89,7 @@ export const TIER_FEATURES = {
   'Custom styling options',
  ],
  pro: [
-  '50 generations per month',
+  '25 generations per month',
   'All templates including ultra-modern',
   '2,000 character prompts',
   'Priority support',
