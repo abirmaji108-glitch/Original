@@ -118,7 +118,7 @@ export function useFeatureGate() {
             prioritySupport: false
           },
           'pro': {
-            monthlyGenerations: 50,
+            monthlyGenerations: 25,
             maxProjects: 20,
             customDomain: true,
             prioritySupport: true
