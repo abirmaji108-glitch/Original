@@ -1499,10 +1499,8 @@ app.get('/api/profile', async (req, res) => {
 };
     const limit = tierLimits[profile.user_tier] || 2;
     const downloadLimit = downloadLimits[profile.user_tier] || 0;
-    const generationsThisMonth = profile.last_generation_reset === currentMonth
-      ? (profile.generations_this_month || 0)
-      : 0;
-    const downloadsThisMonth = profile.last_download_reset === currentMonth
+   const generationsThisMonth = profile.generations_this_month || 0;
+const downloadsThisMonth = profile.downloads_this_month || 0;
       ? (profile.downloads_this_month || 0)
       : 0;
     logger.log(`${E.CHECK} [${req.id}] Profile fetched successfully for ${user.id}`);
