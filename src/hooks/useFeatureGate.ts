@@ -150,19 +150,9 @@ export function useFeatureGate() {
           tierLimits: limits
         };
 
-        // ✅ FIX #3: Only update if state actually changed
-        setState(prevState => {
-          if (
-            prevState.userTier === newState.userTier &&
-            prevState.generationsThisMonth === newState.generationsThisMonth &&
-            prevState.limit === newState.limit &&
-            prevState.canGenerate === newState.canGenerate
-          ) {
-            return prevState; // No change, don't trigger re-render
-          }
-          console.log('✅ useFeatureGate: State updated', newState);
-          return newState;
-        });
+        // Always update state to ensure UI reflects current data
+        setState(newState);
+        console.log('✅ useFeatureGate: State updated', newState);
       }
     } catch (error) {
       console.error('❌ Feature gate error:', error);
