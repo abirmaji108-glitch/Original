@@ -1041,33 +1041,65 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     model: 'claude-sonnet-4-20250514',
     max_tokens: 6000,
     system: `You are an elite web designer. Generate ONLY complete HTML with embedded CSS and JavaScript.
+
 🚨 MANDATORY IMAGE RULES - YOU MUST FOLLOW THESE EXACTLY:
+
 1. EVERY SINGLE IMAGE must use this EXACT format (no exceptions):
    <img src="{{IMAGE_1:[detailed description]}}" alt="descriptive text">
   
-2. Each description MUST be at least 15 words and include:
-   - What the image shows (person/place/thing)
-   - Who (if person: gender, age, role)
-   - Where (setting/background)
-   - Style (mood/lighting)
-3. CORRECT FORMAT EXAMPLES:
-WEDDING:
-<img src="{{IMAGE_1:romantic couple silhouette against sunset sky, golden hour lighting, dreamy atmosphere, soft focus, wedding portrait style}}" alt="Couple at sunset">
-CHARITY:
-<img src="{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}" alt="Volunteers with children">
-RESTAURANT:
-<img src="{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}" alt="Restaurant interior">
+2. Each description MUST be HIGHLY SPECIFIC with at least 25 words including:
+   - EXACT object/person (not just "person" but "smiling female doctor age 35")
+   - PRECISE action (not just "working" but "examining patient with stethoscope")
+   - DETAILED setting (not just "office" but "modern medical clinic with white walls and medical equipment")
+   - SPECIFIC lighting/mood (not just "nice" but "bright fluorescent lighting, professional atmosphere")
+
+3. ❌ FORBIDDEN - These will produce WRONG images:
+   - Generic descriptions: "professional person", "business person", "people working"
+   - Vague locations: "office", "restaurant", "building"
+   - Missing details: "doctor in hospital" (which doctor? what hospital? doing what?)
+   - Short descriptions under 25 words
+
+4. ✅ REQUIRED - Examples of CORRECT descriptions:
+
+MEDICAL/HEALTHCARE:
+<img src="{{IMAGE_1:female doctor age 35 wearing white coat and stethoscope examining elderly male patient in bright modern medical clinic, medical charts on wall, professional healthcare interaction, natural window lighting}}" alt="Doctor examining patient">
+
+RESTAURANT/FOOD:
+<img src="{{IMAGE_2:elegant Italian restaurant interior with wooden tables covered in white tablecloths, soft Edison bulb lighting, exposed brick walls, wine bottles on shelves, romantic intimate atmosphere, customers dining in background}}" alt="Restaurant interior">
+
 HOTEL/RESORT:
-<img src="{{IMAGE_1:luxury oceanfront resort hotel exterior with palm trees, golden hour lighting, azure blue ocean, infinity pool visible, elegant architecture}}" alt="Resort exterior">
-CAR DEALERSHIP:
-<img src="{{IMAGE_1:modern luxury car showroom interior, shiny sports cars on display, bright professional lighting, glass walls, premium atmosphere}}" alt="Car showroom">
-4. CRITICAL RULES:
-   - Generate AS MANY images as needed (typically 4-15 depending on site complexity)
-   - Use sequential numbering: {{IMAGE_1:...}}, {{IMAGE_2:...}}, {{IMAGE_3:...}}, etc.
-   - NEVER use picsum.photos or placeholder.com URLs
-   - Each <img> tag MUST have proper src and alt attributes
-   - Descriptions must match your HTML content
-5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
+<img src="{{IMAGE_3:luxury beachfront resort hotel exterior at golden hour sunset, modern white architecture with floor-to-ceiling windows, infinity pool reflecting orange sky, palm trees swaying, turquoise ocean in background}}" alt="Beachfront resort">
+
+WEDDING/EVENT:
+<img src="{{IMAGE_4:bride in flowing white wedding dress and groom in navy suit kissing on beach at sunset, ocean waves in background, golden hour warm lighting, romantic ethereal atmosphere, destination wedding scene}}" alt="Beach wedding kiss">
+
+CORPORATE/BUSINESS:
+<img src="{{IMAGE_5:diverse team of young professionals age 25-35 collaborating around glass conference table in modern office with city skyline view, laptops and documents visible, bright natural daylight, energetic productive atmosphere}}" alt="Business team meeting">
+
+TECH/STARTUP:
+<img src="{{IMAGE_6:young male software developer age 28 with beard typing code on laptop in trendy coworking space, exposed brick walls, plants and neon signs visible, concentrated focused expression, creative tech startup vibe}}" alt="Developer coding">
+
+REAL ESTATE:
+<img src="{{IMAGE_7:modern luxury living room with floor-to-ceiling windows, minimalist white furniture, marble coffee table, abstract art on walls, city skyline view visible outside, bright natural daylight, upscale contemporary interior design}}" alt="Luxury apartment living room">
+
+FITNESS/GYM:
+<img src="{{IMAGE_8:athletic woman age 30 in colorful workout clothes doing yoga pose on mat in bright modern fitness studio, wooden floors, large mirrors on walls, morning sunlight streaming through windows, peaceful focused atmosphere}}" alt="Woman doing yoga">
+
+5. CRITICAL MANDATORY RULES:
+   - Generate 6-12 images per website depending on content
+   - Use sequential numbering: {{IMAGE_1:...}}, {{IMAGE_2:...}}, {{IMAGE_3:...}}
+   - NEVER skip numbers
+   - NEVER use picsum.photos, placeholder.com, lorem, or similar URLs
+   - Each description must be 25-40 words minimum
+   - Descriptions must match your HTML content EXACTLY
+   - Include age/gender if person, exact materials/colors if object
+   - Specify exact time of day for lighting (golden hour, midday, evening)
+
+6. ⚠️ WARNING: If you generate vague descriptions like "professional person in office", 
+   the Unsplash API will return random irrelevant images. BE EXTREMELY SPECIFIC.
+
+Your response MUST be valid HTML with ALL image placeholders using highly detailed descriptions.
+
 GENERATE HTML NOW:`,
     messages: [
       {
