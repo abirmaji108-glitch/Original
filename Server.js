@@ -11,6 +11,7 @@ import rateLimit from 'express-rate-limit';
 import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
 // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIXED: Import default export from logger
 import logger from './utils/logger.js';
+import vercelDeploy from './services/vercelDeploy.js'
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
@@ -2252,6 +2253,161 @@ for (let i = 6; i >= 0; i--) {
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch analytics'
+    });
+  }
+});
+// ============================================
+// PUBLISH LANDING PAGE TO VERCEL
+// ============================================
+app.post('/api/publish/:websiteId', authLimiter, requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const userId = req.user.id;
+    
+    logger.log(`🚀 [${req.id}] Publishing website ${websiteId} for user ${userId}`);
+
+    // 1. Get the website from database
+    const { data: website, error: fetchError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !website) {
+      logger.warn(`⚠️ [${req.id}] Website not found: ${websiteId}`);
+      return res.status(404).json({ 
+        success: false,
+        error: 'Website not found' 
+      });
+    }
+
+    // 2. Update status to 'deploying'
+    await supabase
+      .from('websites')
+      .update({ deployment_status: 'deploying' })
+      .eq('id', websiteId);
+
+    // 3. Create unique project name (lowercase, no spaces)
+    const projectName = `sento-${userId.substring(0, 8)}-${websiteId.substring(0, 8)}`;
+
+    // 4. Deploy to Vercel
+    logger.log(`📤 [${req.id}] Deploying to Vercel with project name: ${projectName}`);
+    const { url, deploymentId } = await vercelDeploy.deployPage(
+      website.generated_html,
+      projectName
+    );
+
+    // 5. Update database with deployment info
+    const { error: updateError } = await supabase
+      .from('websites')
+      .update({
+        deployment_url: url,
+        deployment_id: deploymentId,
+        deployment_status: 'live'
+      })
+      .eq('id', websiteId);
+
+    if (updateError) {
+      logger.error(`❌ [${req.id}] Failed to update website with deployment info:`, updateError);
+      throw updateError;
+    }
+
+    logger.log(`✅ [${req.id}] Successfully published to ${url}`);
+
+    // 6. Return success
+    return res.json({
+      success: true,
+      url: url,
+      deploymentId: deploymentId,
+      message: 'Page published successfully!'
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Publish error:`, error);
+    
+    // Update status to failed
+    try {
+      await supabase
+        .from('websites')
+        .update({ deployment_status: 'failed' })
+        .eq('id', req.params.websiteId);
+    } catch (updateErr) {
+      logger.error(`❌ [${req.id}] Failed to update status to failed:`, updateErr);
+    }
+
+    return res.status(500).json({ 
+      success: false,
+      error: 'Failed to publish page',
+      details: error.message 
+    });
+  }
+});
+
+// ============================================
+// UNPUBLISH LANDING PAGE (DELETE FROM VERCEL)
+// ============================================
+app.delete('/api/publish/:websiteId', authLimiter, requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const userId = req.user.id;
+
+    logger.log(`🗑️ [${req.id}] Unpublishing website ${websiteId} for user ${userId}`);
+
+    // Get website
+    const { data: website, error: fetchError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !website) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Website not found' 
+      });
+    }
+
+    if (!website.deployment_id) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'No published page found' 
+      });
+    }
+
+    // Delete from Vercel
+    logger.log(`🗑️ [${req.id}] Deleting deployment ${website.deployment_id} from Vercel`);
+    await vercelDeploy.deleteDeployment(website.deployment_id);
+
+    // Update database
+    const { error: updateError } = await supabase
+      .from('websites')
+      .update({
+        deployment_url: null,
+        deployment_id: null,
+        deployment_status: 'draft'
+      })
+      .eq('id', websiteId);
+
+    if (updateError) {
+      logger.error(`❌ [${req.id}] Failed to update website after unpublish:`, updateError);
+      throw updateError;
+    }
+
+    logger.log(`✅ [${req.id}] Successfully unpublished`);
+
+    return res.json({ 
+      success: true, 
+      message: 'Page unpublished successfully' 
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Unpublish error:`, error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Failed to unpublish page',
+      details: error.message
     });
   }
 });
