@@ -2259,7 +2259,7 @@ for (let i = 6; i >= 0; i--) {
 // ============================================
 // PUBLISH LANDING PAGE TO VERCEL
 // ============================================
-app.post('/api/publish/:websiteId', authLimiter, requireAuth, async (req, res) => {
+app.post('/api/publish/:websiteId', requireAuth, async (req, res) => {
   try {
     const { websiteId } = req.params;
     const userId = req.user.id;
@@ -2347,7 +2347,7 @@ app.post('/api/publish/:websiteId', authLimiter, requireAuth, async (req, res) =
 // ============================================
 // UNPUBLISH LANDING PAGE (DELETE FROM VERCEL)
 // ============================================
-app.delete('/api/publish/:websiteId', authLimiter, requireAuth, async (req, res) => {
+app.delete('/api/publish/:websiteId', requireAuth, async (req, res) => {
   try {
     const { websiteId } = req.params;
     const userId = req.user.id;
