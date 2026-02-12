@@ -1396,13 +1396,34 @@ if (userId && generatedCode) {
       };
       const limit = tierLimits[userTier] || 2;
       console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
+      // ✅ Get the website ID from the saved data
+      let websiteId = null;
+      if (userId && generatedCode) {
+        try {
+          const { data: websiteData, error: selectError } = await supabase
+            .from('websites')
+            .select('id')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (!selectError && websiteData) {
+            websiteId = websiteData.id;
+          }
+        } catch (err) {
+          console.error('Failed to fetch website ID:', err);
+        }
+      }
+
       return res.json({
         success: true,
         htmlCode: generatedCode,
+        websiteId: websiteId,  // ✅ NEW - Return the UUID from Supabase
         usage: {
-          used: generationsThisMonth,  // ✅ FIX: Don't add 1 - it's already incremented
+          used: generationsThisMonth,
           limit,
-          remaining: limit - generationsThisMonth  // ✅ FIX: Use correct value
+          remaining: limit - generationsThisMonth
         },
         tier: userTier,
         generationTime: `${Date.now() - startTime}ms`
@@ -1567,6 +1588,59 @@ app.get('/api/profile', async (req, res) => {
       success: false,
       error: 'Internal server error',
       message: error.message
+    });
+  }
+});
+// ============================================
+// GET USER'S WEBSITES FROM SUPABASE
+// ============================================
+app.get('/api/websites', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Fetch all websites for this user from Supabase
+    const { data: websites, error } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Failed to fetch websites:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load websites'
+      });
+    }
+    
+    // Transform to frontend format
+    const formatted = websites.map(site => ({
+      id: site.id,  // UUID from Supabase
+      name: site.name || `Website ${site.id.substring(0, 8)}`,
+      prompt: site.prompt || '',
+      html: site.html_code || '',
+      timestamp: new Date(site.created_at).getTime(),
+      tags: site.tags || [],
+      isFavorite: site.is_favorite || false,
+      notes: site.notes || '',
+      thumbnail: site.thumbnail || '',
+      userId: site.user_id,
+      // Include deployment info
+      deployment_url: site.deployment_url,
+      deployment_id: site.deployment_id,
+      deployment_status: site.deployment_status || 'draft'
+    }));
+    
+    return res.json({
+      success: true,
+      websites: formatted
+    });
+    
+  } catch (error) {
+    console.error('Get websites error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
     });
   }
 });
