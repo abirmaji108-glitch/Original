@@ -254,6 +254,44 @@ if (stripeKey) {
 } else {
   logger.warn(`${E.WARN} STRIPE_SECRET_KEY not configured - payment features disabled`);
 }
+// ============================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================
+const requireAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'No authorization token provided' 
+      });
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Invalid or expired token' 
+      });
+    }
+
+    // Attach user to request
+    req.user = user;
+    next();
+  } catch (error) {
+    logger.error('Auth middleware error:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Authentication failed' 
+    });
+  }
+};
+
 // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate all Stripe price IDs are configured at startup
 if (stripe) {
   const requiredPriceIds = [
