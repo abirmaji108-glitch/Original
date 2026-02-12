@@ -317,23 +317,33 @@ const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
     feature: 'download'
   });
 
-  // Load history from localStorage on mount - FILTER BY USER
+  // ✅ Load websites from Supabase (with localStorage fallback)
 useEffect(() => {
-  const loadUserHistory = () => {
-    const saved = localStorage.getItem('websiteHistory');
-    if (saved && userId) {
-      const allHistory = JSON.parse(saved);
-      // Filter to only show current user's websites
-      const userHistory = allHistory.filter((site: any) => site.userId === userId);
-      setWebsiteHistory(userHistory);
-      calculateAnalytics();
+  const loadWebsites = async () => {
+    if (!userId) return;
+    
+    // Try Supabase first
+    try {
+      await fetchWebsites();
+    } catch (error) {
+      console.error('Supabase load failed, trying localStorage:', error);
+      
+      // Fallback to localStorage if Supabase fails
+      const saved = localStorage.getItem('websiteHistory');
+      if (saved) {
+        const allHistory = JSON.parse(saved);
+        const userHistory = allHistory.filter((site: any) => site.userId === userId);
+        setWebsiteHistory(userHistory);
+      }
     }
+    
+    calculateAnalytics();
   };
   
   if (userId) {
-    loadUserHistory();
+    loadWebsites();
   }
-}, [userId]); // Trigger when userId changes
+}, [userId]);
   useEffect(() => {
     calculateAnalytics();
   }, [websiteHistory]);
@@ -1313,7 +1323,7 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
 
       // Save to history WITH userId
 const newWebsite = {
-  id: Date.now().toString(),
+  id: data.websiteId || Date.now().toString(),  // ✅ Use backend's UUID
   name: `Website ${websiteHistory.length + 1}`,
   prompt: prompt,
   html: htmlCode,
@@ -1322,7 +1332,11 @@ const newWebsite = {
   isFavorite: false,
   notes: "",
   thumbnail: "",
-  userId: userId || user?.id // Add current user's ID
+  userId: userId || user?.id,
+  // Include deployment fields
+  deployment_url: null,
+  deployment_id: null,
+  deployment_status: 'draft'
 };
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
@@ -1629,16 +1643,20 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
      
 
       const newWebsite = {
-  id: Date.now().toString(),
+  id: data.websiteId || Date.now().toString(),  // ✅ Use backend's UUID
   name: `Website ${websiteHistory.length + 1}`,
-  prompt: lastPrompt,
+  prompt: prompt,
   html: htmlCode,
   timestamp: Date.now(),
   tags: [],
   isFavorite: false,
   notes: "",
   thumbnail: "",
-  userId: userId || user?.id // Add current user's ID
+  userId: userId || user?.id,
+  // Include deployment fields
+  deployment_url: null,
+  deployment_id: null,
+  deployment_status: 'draft'
 };
       // Merge with ALL history (including other users), then save
 const allHistory = JSON.parse(localStorage.getItem('websiteHistory') || '[]');
@@ -1821,6 +1839,36 @@ ${new Date().toLocaleDateString()}
       description: "Code copied to clipboard! Paste it into any code editor or StackBlitz.",
     });
   };
+  // ✅ Fetch websites from Supabase
+const fetchWebsites = async () => {
+  if (!userId) return;
+  
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://original-lbxv.onrender.com'}/api/websites`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch websites');
+      return;
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.websites) {
+      setWebsiteHistory(data.websites);
+      // Also save to localStorage as cache
+      localStorage.setItem('websiteHistory', JSON.stringify(data.websites));
+    }
+  } catch (error) {
+    console.error('Fetch websites error:', error);
+  }
+};
   // Publish website to Vercel
   const handlePublish = async (websiteId: string) => {
     setPublishingId(websiteId);
@@ -1852,8 +1900,8 @@ ${new Date().toLocaleDateString()}
           description: `Your page is live at: ${data.url}`,
         });
         
-        // Refresh websites list - you'll need to add a fetchWebsites function
-        window.location.reload(); // Temporary - refresh page to show updated status
+// Refresh websites list from Supabase
+      await fetchWebsites();
       } else {
         toast({
           title: "Error",
@@ -1904,7 +1952,7 @@ ${new Date().toLocaleDateString()}
           description: "Page unpublished successfully",
         });
         
-        window.location.reload(); // Refresh to show updated status
+        await fetchWebsites();
       } else {
         toast({
           title: "Error",
