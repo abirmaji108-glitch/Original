@@ -1323,9 +1323,9 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
 
       // Save to history WITH userId
 const newWebsite = {
-  id: data.websiteId || Date.now().toString(),  // ✅ Use backend's UUID
+  id: data.websiteId || Date.now().toString(),
   name: `Website ${websiteHistory.length + 1}`,
-  prompt: prompt,
+  prompt: input,  // ✅ FIX - use the original user input
   html: htmlCode,
   timestamp: Date.now(),
   tags: [],
@@ -1333,10 +1333,10 @@ const newWebsite = {
   notes: "",
   thumbnail: "",
   userId: userId || user?.id,
-  // Include deployment fields
   deployment_url: null,
   deployment_id: null,
   deployment_status: 'draft'
+};
 };
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
@@ -1643,9 +1643,9 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
      
 
       const newWebsite = {
-  id: data.websiteId || Date.now().toString(),  // ✅ Use backend's UUID
+  id: data.websiteId || Date.now().toString(),
   name: `Website ${websiteHistory.length + 1}`,
-  prompt: prompt,
+  prompt: lastPrompt,  // ✅ FIX - use lastPrompt for regeneration
   html: htmlCode,
   timestamp: Date.now(),
   tags: [],
@@ -1653,7 +1653,6 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
   notes: "",
   thumbnail: "",
   userId: userId || user?.id,
-  // Include deployment fields
   deployment_url: null,
   deployment_id: null,
   deployment_status: 'draft'
