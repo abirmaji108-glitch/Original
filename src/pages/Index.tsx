@@ -281,7 +281,8 @@ const Index = () => {
   // ✅ ADD #13: Rate limiting state
   const [lastGenerationTime, setLastGenerationTime] = useState<number>(0);
   const GENERATION_COOLDOWN = 5000; // 5 seconds
-  
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
   // Refs for cleanup
   const abortControllerRef = useRef<AbortController | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -1820,6 +1821,108 @@ ${new Date().toLocaleDateString()}
       description: "Code copied to clipboard! Paste it into any code editor or StackBlitz.",
     });
   };
+  // Publish website to Vercel
+  const handlePublish = async (websiteId: string) => {
+    setPublishingId(websiteId);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to publish",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/publish/${websiteId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success! 🚀",
+          description: `Your page is live at: ${data.url}`,
+        });
+        
+        // Refresh websites list - you'll need to add a fetchWebsites function
+        window.location.reload(); // Temporary - refresh page to show updated status
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || 'Failed to publish page',
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Publish error:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to publish page',
+        variant: "destructive"
+      });
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  // Unpublish website
+  const handleUnpublish = async (websiteId: string) => {
+    setUnpublishingId(websiteId);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to unpublish",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/publish/${websiteId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Page unpublished successfully",
+        });
+        
+        window.location.reload(); // Refresh to show updated status
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || 'Failed to unpublish page',
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Unpublish error:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to unpublish page',
+        variant: "destructive"
+      });
+    } finally {
+      setUnpublishingId(null);
+    }
+  };
 
   const handleNewWebsite = () => {
     setGeneratedCode(null);
@@ -2903,7 +3006,7 @@ ${new Date().toLocaleDateString()}
                           {new Date(site.timestamp).toLocaleTimeString()}
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                     <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => {
                             setGeneratedCode(site.html || "");
@@ -2927,6 +3030,50 @@ ${new Date().toLocaleDateString()}
                         >
                           ✏️ Edit
                         </button>
+                        
+                        {/* 🚀 PUBLISH BUTTON - NEW */}
+                        {(site as any).deployment_status === 'live' ? (
+                          <div className="flex-1 flex flex-col gap-1">
+                            <a 
+                              href={(site as any).deployment_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`px-2 py-1 rounded text-xs font-semibold ${
+                                isDarkMode ? 'text-green-300 hover:text-green-200' : 'text-green-600 hover:text-green-700'
+                              }`}
+                            >
+                              ✅ Live: {((site as any).deployment_url || '').replace('https://', '').substring(0, 20)}...
+                            </a>
+                            <button
+                              onClick={() => handleUnpublish(site.id)}
+                              disabled={unpublishingId === site.id}
+                              className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                                isDarkMode
+                                  ? 'bg-red-500/20 text-red-300 hover:bg-red-500/40'
+                                  : 'bg-red-100 text-red-600 hover:bg-red-200'
+                              }`}
+                            >
+                              {unpublishingId === site.id ? '⏳ Unpublishing...' : '❌ Unpublish'}
+                            </button>
+                          </div>
+                        ) : (site as any).deployment_status === 'deploying' ? (
+                          <button disabled className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold bg-gray-500/20 text-gray-400">
+                            ⏳ Publishing...
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePublish(site.id)}
+                            disabled={publishingId === site.id}
+                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                              isDarkMode
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                                : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:shadow-md'
+                            }`}
+                          >
+                            {publishingId === site.id ? '⏳ Publishing...' : '🚀 Publish Live'}
+                          </button>
+                        )}
+                        
                         <button
                           onClick={() => handleDelete(site.id)}
                           className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-110 hover:rotate-6 ${
