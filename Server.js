@@ -1545,6 +1545,18 @@ if (userId && generatedCode) {
                 generatedCode += formHandlerScript;
                 console.log('✅ Form handler script appended with websiteId:', websiteId);
               }
+              
+              // Update database with script-injected HTML
+              const { error: updateError } = await supabase
+                .from('websites')
+                .update({ html_code: generatedCode })
+                .eq('id', websiteId);
+              
+              if (updateError) {
+                console.error('❌ Failed to update HTML with script:', updateError);
+              } else {
+                console.log('✅ Database updated with script-injected HTML');
+              }
             }
         } catch (err) {
           console.error('Failed to inject form handler:', err);
