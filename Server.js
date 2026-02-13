@@ -1115,37 +1115,34 @@ CAR DEALERSHIP:
    - method="POST"
    - data-sento-form="true" (this is REQUIRED - marks form for processing)
    - class="sento-contact-form" (for styling/identification)
-2. Form inputs MUST have proper "name" attributes:
-   - Required names: name="name", name="email", name="phone", name="message"
-   - Use semantic names that describe the data (e.g., name="company", name="subject")
-3. EXAMPLE FORM STRUCTURE (copy this pattern):
+
+2. ❌ CRITICAL: DO NOT GENERATE ANY JAVASCRIPT FOR FORM SUBMISSION
+   - NO form.addEventListener('submit', ...)
+   - NO JavaScript that handles form submission
+   - NO AJAX/fetch calls for forms
+   - NO onsubmit handlers
+   - Our backend automatically injects the form handler
+   - You can add other scripts (animations, parallax, smooth scroll) but NOT form handlers
+
+3. Form inputs MUST have proper attributes:
+   - ALL inputs need: id, name, and required attributes
+   - Example: <input type="text" id="name" name="name" required />
+   - Use semantic names: name, email, phone, message, subject, company, etc.
+
+4. CORRECT FORM STRUCTURE:
    <form method="POST" data-sento-form="true" class="sento-contact-form space-y-4">
-     <div>
-       <label for="name" class="block text-sm font-medium mb-2">Name</label>
-       <input type="text" id="name" name="name" required 
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
-              placeholder="Your Name">
-     </div>
-     <div>
-       <label for="email" class="block text-sm font-medium mb-2">Email</label>
-       <input type="email" id="email" name="email" required 
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
-              placeholder="your@email.com">
-     </div>
-     <div>
-       <label for="message" class="block text-sm font-medium mb-2">Message</label>
-       <textarea id="message" name="message" required rows="4"
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
-                 placeholder="Your message..."></textarea>
-     </div>
-     <button type="submit" 
-             class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105">
-       Send Message
-     </button>
+     <input type="text" id="name" name="name" required placeholder="Your Name" />
+     <input type="email" id="email" name="email" required placeholder="your@email.com" />
+     <textarea id="message" name="message" required placeholder="Your message..."></textarea>
+     <button type="submit">Send Message</button>
      <div id="form-message" class="hidden mt-4"></div>
    </form>
-4. IMPORTANT: Forms will be automatically connected to backend - DO NOT add action attribute or JavaScript handlers.
-5. Include a <div id="form-message"> after the submit button for success/error messages.
+
+5. IMPORTANT RESTRICTIONS:
+   ✅ YOU CAN ADD: CSS animations, parallax effects, smooth scrolling, intersection observers
+   ❌ YOU CANNOT ADD: Any JavaScript that handles form.addEventListener('submit'), fetch calls for forms, or form data processing
+
+6. Include a <div id="form-message" class="hidden"></div> after submit button for messages.
 
 GENERATE HTML NOW:`,
     messages: [
