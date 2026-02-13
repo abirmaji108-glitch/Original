@@ -12,6 +12,8 @@ import { sendWelcomeEmail, sendLimitWarningEmail } from './src/lib/email.js';
 // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIXED: Import default export from logger
 import logger from './utils/logger.js';
 import vercelDeploy from './services/vercelDeploy.js'
+import emailService from './services/emailService.js';
+import formHandler from './services/formHandler.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
@@ -2520,6 +2522,241 @@ app.delete('/api/publish/:websiteId', requireAuth, async (req, res) => {
       success: false,
       error: 'Failed to unpublish page',
       details: error.message
+    });
+  }
+});
+// ============================================
+// FORM HANDLING ENDPOINTS
+// ============================================
+
+// Submit form (public endpoint - anyone can submit)
+app.post('/api/forms/submit', async (req, res) => {
+  try {
+    const formData = req.body;
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    logger.log(`📝 [${req.id}] Form submission received for website: ${formData.website_id}`);
+
+    // Validate form data
+    const validation = formHandler.validateFormData(formData);
+    if (!validation.valid) {
+      logger.warn(`⚠️ [${req.id}] Invalid form data: ${validation.error}`);
+      return res.status(400).json({
+        success: false,
+        error: validation.error
+      });
+    }
+
+    // Sanitize form data
+    const sanitizedData = formHandler.sanitizeFormData(formData);
+
+    // Save submission to database
+    const { submission, website } = await formHandler.saveSubmission({
+      formData: sanitizedData,
+      ipAddress,
+      userAgent,
+      supabase
+    });
+
+    // Get owner email
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', website.user_id)
+      .single();
+
+    if (ownerProfile?.email) {
+      // Send notification email (non-blocking)
+      formHandler.notifyOwner({
+        ownerEmail: ownerProfile.email,
+        pageName: website.prompt || 'Your Landing Page',
+        formData: sanitizedData,
+        submittedAt: submission.created_at
+      }).catch(err => {
+        logger.error(`❌ [${req.id}] Failed to send notification:`, err);
+      });
+    }
+
+    logger.log(`✅ [${req.id}] Form submission saved: ${submission.id}`);
+
+    // Return success (with redirect URL if needed)
+    return res.json({
+      success: true,
+      message: 'Form submitted successfully!',
+      submissionId: submission.id
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Form submission error:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to process form submission',
+      details: error.message
+    });
+  }
+});
+
+// Get all form submissions for a website (authenticated)
+app.get('/api/forms/:websiteId', requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const userId = req.user.id;
+
+    logger.log(`📊 [${req.id}] Fetching form submissions for website: ${websiteId}`);
+
+    // Verify ownership
+    const { data: website, error: websiteError } = await supabase
+      .from('websites')
+      .select('user_id')
+      .eq('id', websiteId)
+      .single();
+
+    if (websiteError || !website) {
+      return res.status(404).json({
+        success: false,
+        error: 'Website not found'
+      });
+    }
+
+    if (website.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to view these submissions'
+      });
+    }
+
+    // Get all submissions
+    const { data: submissions, error: fetchError } = await supabase
+      .from('form_submissions')
+      .select('*')
+      .eq('website_id', websiteId)
+      .order('created_at', { ascending: false });
+
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    logger.log(`✅ [${req.id}] Found ${submissions?.length || 0} submissions`);
+
+    return res.json({
+      success: true,
+      submissions: submissions || [],
+      count: submissions?.length || 0
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Get submissions error:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch submissions'
+    });
+  }
+});
+
+// Mark submission as read/unread (authenticated)
+app.patch('/api/forms/:submissionId/read', requireAuth, async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { isRead } = req.body;
+    const userId = req.user.id;
+
+    // Verify ownership
+    const { data: submission, error: fetchError } = await supabase
+      .from('form_submissions')
+      .select('user_id')
+      .eq('id', submissionId)
+      .single();
+
+    if (fetchError || !submission) {
+      return res.status(404).json({
+        success: false,
+        error: 'Submission not found'
+      });
+    }
+
+    if (submission.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized'
+      });
+    }
+
+    // Update read status
+    const { error: updateError } = await supabase
+      .from('form_submissions')
+      .update({ is_read: isRead })
+      .eq('id', submissionId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    logger.log(`✅ [${req.id}] Submission ${submissionId} marked as ${isRead ? 'read' : 'unread'}`);
+
+    return res.json({
+      success: true,
+      message: `Marked as ${isRead ? 'read' : 'unread'}`
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Update read status error:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to update submission'
+    });
+  }
+});
+
+// Delete submission (authenticated)
+app.delete('/api/forms/:submissionId', requireAuth, async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const userId = req.user.id;
+
+    // Verify ownership
+    const { data: submission, error: fetchError } = await supabase
+      .from('form_submissions')
+      .select('user_id')
+      .eq('id', submissionId)
+      .single();
+
+    if (fetchError || !submission) {
+      return res.status(404).json({
+        success: false,
+        error: 'Submission not found'
+      });
+    }
+
+    if (submission.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized'
+      });
+    }
+
+    // Delete submission
+    const { error: deleteError } = await supabase
+      .from('form_submissions')
+      .delete()
+      .eq('id', submissionId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    logger.log(`✅ [${req.id}] Submission ${submissionId} deleted`);
+
+    return res.json({
+      success: true,
+      message: 'Submission deleted'
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Delete submission error:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete submission'
     });
   }
 });
