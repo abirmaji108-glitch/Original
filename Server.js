@@ -1032,6 +1032,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     let userTier = 'free';
     let generationsThisMonth = 0;
     let generatedCode = null;
+    let websiteId = null;  // 👈 ADD THIS LINE
     
     // 🔒 STEP 5: ATOMIC INCREMENT (your existing perfect code - UNCHANGED)
     const { data: result, error: txError } = await supabase.rpc(
@@ -1442,6 +1443,7 @@ if (userId && generatedCode) {
       console.log(`   - ID: ${websiteData.id}`);
       console.log(`   - User: ${userId}`);
       console.log(`   - Name: ${websiteData.name}`);
+      websiteId = websiteData.id;  // 👈 NEW LINE
     }
   } catch (saveError) {
     console.error('❌ Website save exception:', saveError.message);
@@ -1457,21 +1459,9 @@ if (userId && generatedCode) {
       };
       const limit = tierLimits[userTier] || 2;
       console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
-      // ✅ Get the website ID from the saved data
-      let websiteId = null;
-      if (userId && generatedCode) {
+      // ✅ websiteId will be set when website is saved
+      if (userId && websiteId && generatedCode) {
         try {
-          const { data: websiteData, error: selectError } = await supabase
-            .from('websites')
-            .select('id')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-          
-          if (!selectError && websiteData) {
-            websiteId = websiteData.id;
-            
             // 📧 INJECT FORM HANDLER with websiteId
             if (generatedCode.includes('data-sento-form="true"')) {
               const formHandlerScript = `
