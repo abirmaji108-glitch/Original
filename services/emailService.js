@@ -72,11 +72,11 @@ class EmailService {
       `;
 
       const { data, error } = await this.resend.emails.send({
-        from: 'Sento AI <onboarding@resend.dev>', // Resend's default domain (free tier)
-        to: [toEmail],
-        subject: `🔔 New lead from "${pageName}"`,
-        html: emailHtml,
-      });
+  from: 'Sento AI <onboarding@resend.dev>', // Resend's default domain (free tier)
+  to: [toEmail],
+  subject: `🔔 New lead from "${pageName.substring(0, 50)}${pageName.length > 50 ? '...' : ''}"`,
+  html: emailHtml,
+});
 
       if (error) {
         console.error('❌ Failed to send email:', error);
