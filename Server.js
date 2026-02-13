@@ -1111,38 +1111,57 @@ CAR DEALERSHIP:
 5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
 
 📧 FORM HANDLING RULES (CRITICAL - if website includes contact/signup/newsletter/inquiry forms):
-1. ALL forms MUST have these attributes:
+
+⚠️ ⚠️ ⚠️ CRITICAL WARNING ⚠️ ⚠️ ⚠️
+DO NOT GENERATE ANY JAVASCRIPT THAT HANDLES FORMS!
+NO <script> TAGS THAT CONTAIN:
+  - form.addEventListener
+  - querySelector('form')
+  - getElementsByTagName('form')
+  - FormData
+  - fetch('/submit') or any form submission logic
+  - preventDefault() on forms
+  
+THE BACKEND WILL AUTOMATICALLY INJECT FORM HANDLING!
+ONLY GENERATE THE HTML <form> TAG - NO JAVASCRIPT!
+⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️ ⚠️
+
+1. ALL forms MUST have ONLY these attributes:
    - method="POST"
-   - data-sento-form="true" (this is REQUIRED - marks form for processing)
-   - class="sento-contact-form" (for styling/identification)
+   - data-sento-form="true"
+   - class="sento-contact-form"
 
-2. ❌ CRITICAL: DO NOT GENERATE ANY JAVASCRIPT FOR FORM SUBMISSION
-   - NO form.addEventListener('submit', ...)
-   - NO JavaScript that handles form submission
-   - NO AJAX/fetch calls for forms
-   - NO onsubmit handlers
-   - Our backend automatically injects the form handler
-   - You can add other scripts (animations, parallax, smooth scroll) but NOT form handlers
-
-3. Form inputs MUST have proper attributes:
-   - ALL inputs need: id, name, and required attributes
+2. Form inputs MUST have:
+   - id attribute
+   - name attribute  
+   - required attribute (if field is required)
    - Example: <input type="text" id="name" name="name" required />
-   - Use semantic names: name, email, phone, message, subject, company, etc.
 
-4. CORRECT FORM STRUCTURE:
+3. CORRECT FORM HTML (NO JAVASCRIPT):
    <form method="POST" data-sento-form="true" class="sento-contact-form space-y-4">
      <input type="text" id="name" name="name" required placeholder="Your Name" />
      <input type="email" id="email" name="email" required placeholder="your@email.com" />
-     <textarea id="message" name="message" required placeholder="Your message..."></textarea>
+     <textarea id="message" name="message" required rows="4" placeholder="Your message..."></textarea>
      <button type="submit">Send Message</button>
      <div id="form-message" class="hidden mt-4"></div>
    </form>
 
-5. IMPORTANT RESTRICTIONS:
-   ✅ YOU CAN ADD: CSS animations, parallax effects, smooth scrolling, intersection observers
-   ❌ YOU CANNOT ADD: Any JavaScript that handles form.addEventListener('submit'), fetch calls for forms, or form data processing
+4. YOU CAN INCLUDE OTHER <script> TAGS FOR:
+   ✅ Smooth scrolling navigation
+   ✅ CSS animations and parallax effects
+   ✅ Intersection observers for fade-ins
+   ✅ Menu toggles and UI interactions
+   
+5. YOU MUST NOT INCLUDE <script> TAGS FOR:
+   ❌ Form submission handling
+   ❌ Form validation  
+   ❌ AJAX/fetch calls for forms
+   ❌ Any code that uses querySelector('form') or form.addEventListener
+   
+6. Include <div id="form-message" class="hidden"></div> inside the form for messages.
 
-6. Include a <div id="form-message" class="hidden"></div> after submit button for messages.
+REMINDER: THE BACKEND HANDLES ALL FORM LOGIC AUTOMATICALLY!
+DO NOT WRITE ANY JAVASCRIPT FOR FORMS!
 
 GENERATE HTML NOW:`,
     messages: [
