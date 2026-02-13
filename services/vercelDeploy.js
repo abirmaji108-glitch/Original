@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import crypto from 'crypto';
 
 class VercelDeployService {
   constructor() {
@@ -23,7 +24,10 @@ class VercelDeployService {
       
       console.log(`📤 Deploying to Vercel: ${safeName}`);
 
-      // ✅ CRITICAL FIX: Convert HTML to base64
+      // Calculate SHA hash of the content
+      const sha = crypto.createHash('sha1').update(htmlContent).digest('hex');
+      
+      // Convert to base64
       const base64Content = Buffer.from(htmlContent, 'utf-8').toString('base64');
 
       // Prepare deployment payload
@@ -32,7 +36,8 @@ class VercelDeployService {
         files: [
           {
             file: 'index.html',
-            data: base64Content  // ✅ MUST BE BASE64!
+            data: base64Content,
+            encoding: 'base64'  // ✅ Explicitly specify encoding
           }
         ],
         projectSettings: {
