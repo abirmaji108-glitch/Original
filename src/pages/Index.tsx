@@ -1322,22 +1322,21 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
       
 
       // Save to history WITH userId
-const newWebsite = {
-  id: data.websiteId || Date.now().toString(),
-  name: `Website ${websiteHistory.length + 1}`,
-  prompt: input,  // ✅ FIX - use the original user input
-  html: htmlCode,
-  timestamp: Date.now(),
-  tags: [],
-  isFavorite: false,
-  notes: "",
-  thumbnail: "",
-  userId: userId || user?.id,
-  deployment_url: null,
-  deployment_id: null,
-  deployment_status: 'draft'
-};
-};
+      const newWebsite = {
+        id: data.websiteId || Date.now().toString(),
+        name: `Website ${websiteHistory.length + 1}`,
+        prompt: input,  // ✅ FIXED - use input instead of prompt
+        html: htmlCode,
+        timestamp: Date.now(),
+        tags: [],
+        isFavorite: false,
+        notes: "",
+        thumbnail: "",
+        userId: userId || user?.id,
+        deployment_url: null,
+        deployment_id: null,
+        deployment_status: 'draft'
+      };
       const updatedHistory = [newWebsite, ...websiteHistory];
       setWebsiteHistory(updatedHistory);
       localStorage.setItem('websiteHistory', JSON.stringify(updatedHistory));
@@ -1643,20 +1642,20 @@ const sanitizedCode = DOMPurifyIsomorphic.sanitize(htmlCode, {
      
 
       const newWebsite = {
-  id: data.websiteId || Date.now().toString(),
-  name: `Website ${websiteHistory.length + 1}`,
-  prompt: lastPrompt,  // ✅ FIX - use lastPrompt for regeneration
-  html: htmlCode,
-  timestamp: Date.now(),
-  tags: [],
-  isFavorite: false,
-  notes: "",
-  thumbnail: "",
-  userId: userId || user?.id,
-  deployment_url: null,
-  deployment_id: null,
-  deployment_status: 'draft'
-};
+        id: data.websiteId || Date.now().toString(),
+        name: `Website ${websiteHistory.length + 1}`,
+        prompt: lastPrompt,  // ✅ FIXED - use lastPrompt for regenerate
+        html: htmlCode,
+        timestamp: Date.now(),
+        tags: [],
+        isFavorite: false,
+        notes: "",
+        thumbnail: "",
+        userId: userId || user?.id,
+        deployment_url: null,
+        deployment_id: null,
+        deployment_status: 'draft'
+      };
       // Merge with ALL history (including other users), then save
 const allHistory = JSON.parse(localStorage.getItem('websiteHistory') || '[]');
 const updatedAllHistory = [newWebsite, ...allHistory];
