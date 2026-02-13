@@ -2406,7 +2406,7 @@ app.post('/api/publish/:websiteId', requireAuth, async (req, res) => {
     // 4. Deploy to Vercel
     logger.log(`📤 [${req.id}] Deploying to Vercel with project name: ${projectName}`);
     const { url, deploymentId } = await vercelDeploy.deployPage(
-      website.html,
+      website.html_code,
       projectName
     );
 
