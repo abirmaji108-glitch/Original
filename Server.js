@@ -1109,6 +1109,44 @@ CAR DEALERSHIP:
    - Each <img> tag MUST have proper src and alt attributes
    - Descriptions must match your HTML content
 5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
+
+📧 FORM HANDLING RULES (CRITICAL - if website includes contact/signup/newsletter/inquiry forms):
+1. ALL forms MUST have these attributes:
+   - method="POST"
+   - data-sento-form="true" (this is REQUIRED - marks form for processing)
+   - class="sento-contact-form" (for styling/identification)
+2. Form inputs MUST have proper "name" attributes:
+   - Required names: name="name", name="email", name="phone", name="message"
+   - Use semantic names that describe the data (e.g., name="company", name="subject")
+3. EXAMPLE FORM STRUCTURE (copy this pattern):
+   <form method="POST" data-sento-form="true" class="sento-contact-form space-y-4">
+     <div>
+       <label for="name" class="block text-sm font-medium mb-2">Name</label>
+       <input type="text" id="name" name="name" required 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+              placeholder="Your Name">
+     </div>
+     <div>
+       <label for="email" class="block text-sm font-medium mb-2">Email</label>
+       <input type="email" id="email" name="email" required 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+              placeholder="your@email.com">
+     </div>
+     <div>
+       <label for="message" class="block text-sm font-medium mb-2">Message</label>
+       <textarea id="message" name="message" required rows="4"
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                 placeholder="Your message..."></textarea>
+     </div>
+     <button type="submit" 
+             class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105">
+       Send Message
+     </button>
+     <div id="form-message" class="hidden mt-4"></div>
+   </form>
+4. IMPORTANT: Forms will be automatically connected to backend - DO NOT add action attribute or JavaScript handlers.
+5. Include a <div id="form-message"> after the submit button for success/error messages.
+
 GENERATE HTML NOW:`,
     messages: [
       {
@@ -1129,6 +1167,11 @@ GENERATE HTML NOW:`,
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
+      // 📧 INJECT FORM HANDLER (if forms exist and websiteId is available)
+      if (generatedCode.includes('data-sento-form') && userId) {
+        // We'll get websiteId after saving to database, so we'll inject it later
+        console.log('✅ Form detected - will inject handler after website is saved');
+      }
      // 🎯 UNIVERSAL: Extract descriptions and get perfect images
 try {
   console.log('🔍 [IMAGE] Processing images for:', sanitizedPrompt.substring(0, 50));
@@ -1412,6 +1455,91 @@ if (userId && generatedCode) {
           
           if (!selectError && websiteData) {
             websiteId = websiteData.id;
+            
+            // 📧 INJECT FORM HANDLER with websiteId
+            if (generatedCode.includes('data-sento-form="true"')) {
+              const formHandlerScript = `
+<script>
+(function() {
+  const BACKEND_URL = '${process.env.API_URL || 'https://original-lbxv.onrender.com'}';
+  const WEBSITE_ID = '${websiteId}';
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('[data-sento-form="true"]');
+    
+    forms.forEach(function(form) {
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const messageDiv = form.querySelector('#form-message') || document.createElement('div');
+        messageDiv.id = 'form-message';
+        
+        if (!form.querySelector('#form-message')) {
+          form.appendChild(messageDiv);
+        }
+        
+        // Get form data
+        const formData = new FormData(form);
+        const data = {
+          website_id: WEBSITE_ID
+        };
+        
+        formData.forEach((value, key) => {
+          data[key] = value;
+        });
+        
+        // Disable submit button
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Sending...';
+        }
+        
+        try {
+          const response = await fetch(BACKEND_URL + '/api/forms/submit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            messageDiv.className = 'mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg';
+            messageDiv.textContent = '✅ Thank you! Your message has been sent successfully.';
+            form.reset();
+          } else {
+            throw new Error(result.error || 'Submission failed');
+          }
+        } catch (error) {
+          messageDiv.className = 'mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg';
+          messageDiv.textContent = '❌ Oops! Something went wrong. Please try again.';
+          console.error('Form submission error:', error);
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send Message';
+          }
+          messageDiv.classList.remove('hidden');
+        }
+      });
+    });
+  });
+})();
+</script>`;
+              
+              // Inject before closing </body> tag
+              if (generatedCode.includes('</body>')) {
+                generatedCode = generatedCode.replace('</body>', formHandlerScript + '</body>');
+                console.log('✅ Form handler script injected with websiteId:', websiteId);
+              } else {
+                // If no </body> tag, append at end
+                generatedCode += formHandlerScript;
+                console.log('✅ Form handler script appended with websiteId:', websiteId);
+              }
+            }
           }
         } catch (err) {
           console.error('Failed to fetch website ID:', err);
