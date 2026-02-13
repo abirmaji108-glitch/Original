@@ -1,72 +1,76 @@
-// services/vercelDeploy.js
-// Vercel deployment service with proper error handling
+import fetch from 'node-fetch';
 
 class VercelDeployService {
   constructor() {
     this.token = process.env.VERCEL_TOKEN;
-    this.apiUrl = 'https://api.vercel.com';
+    this.teamId = process.env.VERCEL_TEAM_ID || null;
     
     if (!this.token) {
-      console.error('❌ VERCEL_TOKEN not found in environment variables!');
+      console.error('❌ VERCEL_TOKEN not found in environment variables');
     } else {
       console.log('✅ Vercel token loaded successfully');
     }
   }
 
-  /**
-   * Deploy HTML to Vercel
-   * @param {string} html - The HTML content
-   * @param {string} projectName - Unique name for this page
-   * @returns {Promise<{url: string, deploymentId: string}>}
-   */
-  async deployPage(html, projectName) {
+  async deployPage(htmlContent, projectName) {
+    if (!this.token) {
+      throw new Error('Vercel token not configured');
+    }
+
     try {
-      if (!this.token) {
-        throw new Error('Vercel token not configured. Please add VERCEL_TOKEN to environment variables.');
-      }
-
-      console.log(`📤 Deploying to Vercel: ${projectName}`);
+      // Create a safe project name for Vercel
+      const safeName = `sento-${projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
       
-      // Vercel expects files in this format
-      const files = [
-        {
-          file: 'index.html',
-          data: html
-        }
-      ];
+      console.log(`📤 Deploying to Vercel: ${safeName}`);
 
-      // Create deployment
-      const response = await fetch(`${this.apiUrl}/v13/deployments`, {
+      // ✅ CRITICAL FIX: Convert HTML to base64
+      const base64Content = Buffer.from(htmlContent, 'utf-8').toString('base64');
+
+      // Prepare deployment payload
+      const deploymentData = {
+        name: safeName,
+        files: [
+          {
+            file: 'index.html',
+            data: base64Content  // ✅ MUST BE BASE64!
+          }
+        ],
+        projectSettings: {
+          framework: null,
+          buildCommand: null,
+          outputDirectory: null
+        },
+        target: 'production'
+      };
+
+      // Add team ID if available
+      const url = this.teamId 
+        ? `https://api.vercel.com/v13/deployments?teamId=${this.teamId}`
+        : 'https://api.vercel.com/v13/deployments';
+
+      console.log(`🔗 Deploying to: ${url}`);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          name: projectName,
-          files: files,
-          projectSettings: {
-            framework: null, // Static HTML, no framework
-          }
-        })
+        body: JSON.stringify(deploymentData)
       });
 
-      // Parse response
-      const data = await response.json();
-
-      // Check for errors
       if (!response.ok) {
-        console.error('❌ Vercel API error:', data);
-        
-        // Extract error message properly
+        const data = await response.json();
         const errorMsg = data.error?.message || data.message || JSON.stringify(data);
+        console.error('❌ Vercel API error:', errorMsg);
         throw new Error(`Vercel deployment failed: ${errorMsg}`);
       }
 
-      // Check if deployment was created
+      const data = await response.json();
+      
       if (!data.url) {
-        console.error('❌ Vercel response missing URL:', data);
-        throw new Error('Vercel deployment succeeded but no URL returned');
+        console.error('❌ No URL in response:', data);
+        throw new Error('Deployment succeeded but no URL returned');
       }
 
       const deploymentUrl = `https://${data.url}`;
@@ -76,40 +80,29 @@ class VercelDeployService {
         url: deploymentUrl,
         deploymentId: data.id || data.uid
       };
-      
+
     } catch (error) {
-      console.error('❌ Deployment error:', error);
-      
-      // Re-throw with more context
-      if (error.message.includes('Vercel')) {
-        throw error; // Already formatted
-      } else {
-        throw new Error(`Deployment failed: ${error.message}`);
-      }
+      console.error('❌ Deployment error:', error.message);
+      throw error;
     }
   }
 
-  /**
-   * Delete a deployment
-   * @param {string} deploymentId - The deployment ID
-   */
   async deleteDeployment(deploymentId) {
+    if (!this.token) {
+      throw new Error('Vercel token not configured');
+    }
+
     try {
-      if (!this.token) {
-        throw new Error('Vercel token not configured');
-      }
+      const url = this.teamId
+        ? `https://api.vercel.com/v13/deployments/${deploymentId}?teamId=${this.teamId}`
+        : `https://api.vercel.com/v13/deployments/${deploymentId}`;
 
-      console.log(`🗑️ Deleting deployment: ${deploymentId}`);
-
-      const response = await fetch(
-        `${this.apiUrl}/v13/deployments/${deploymentId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${this.token}`
-          }
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
         }
-      );
+      });
 
       if (!response.ok) {
         const data = await response.json();
@@ -117,15 +110,14 @@ class VercelDeployService {
         throw new Error(`Failed to delete deployment: ${errorMsg}`);
       }
 
-      console.log(`✅ Deployment deleted: ${deploymentId}`);
-      return true;
-      
+      console.log(`✅ Deployment ${deploymentId} deleted successfully`);
+      return { success: true };
+
     } catch (error) {
-      console.error('❌ Delete deployment error:', error);
+      console.error('❌ Delete error:', error.message);
       throw error;
     }
   }
 }
 
-// Export singleton instance
 export default new VercelDeployService();
