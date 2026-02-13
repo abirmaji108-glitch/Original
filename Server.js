@@ -1546,9 +1546,8 @@ if (userId && generatedCode) {
                 console.log('✅ Form handler script appended with websiteId:', websiteId);
               }
             }
-          }
         } catch (err) {
-          console.error('Failed to fetch website ID:', err);
+          console.error('Failed to inject form handler:', err);
         }
       }
 
