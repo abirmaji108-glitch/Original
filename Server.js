@@ -1419,17 +1419,52 @@ if (userId) {
   }
 }
  */     
-} else {
+// ✅ SAVE WEBSITE TO DATABASE
+if (userId && generatedCode) {
+  try {
+    const { data: websiteData, error: insertError } = await supabase
+      .from('websites')
+      .insert({
+        user_id: userId,
+        name: sanitizedPrompt.substring(0, 100),  // ✅ CORRECT - using 'name' column
+        prompt: sanitizedPrompt,                   // ✅ ADDED - save full prompt
+        html_code: generatedCode,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('❌ Failed to save website:', insertError);
+      console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+      // Don't throw - let user still get their generated code
+    } else {
       console.log(`✅ Website saved successfully`);
       console.log(`   - ID: ${websiteData.id}`);
       console.log(`   - User: ${userId}`);
       console.log(`   - Name: ${websiteData.name}`);
-      websiteId = websiteData.id;
-      
-      // 📧 INJECT FORM HANDLER SCRIPT (if form exists)
-      if (generatedCode.includes('data-sento-form="true"')) {
+      websiteId = websiteData.id;  // 👈 NEW LINE
+    }
+  } catch (saveError) {
+    console.error('❌ Website save exception:', saveError.message);
+    console.error('Stack trace:', saveError.stack);
+    // Don't throw - let user still get their generated code
+  }
+}
+      const tierLimits = {
+        free: 2,
+        basic: 10,
+        pro: 25,
+        business: 100
+      };
+      const limit = tierLimits[userTier] || 2;
+      console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
+      // ✅ websiteId will be set when website is saved
+      if (userId && websiteId && generatedCode) {
         try {
-          const formHandlerScript = `
+            // 📧 INJECT FORM HANDLER with websiteId
+            if (generatedCode.includes('data-sento-form="true"')) {
+              const formHandlerScript = `
 <script>
 (function() {
   const BACKEND_URL = '${process.env.API_URL || 'https://original-lbxv.onrender.com'}';
@@ -1500,50 +1535,21 @@ if (userId) {
   });
 })();
 </script>`;
-          
-          // Inject before closing </body> tag
-          if (generatedCode.includes('</body>')) {
-            generatedCode = generatedCode.replace('</body>', formHandlerScript + '</body>');
-            console.log('✅ Form handler script injected with websiteId:', websiteId);
-          } else {
-            // If no </body> tag, append at end
-            generatedCode += formHandlerScript;
-            console.log('✅ Form handler script appended with websiteId:', websiteId);
-          }
-          
-          // 🔥 UPDATE DATABASE WITH NEW HTML
-          const { error: updateError } = await supabase
-            .from('websites')
-            .update({ html_code: generatedCode })
-            .eq('id', websiteId);
-          
-          if (updateError) {
-            console.error('❌ Failed to update HTML with form script:', updateError);
-          } else {
-            console.log('✅ Database updated with form handler script');
-          }
-          
+              
+              // Inject before closing </body> tag
+              if (generatedCode.includes('</body>')) {
+                generatedCode = generatedCode.replace('</body>', formHandlerScript + '</body>');
+                console.log('✅ Form handler script injected with websiteId:', websiteId);
+              } else {
+                // If no </body> tag, append at end
+                generatedCode += formHandlerScript;
+                console.log('✅ Form handler script appended with websiteId:', websiteId);
+              }
+            }
         } catch (err) {
-          console.error('❌ Failed to inject form handler:', err);
+          console.error('Failed to inject form handler:', err);
         }
       }
-    
-    }
-  } catch (saveError) {
-    console.error('❌ Website save exception:', saveError.message);
-    console.error('Stack trace:', saveError.stack);
-    // Don't throw - let user still get their generated code
-  }
-}
-      const tierLimits = {
-        free: 2,
-        basic: 10,
-        pro: 25,
-        business: 100
-      };
-      const limit = tierLimits[userTier] || 2;
-      console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Generated in ${Date.now() - startTime}ms for ${userId || 'anon'}`);
-      
 
       return res.json({
         success: true,
