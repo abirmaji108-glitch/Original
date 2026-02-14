@@ -1,14 +1,17 @@
 // services/emailService.js
-import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 
 class EmailService {
   constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+    const apiKey = process.env.SENDGRID_API_KEY;
     
-    if (!process.env.RESEND_API_KEY) {
-      console.error('❌ RESEND_API_KEY not found in environment variables');
+    if (!apiKey) {
+      console.error('❌ SENDGRID_API_KEY not found in environment variables');
+      this.isConfigured = false;
     } else {
-      console.log('✅ Resend email service initialized');
+      sgMail.setApiKey(apiKey);
+      this.isConfigured = true;
+      console.log('✅ SendGrid email service initialized');
     }
   }
 
@@ -71,20 +74,20 @@ class EmailService {
         </html>
       `;
 
-      const { data, error } = await this.resend.emails.send({
-  from: 'Sento AI <onboarding@resend.dev>', // Resend's default domain (free tier)
-  to: [toEmail],
-  subject: `🔔 New lead from "${pageName.substring(0, 50)}${pageName.length > 50 ? '...' : ''}"`,
-  html: emailHtml,
-});
-
-      if (error) {
-        console.error('❌ Failed to send email:', error);
-        throw error;
+      if (!this.isConfigured) {
+        throw new Error('Email service not configured');
       }
 
-      console.log('✅ Form notification email sent:', data.id);
-      return { success: true, emailId: data.id };
+      const msg = {
+        to: toEmail,
+        from: 'Sento AI <abirmaji108@gmail.com>',
+        subject: `🔔 New lead from "${pageName.substring(0, 50)}${pageName.length > 50 ? '...' : ''}"`,
+        html: emailHtml,
+      };
+
+      await sgMail.send(msg);
+      console.log('✅ Form notification email sent to', toEmail);
+      return { success: true };
 
     } catch (error) {
       console.error('❌ Email service error:', error);
@@ -97,15 +100,19 @@ class EmailService {
    */
   async sendTestEmail(toEmail) {
     try {
-      const { data, error } = await this.resend.emails.send({
-        from: 'Sento AI <onboarding@resend.dev>',
-        to: [toEmail],
+      if (!this.isConfigured) {
+        throw new Error('Email service not configured');
+      }
+
+      const msg = {
+        to: toEmail,
+        from: 'Sento AI <abirmaji108@gmail.com>',
         subject: 'Test Email from Sento AI',
         html: '<p>This is a test email. Your email service is working! ✅</p>',
-      });
+      };
 
-      if (error) throw error;
-      return { success: true, emailId: data.id };
+      await sgMail.send(msg);
+      return { success: true };
     } catch (error) {
       console.error('Test email failed:', error);
       throw error;
