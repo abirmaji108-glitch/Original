@@ -14,6 +14,7 @@ import logger from './utils/logger.js';
 import vercelDeploy from './services/vercelDeploy.js'
 import emailService from './services/emailService.js';
 import formHandler from './services/formHandler.js';
+import analyticsService from './services/analyticsService.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
@@ -2896,6 +2897,91 @@ app.delete('/api/forms/:submissionId', requireAuth, async (req, res) => {
     });
   }
 });
+
+// ============================================
+// ANALYTICS ENDPOINTS
+// ============================================
+
+// Track page view (public endpoint - no auth required)
+app.post('/api/analytics/track', async (req, res) => {
+  try {
+    const { website_id, visitor_id } = req.body;
+
+    if (!website_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'website_id is required'
+      });
+    }
+
+    logger.log(`📊 [${req.id}] Tracking view for website: ${website_id}`);
+
+    await analyticsService.trackView(website_id, visitor_id, supabase);
+
+    logger.log(`✅ [${req.id}] Analytics tracked successfully`);
+
+    return res.json({
+      success: true,
+      message: 'View tracked'
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Analytics tracking error:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to track analytics'
+    });
+  }
+});
+
+// Get analytics for a website (authenticated)
+app.get('/api/analytics/:websiteId', requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const userId = req.user.id;
+
+    logger.log(`📊 [${req.id}] Fetching analytics for website: ${websiteId}`);
+
+    // Verify ownership
+    const { data: website, error: websiteError } = await supabase
+      .from('websites')
+      .select('user_id')
+      .eq('id', websiteId)
+      .single();
+
+    if (websiteError || !website) {
+      return res.status(404).json({
+        success: false,
+        error: 'Website not found'
+      });
+    }
+
+    if (website.user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized'
+      });
+    }
+
+    // Fetch analytics
+    const analyticsData = await analyticsService.getAnalytics(websiteId, supabase);
+
+    logger.log(`✅ [${req.id}] Analytics fetched successfully`);
+
+    return res.json({
+      success: true,
+      analytics: analyticsData
+    });
+
+  } catch (error) {
+    logger.error(`❌ [${req.id}] Fetch analytics error:`, error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analytics'
+    });
+  }
+});
+
 // ============================================
 // SERVE STATIC FILES (React build)
 // ============================================
