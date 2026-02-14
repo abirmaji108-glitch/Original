@@ -110,6 +110,41 @@ function sanitizePrompt(prompt) {
   return sanitized;
 }
 /**
+ * Generate a short, meaningful website name from the prompt
+ */
+function generateWebsiteName(prompt) {
+  // Remove common instruction phrases
+  let name = prompt
+    .toLowerCase()
+    .replace(/generate a complete.*?html website (based on this description:?)?/gi, '')
+    .replace(/create a.*?(website|page|site|landing page)/gi, '')
+    .replace(/build a.*?(website|page|site)/gi, '')
+    .replace(/make a.*?(website|page|site)/gi, '')
+    .replace(/design a.*?(website|page|site)/gi, '')
+    .trim();
+  
+  // Take first sentence or clause
+  name = name.split(/[.,;!\n]/)[0].trim();
+  
+  // Capitalize first letter of each word
+  name = name
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+  
+  // Limit to 50 characters
+  if (name.length > 50) {
+    name = name.substring(0, 47) + '...';
+  }
+  
+  // Fallback if empty
+  if (!name || name.length < 3) {
+    name = 'New Website';
+  }
+  
+  return name;
+}
+/**
  * Validate email format
  */
 function isValidEmail(email) {
@@ -1382,7 +1417,7 @@ if (userId && generatedCode) {
       .from('websites')
       .insert({
         user_id: userId,
-        name: sanitizedPrompt.substring(0, 100),  // ✅ CORRECT - using 'name' column
+        name: generateWebsiteName(sanitizedPrompt),  // ✅ CORRECT - using 'name' column
         prompt: sanitizedPrompt,                   // ✅ ADDED - save full prompt
         html_code: generatedCode,
         created_at: new Date().toISOString()
@@ -2671,7 +2706,7 @@ app.post('/api/forms/submit', async (req, res) => {
       // Send notification email (non-blocking)
       formHandler.notifyOwner({
         ownerEmail: ownerProfile.email,
-        pageName: website.prompt || 'Your Landing Page',
+        pageName: website.name || 'Your Landing Page',
         formData: sanitizedData,
         submittedAt: submission.created_at
       }).catch(err => {
