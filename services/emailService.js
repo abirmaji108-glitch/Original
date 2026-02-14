@@ -80,7 +80,7 @@ class EmailService {
 
       const msg = {
         to: toEmail,
-        from: 'Sento AI <abirmaji108@gmail.com>',
+        from: 'abirmaji108@gmail.com',
         subject: `🔔 New lead from "${pageName.substring(0, 50)}${pageName.length > 50 ? '...' : ''}"`,
         html: emailHtml,
       };
@@ -106,7 +106,7 @@ class EmailService {
 
       const msg = {
         to: toEmail,
-        from: 'Sento AI <abirmaji108@gmail.com>',
+        from: 'abirmaji108@gmail.com',
         subject: 'Test Email from Sento AI',
         html: '<p>This is a test email. Your email service is working! ✅</p>',
       };
