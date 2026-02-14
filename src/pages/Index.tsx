@@ -2021,6 +2021,35 @@ const fetchWebsites = async () => {
     }
   };
 
+  // Fetch analytics from server
+  const fetchAnalytics = async (websiteId: string) => {
+    try {
+      const token = await supabase.auth.getSession();
+      const accessToken = token.data.session?.access_token;
+
+      const response = await fetch(`/api/analytics/${websiteId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch analytics');
+      }
+
+      const data = await response.json();
+      return data.analytics;
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load analytics data",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const handleDeleteSubmission = async (submissionId: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -2232,6 +2261,8 @@ const fetchWebsites = async () => {
         <AnalyticsModal
           open={showAnalytics}
           onOpenChange={setShowAnalytics}
+          fetchAnalytics={fetchAnalytics}
+          selectedWebsite={editingProject}
         />
       </Suspense>
 
