@@ -1435,6 +1435,7 @@ if (userId && generatedCode) {
       console.log(`   - ID: ${websiteData.id}`);
       console.log(`   - User: ${userId}`);
       console.log(`   - Name: ${websiteData.name}`);
+      console.log(`   ⏱️ Save took: ${Date.now() - startTime}ms`);
       websiteId = websiteData.id;  // 👈 NEW LINE
     }
   } catch (saveError) {
