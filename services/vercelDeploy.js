@@ -45,6 +45,7 @@ class VercelDeployService {
           buildCommand: null,
           outputDirectory: null
         },
+        public: true,  // ⭐ Force public access - bypass protection
         target: 'production'
       };
 
