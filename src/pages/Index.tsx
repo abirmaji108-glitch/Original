@@ -1032,7 +1032,7 @@ const error = null; // No error since we're not inserting
     setEditingWebsite({
       id: site.id,
       name: site.name,
-      html: site.htmlCode
+      html: site.html  // ✅ CORRECT - it's 'html' not 'htmlCode'
     });
     setShowEditModal(true);
   };
@@ -1043,12 +1043,16 @@ const error = null; // No error since we're not inserting
   };
 
   const handleEditApplied = () => {
-    // Refresh website list
-    loadWebsites();
+    // Show success message
     toast({
       title: "✅ Page updated",
-      description: "Your changes are live!",
+      description: "Your changes are live! Refreshing...",
     });
+    
+    // Reload page to show updated content
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
   };
 
   const getFilteredProjects = () => {
