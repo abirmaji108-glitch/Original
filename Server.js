@@ -2542,10 +2542,42 @@ app.post('/api/publish/:websiteId', requireAuth, async (req, res) => {
     // 3. Create unique project name (lowercase, no spaces)
     const projectName = `sento-${userId.substring(0, 8)}-${websiteId.substring(0, 8)}`;
 
-    // 4. Deploy to Vercel
+    // 4. Inject analytics tracking script
+    const backendUrl = process.env.RENDER_EXTERNAL_URL || process.env.VITE_API_URL || 'https://sento-ai.onrender.com';
+    const trackingScript = `
+<script>
+(function() {
+  // Generate or get visitor ID
+  let visitorId = localStorage.getItem('sento_visitor_id');
+  if (!visitorId) {
+    visitorId = 'v_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem('sento_visitor_id', visitorId);
+  }
+  
+  // Track page view
+  fetch('${backendUrl}/api/analytics/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      website_id: '${websiteId}',
+      visitor_id: visitorId
+    })
+  }).catch(function(err) { console.error('Analytics error:', err); });
+})();
+</script>`;
+
+    // Inject tracking script before </body>
+    let htmlWithTracking = website.html_code;
+    if (htmlWithTracking.includes('</body>')) {
+      htmlWithTracking = htmlWithTracking.replace('</body>', trackingScript + '</body>');
+    } else {
+      htmlWithTracking = htmlWithTracking + trackingScript;
+    }
+
+    // 5. Deploy to Vercel
     logger.log(`📤 [${req.id}] Deploying to Vercel with project name: ${projectName}`);
     const { url, deploymentId } = await vercelDeploy.deployPage(
-      website.html_code,
+      htmlWithTracking,
       projectName
     );
 
