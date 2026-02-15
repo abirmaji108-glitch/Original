@@ -15,6 +15,8 @@ import vercelDeploy from './services/vercelDeploy.js'
 import emailService from './services/emailService.js';
 import formHandler from './services/formHandler.js';
 import analyticsService from './services/analyticsService.js';
+import iterativeEditor from './services/iterativeEditor.js';
+import htmlParser from './services/htmlParser.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
@@ -3014,6 +3016,384 @@ app.get('/api/analytics/:websiteId', requireAuth, async (req, res) => {
     });
   }
 });
+// ============================================
+// ITERATIVE EDITING - AI-POWERED PAGE UPDATES
+// ============================================
+
+// 🎨 EDIT ENDPOINT: Preview edit without saving
+app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const { editInstruction } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!editInstruction || editInstruction.length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: 'Edit instruction must be at least 10 characters'
+      });
+    }
+
+    // Get current website
+    const { data: website, error: fetchError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !website) {
+      return res.status(404).json({
+        success: false,
+        error: 'Website not found'
+      });
+    }
+
+    // Sanitize instruction
+    const sanitized = iterativeEditor.sanitizeEditInstruction(editInstruction);
+
+    // Analyze edit request
+    const analysis = iterativeEditor.analyzeEditRequest(sanitized, website.html_code);
+
+    // Build edit prompt
+    const editPrompt = iterativeEditor.buildEditPrompt(website.html_code, sanitized);
+
+    logger.log(`🎨 [EDIT] Processing edit for ${websiteId}: ${analysis.targetSection}`);
+
+    // Call Claude API
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 6000,
+        messages: [
+          {
+            role: 'user',
+            content: editPrompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    let editedHTML = htmlParser.cleanHTML(data.content[0].text);
+
+    // Validate edited HTML
+    const validation = iterativeEditor.validateEditedHTML(editedHTML, website.html_code);
+
+    if (!validation.valid) {
+      logger.log(`⚠️ [EDIT] Validation issues: ${validation.issues.join(', ')}`);
+      // Try to preserve critical attributes
+      editedHTML = htmlParser.preserveCriticalAttributes(editedHTML, website.html_code);
+    }
+
+    // Process images (same as generation)
+    const descriptions = [];
+    const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
+    let match;
+
+    while ((match = regex.exec(editedHTML)) !== null) {
+      descriptions.push({
+        index: parseInt(match[1]),
+        description: match[2].trim(),
+        placeholder: match[0]
+      });
+    }
+
+    if (descriptions.length > 0) {
+      const { getContextAwareImages } = await import('./imageLibrary.js');
+      const images = await getContextAwareImages(sanitized, descriptions.length);
+      
+      descriptions.forEach((desc, idx) => {
+        if (images[idx]) {
+          const escapedPlaceholder = desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          editedHTML = editedHTML.replace(new RegExp(escapedPlaceholder, 'g'), images[idx]);
+        }
+      });
+    }
+
+    logger.log(`✅ [EDIT] Preview generated successfully`);
+
+    return res.json({
+      success: true,
+      preview: editedHTML,
+      analysis,
+      validation,
+      message: 'Edit preview ready - review before applying'
+    });
+
+  } catch (error) {
+    logger.error('❌ [EDIT] Preview error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate edit preview'
+    });
+  }
+});
+
+// 💾 APPLY EDIT: Save and deploy edited version
+app.post('/api/edit/:websiteId/apply', requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const { editedHTML, editInstruction } = req.body;
+    const userId = req.user.id;
+
+    if (!editedHTML) {
+      return res.status(400).json({
+        success: false,
+        error: 'No edited HTML provided'
+      });
+    }
+
+    // Get current website
+    const { data: website, error: fetchError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !website) {
+      return res.status(404).json({
+        success: false,
+        error: 'Website not found'
+      });
+    }
+
+    const newVersion = (website.current_version || 0) + 1;
+
+    // Save current version to history
+    const { error: versionError } = await supabase
+      .from('website_versions')
+      .insert({
+        website_id: websiteId,
+        user_id: userId,
+        html_code: website.html_code,
+        version_number: website.current_version || 1,
+        change_description: `Version ${website.current_version || 1} - before edit`
+      });
+
+    if (versionError) {
+      logger.error('Version save error:', versionError);
+    }
+
+    // Update website with edited HTML
+    const { error: updateError } = await supabase
+      .from('websites')
+      .update({
+        html_code: editedHTML,
+        current_version: newVersion,
+        last_edited_at: new Date().toISOString()
+      })
+      .eq('id', websiteId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // If published, redeploy
+    let deploymentResult = null;
+    if (website.deployment_status === 'live' && website.deployment_url) {
+      try {
+        logger.log(`🚀 [EDIT] Redeploying edited page...`);
+        
+        const { url, deploymentId } = await vercelDeploy.deployPage(
+          editedHTML,
+          website.name
+        );
+
+        // Update deployment info
+        await supabase
+          .from('websites')
+          .update({
+            deployment_url: url,
+            deployment_id: deploymentId
+          })
+          .eq('id', websiteId);
+
+        deploymentResult = { url, deploymentId };
+        logger.log(`✅ [EDIT] Redeployed to ${url}`);
+      } catch (deployError) {
+        logger.error('Deployment error:', deployError);
+        // Don't fail the edit if deployment fails
+      }
+    }
+
+    logger.log(`✅ [EDIT] Applied and saved version ${newVersion}`);
+
+    return res.json({
+      success: true,
+      version: newVersion,
+      deployment: deploymentResult,
+      message: deploymentResult 
+        ? 'Edit applied and redeployed successfully'
+        : 'Edit applied successfully'
+    });
+
+  } catch (error) {
+    logger.error('❌ [EDIT] Apply error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to apply edit'
+    });
+  }
+});
+
+// 📜 GET VERSION HISTORY
+app.get('/api/edit/:websiteId/versions', requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const userId = req.user.id;
+
+    // Verify ownership
+    const { data: website, error: verifyError } = await supabase
+      .from('websites')
+      .select('id')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (verifyError || !website) {
+      return res.status(404).json({
+        success: false,
+        error: 'Website not found'
+      });
+    }
+
+    // Get version history
+    const { data: versions, error: fetchError } = await supabase
+      .from('website_versions')
+      .select('*')
+      .eq('website_id', websiteId)
+      .order('version_number', { ascending: false })
+      .limit(10);
+
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    return res.json({
+      success: true,
+      versions: versions || [],
+      count: versions?.length || 0
+    });
+
+  } catch (error) {
+    logger.error('❌ [EDIT] Version history error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch version history'
+    });
+  }
+});
+
+// ⏪ REVERT TO PREVIOUS VERSION
+app.post('/api/edit/:websiteId/revert/:versionNumber', requireAuth, async (req, res) => {
+  try {
+    const { websiteId, versionNumber } = req.params;
+    const userId = req.user.id;
+
+    // Get website
+    const { data: website, error: websiteError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (websiteError || !website) {
+      return res.status(404).json({
+        success: false,
+        error: 'Website not found'
+      });
+    }
+
+    // Get version to revert to
+    const { data: version, error: versionError } = await supabase
+      .from('website_versions')
+      .select('*')
+      .eq('website_id', websiteId)
+      .eq('version_number', parseInt(versionNumber))
+      .single();
+
+    if (versionError || !version) {
+      return res.status(404).json({
+        success: false,
+        error: 'Version not found'
+      });
+    }
+
+    // Save current state before reverting
+    await supabase
+      .from('website_versions')
+      .insert({
+        website_id: websiteId,
+        user_id: userId,
+        html_code: website.html_code,
+        version_number: website.current_version,
+        change_description: `Backup before reverting to v${versionNumber}`
+      });
+
+    // Update website with old version
+    const { error: updateError } = await supabase
+      .from('websites')
+      .update({
+        html_code: version.html_code,
+        current_version: parseInt(versionNumber),
+        last_edited_at: new Date().toISOString()
+      })
+      .eq('id', websiteId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // If published, redeploy
+    if (website.deployment_status === 'live') {
+      const { url, deploymentId } = await vercelDeploy.deployPage(
+        version.html_code,
+        website.name
+      );
+
+      await supabase
+        .from('websites')
+        .update({
+          deployment_url: url,
+          deployment_id: deploymentId
+        })
+        .eq('id', websiteId);
+
+      logger.log(`✅ [EDIT] Reverted and redeployed to v${versionNumber}`);
+    }
+
+    return res.json({
+      success: true,
+      version: parseInt(versionNumber),
+      message: `Reverted to version ${versionNumber}`
+    });
+
+  } catch (error) {
+    logger.error('❌ [EDIT] Revert error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to revert version'
+    });
+  }
+});
+
+// ============================================
+// END OF ITERATIVE EDITING ENDPOINTS
+// ============================================
 
 // ============================================
 // SERVE STATIC FILES (React build)
