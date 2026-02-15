@@ -82,6 +82,38 @@ class VercelDeployService {
       const deploymentUrl = `https://${data.url}`;
       console.log(`✅ Deployed successfully: ${deploymentUrl}`);
 
+      // 🔓 AUTOMATICALLY DISABLE VERCEL AUTHENTICATION
+      try {
+        console.log(`🔓 Attempting to disable protection for project: ${safeName}`);
+        
+        const protectionUrl = this.teamId
+          ? `https://api.vercel.com/v9/projects/${safeName}?teamId=${this.teamId}`
+          : `https://api.vercel.com/v9/projects/${safeName}`;
+
+        const protectionResponse = await fetch(protectionUrl, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${this.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ssoProtection: null,
+            passwordProtection: null
+          })
+        });
+
+        if (protectionResponse.ok) {
+          console.log(`✅ Protection disabled successfully for ${safeName}`);
+        } else {
+          const protectionError = await protectionResponse.json();
+          console.warn(`⚠️ Could not disable protection:`, protectionError);
+          // Don't fail deployment - this is a nice-to-have
+        }
+      } catch (protectionError) {
+        console.warn(`⚠️ Protection disable failed (non-critical):`, protectionError.message);
+        // Continue anyway - deployment already succeeded
+      }
+
       return {
         url: deploymentUrl,
         deploymentId: data.id || data.uid
