@@ -2027,7 +2027,7 @@ const fetchWebsites = async () => {
       const token = await supabase.auth.getSession();
       const accessToken = token.data.session?.access_token;
 
-      const response = await fetch(`/api/analytics/${websiteId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/analytics/${websiteId}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
