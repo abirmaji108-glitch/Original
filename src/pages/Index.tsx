@@ -284,6 +284,8 @@ const Index = () => {
   const GENERATION_COOLDOWN = 5000; // 5 seconds
   const [publishingId, setPublishingId] = useState<string | null>(null);
 const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
+  const [isLoadingWebsites, setIsLoadingWebsites] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Form Submissions State
   const [showFormSubmissionsModal, setShowFormSubmissionsModal] = useState(false);
@@ -325,27 +327,56 @@ const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
     feature: 'download'
   });
 
-  // ✅ Load websites from Supabase (with localStorage fallback)
+  // ✅ Load websites - INSTANT with cache, then sync with database
 useEffect(() => {
   const loadWebsites = async () => {
     if (!userId) return;
     
-    // Try Supabase first
+    setIsLoadingWebsites(true);
+    
+    // ⭐ STEP 1: Show cached data IMMEDIATELY (instant load)
+    let cacheLoaded = false;
     try {
-      await fetchWebsites();
-    } catch (error) {
-      console.error('Supabase load failed, trying localStorage:', error);
-      
-      // Fallback to localStorage if Supabase fails
       const saved = localStorage.getItem('websiteHistory');
       if (saved) {
         const allHistory = JSON.parse(saved);
         const userHistory = allHistory.filter((site: any) => site.userId === userId);
-        setWebsiteHistory(userHistory);
+        if (userHistory.length > 0) {
+          setWebsiteHistory(userHistory);
+          calculateAnalytics();
+          setIsLoadingWebsites(false); // Stop loading - show cached data
+          cacheLoaded = true;
+          console.log('✅ Loaded from cache instantly:', userHistory.length, 'websites');
+        }
       }
+    } catch (cacheError) {
+      console.error('Cache load failed:', cacheError);
     }
     
-    calculateAnalytics();
+    // ⭐ STEP 2: Fetch from database in background (sync)
+    setIsSyncing(true);
+    try {
+      console.log('🔄 Syncing with database...');
+      await fetchWebsites();
+      calculateAnalytics();
+      console.log('✅ Synced with database');
+    } catch (error) {
+      console.error('Database sync failed:', error);
+      // If cache was loaded, this is non-critical
+      if (!cacheLoaded) {
+        // No cache, so try localStorage as final fallback
+        const saved = localStorage.getItem('websiteHistory');
+        if (saved) {
+          const allHistory = JSON.parse(saved);
+          const userHistory = allHistory.filter((site: any) => site.userId === userId);
+          setWebsiteHistory(userHistory);
+          calculateAnalytics();
+        }
+      }
+    } finally {
+      setIsLoadingWebsites(false);
+      setIsSyncing(false);
+    }
   };
   
   if (userId) {
