@@ -1122,21 +1122,43 @@ setShowUsageBanner(false); // ✅ ADD THIS
     // Create abort controller
     abortControllerRef.current = new AbortController();
     
-    // Start progress simulation
+   // Start progress simulation with engaging stages
     simulateProgress();
+    
+    // ⭐ ENGAGING PROGRESS STAGES
+    const progressStages = [
+      { time: 0, percent: 5, message: "🤖 Connecting to AI..." },
+      { time: 2000, percent: 15, message: "📋 Analyzing your requirements..." },
+      { time: 5000, percent: 30, message: "🎨 Designing perfect layout..." },
+      { time: 10000, percent: 50, message: "✍️ Writing compelling content..." },
+      { time: 20000, percent: 65, message: "🖼️ Selecting beautiful images..." },
+      { time: 30000, percent: 75, message: "🎭 Adding smooth animations..." },
+      { time: 40000, percent: 85, message: "🔍 Polishing final details..." },
+      { time: 50000, percent: 92, message: "✨ Almost there..." }
+    ];
+    
+    // Schedule stage updates
+    progressStages.forEach(stage => {
+      setTimeout(() => {
+        if (isGenerating) {
+          setProgress(stage.percent);
+          setProgressStage(stage.message);
+        }
+      }, stage.time);
+    });
     
     // Clear existing smooth progress interval
     if (progressInterval2Ref.current) {
       clearInterval(progressInterval2Ref.current);
     }
     
-    // Smooth progress animation
+    // Smooth progress animation between stages
     progressInterval2Ref.current = setInterval(() => {
       setProgress((p) => {
-        const newProgress = Math.min(p + 0.5, 95);
+        const newProgress = Math.min(p + 0.3, 95);
         return newProgress;
       });
-    }, 150);
+    }, 200);
 
     try {
       const styleInstruction = STYLE_DESCRIPTIONS[selectedStyle] || STYLE_DESCRIPTIONS.modern;
@@ -1368,11 +1390,19 @@ if (data.success) {
     setProgress(0);
     setProgressStage("");
     
-    // 3. THEN refresh usage data
+    // 3. ⭐ CRITICAL FIX: Refresh from database to show new website
+    try {
+      await fetchWebsites();
+      console.log('✅ Websites refreshed from database');
+    } catch (error) {
+      console.error('Failed to refresh websites:', error);
+    }
+    
+    // 4. THEN refresh usage data
     await refreshLimits();
     notifyUsageUpdate();
     
-    // 4. FINALLY show the usage banner (after website is visible)
+    // 5. FINALLY show the usage banner (after website is visible)
     setTimeout(() => {
       setShowUsageBanner(true);
     }, 500); // Small delay to ensure website renders first
