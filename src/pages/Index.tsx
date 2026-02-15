@@ -2261,6 +2261,9 @@ const fetchWebsites = async () => {
         <AnalyticsModal
           open={showAnalytics}
           onOpenChange={setShowAnalytics}
+          fetchAnalytics={fetchAnalytics}
+          selectedWebsite={editingProject}
+          websiteHistory={websiteHistory}
         />
       </Suspense>
 
