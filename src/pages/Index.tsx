@@ -69,6 +69,7 @@ const QUICK_START_TEMPLATES = basicTemplates.slice(0, 6);
 const ChatModal = lazy(() => import("@/components/ChatModal").then(m => ({ default: m.ChatModal })));
 const AnalyticsModal = lazy(() => import("@/components/AnalyticsModal").then(m => ({ default: m.AnalyticsModal })));
 const ProjectModal = lazy(() => import("@/components/ProjectModal").then(m => ({ default: m.ProjectModal })));
+const EditModal = lazy(() => import("@/components/EditModal").then(m => ({ default: m.EditModal })));
 
 const INDUSTRY_TEMPLATES: Record<string, string> = {
   restaurant: "Create a stunning restaurant website for [RestaurantName] specializing in [cuisine]. Include: hero section with food photography and reservation CTA, interactive menu with categories and prices, photo gallery, about section with chef's story, customer testimonials, contact section with map and hours. Use warm colors (burgundy, gold, cream). Mobile-responsive with smooth animations.",
@@ -271,6 +272,12 @@ const Index = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingWebsite, setEditingWebsite] = useState<{
+    id: string;
+    name: string;
+    html: string;
+  } | null>(null);
   const [editedCode, setEditedCode] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("modern");
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -1020,6 +1027,28 @@ const error = null; // No error since we're not inserting
     setProjectTags(site.tags);
     setProjectNotes(site.notes);
     setShowProjectModal(true);
+  };
+  const openAIEditModal = (site: typeof websiteHistory[0]) => {
+    setEditingWebsite({
+      id: site.id,
+      name: site.name,
+      html: site.htmlCode
+    });
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditingWebsite(null);
+  };
+
+  const handleEditApplied = () => {
+    // Refresh website list
+    loadWebsites();
+    toast({
+      title: "✅ Page updated",
+      description: "Your changes are live!",
+    });
   };
 
   const getFilteredProjects = () => {
@@ -3269,6 +3298,7 @@ const fetchWebsites = async () => {
                         >
                           👁️ View
                         </button>
+                        {/* 📝 INFO BUTTON - Edit metadata */}
                         <button
                           onClick={() => openEditProject(site)}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
@@ -3277,8 +3307,22 @@ const fetchWebsites = async () => {
                               : 'bg-purple-100 text-purple-700 hover:bg-purple-200 hover:shadow-md'
                           }`}
                         >
-                          ✏️ Edit
+                          📝 Info
                         </button>
+                        
+                        {/* 🎨 AI EDIT BUTTON - Only show for published sites */}
+                        {(site as any).deployment_status === 'live' && (
+                          <button
+                            onClick={() => openAIEditModal(site)}
+                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                              isDarkMode
+                                ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 hover:shadow-lg'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:shadow-md'
+                            }`}
+                          >
+                            🎨 AI Edit
+                          </button>
+                        )}
                         
                         {/* 📧 FORM SUBMISSIONS BUTTON - Show only for published sites */}
                         {(site as any).deployment_status === 'live' && (
@@ -3497,6 +3541,23 @@ const fetchWebsites = async () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 🎨 AI EDIT MODAL */}
+      {showEditModal && editingWebsite && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200]">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+        </div>}>
+          <EditModal
+            websiteId={editingWebsite.id}
+            websiteName={editingWebsite.name}
+            currentHTML={editingWebsite.html}
+            isOpen={showEditModal}
+            onClose={closeEditModal}
+            onEditApplied={handleEditApplied}
+            isDarkMode={isDarkMode}
+          />
+        </Suspense>
       )}
 
       {showScrollTop && (
