@@ -3099,55 +3099,74 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     let imageFound = false;
     
     // STRATEGY 1: Find by heading text (most reliable)
-    // Look for <h1-h6> tag containing the search term, then find the nearest image
     const headingRegex = new RegExp(
-      `<(h[1-6])[^>]*>([^<]*${searchTerm}[^<]*)<\\/\\1>`,
+      `<(h[1-6])[^>]*>([^<]*${searchTerm}[^<]*)<\\/(h[1-6])>`,
       'gi'
     );
     
-    const headingMatch = currentHTML.match(headingRegex);
-    if (headingMatch && headingMatch.length > 0) {
+    const headingMatches = [...currentHTML.matchAll(headingRegex)];
+    if (headingMatches && headingMatches.length > 0) {
       logger.log(`✅ [EDIT] Found heading with "${searchTerm}"`);
       
-      // Get the position of the heading
-      const headingIndex = currentHTML.indexOf(headingMatch[0]);
-      
-      // Look backwards and forwards 500 chars for an image
-      const beforeHeading = currentHTML.substring(Math.max(0, headingIndex - 500), headingIndex);
-      const afterHeading = currentHTML.substring(headingIndex, headingIndex + 500);
-      
-      // Try finding image after heading first (more common)
-      const imageAfterRegex = /<img[^>]+src="([^"]+)"[^>]*>/i;
-      let imageMatch = afterHeading.match(imageAfterRegex);
-      let imageContext = afterHeading;
-      let searchStart = headingIndex;
-      
-      // If not found after, try before
-      if (!imageMatch) {
-        imageMatch = beforeHeading.match(imageAfterRegex);
-        imageContext = beforeHeading;
-        searchStart = Math.max(0, headingIndex - 500);
-      }
-      
-      if (imageMatch) {
-        const fullImageTag = imageMatch[0];
-        const oldImageSrc = imageMatch[1];
+      for (const match of headingMatches) {
+        const headingIndex = currentHTML.indexOf(match[0]);
         
-        logger.log(`✅ [EDIT] Found image near heading: ${oldImageSrc.substring(0, 50)}...`);
+        // Look in a much larger range (2000 chars instead of 500)
+        const beforeHeading = currentHTML.substring(Math.max(0, headingIndex - 2000), headingIndex);
+        const afterHeading = currentHTML.substring(headingIndex, Math.min(currentHTML.length, headingIndex + 2000));
         
-        // Create new image placeholder
-        const imageDescription = sanitizedInstruction
-          .replace(/change|replace|update|image|picture|photo|for|the|to|a|with/gi, '')
-          .trim() || 'updated image';
+        // More flexible image regex (matches any img tag)
+        const imageRegex = /<img[^>]*>/gi;
         
-        const newImagePlaceholder = `{{IMAGE_NEW:[${imageDescription}]}}`;
+        // Try finding image after heading first
+        const imagesAfter = [...afterHeading.matchAll(imageRegex)];
+        if (imagesAfter && imagesAfter.length > 0) {
+          const fullImageTag = imagesAfter[0][0];
+          const srcMatch = fullImageTag.match(/src=["']([^"']+)["']/);
+          
+          if (srcMatch) {
+            const oldImageSrc = srcMatch[1];
+            logger.log(`✅ [EDIT] Found image after heading: ${oldImageSrc.substring(0, 50)}...`);
+            
+            const imageDescription = sanitizedInstruction
+              .replace(/change|replace|update|image|picture|photo|for|the|to|a|with|different/gi, '')
+              .trim() || 'updated image';
+            
+            const newImagePlaceholder = `{{IMAGE_NEW:[${imageDescription}]}}`;
+            const newImageTag = fullImageTag.replace(oldImageSrc, newImagePlaceholder);
+            modifiedHTML = currentHTML.replace(fullImageTag, newImageTag);
+            
+            imageFound = true;
+            logger.log(`✅ [EDIT] Image replaced successfully`);
+            break;
+          }
+        }
         
-        // Replace this specific image tag
-        const newImageTag = fullImageTag.replace(oldImageSrc, newImagePlaceholder);
-        modifiedHTML = currentHTML.replace(fullImageTag, newImageTag);
-        
-        imageFound = true;
-        logger.log(`✅ [EDIT] Image replaced successfully`);
+        // If not found after, try before
+        if (!imageFound) {
+          const imagesBefore = [...beforeHeading.matchAll(imageRegex)];
+          if (imagesBefore && imagesBefore.length > 0) {
+            const fullImageTag = imagesBefore[imagesBefore.length - 1][0]; // Get last image before heading
+            const srcMatch = fullImageTag.match(/src=["']([^"']+)["']/);
+            
+            if (srcMatch) {
+              const oldImageSrc = srcMatch[1];
+              logger.log(`✅ [EDIT] Found image before heading: ${oldImageSrc.substring(0, 50)}...`);
+              
+              const imageDescription = sanitizedInstruction
+                .replace(/change|replace|update|image|picture|photo|for|the|to|a|with|different/gi, '')
+                .trim() || 'updated image';
+              
+              const newImagePlaceholder = `{{IMAGE_NEW:[${imageDescription}]}}`;
+              const newImageTag = fullImageTag.replace(oldImageSrc, newImagePlaceholder);
+              modifiedHTML = currentHTML.replace(fullImageTag, newImageTag);
+              
+              imageFound = true;
+              logger.log(`✅ [EDIT] Image replaced successfully`);
+              break;
+            }
+          }
+        }
       }
     }
     
