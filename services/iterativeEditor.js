@@ -33,7 +33,7 @@ class IterativeEditor {
         // Pattern 1: "image for X" or "image of X"
         let imageMatch = prompt.match(/(?:image|picture|photo)\s+(?:for|of)\s+([a-z\s]+?)(?:\s+to|\s+with|$)/i);
         
-        // Pattern 2: "the X image" or "X's image"
+        // Pattern 2: "the X image" or "X's image"  
         if (!imageMatch) {
           imageMatch = prompt.match(/(?:the\s+)?([a-z\s]+?)\s+(?:image|picture|photo)/i);
         }
