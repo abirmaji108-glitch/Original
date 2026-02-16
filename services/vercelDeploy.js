@@ -20,7 +20,12 @@ class VercelDeployService {
 
     try {
       // Create a safe project name for Vercel
-      const safeName = `sento-${projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`;
+      const safeName = `sento-${projectName
+  .toLowerCase()
+  .replace(/[^a-z0-9]/g, '-')  // Replace any non-alphanumeric with dash
+  .replace(/--+/g, '-')         // Replace multiple dashes with single dash
+  .replace(/^-|-$/g, '')        // Remove leading/trailing dashes
+  .slice(0, 90)}`;              // Ensure under 100 chars total
       
       console.log(`📤 Deploying to Vercel: ${safeName}`);
 
