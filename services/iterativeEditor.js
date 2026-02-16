@@ -1,26 +1,18 @@
 // services/iterativeEditor.js
-// FIXED VERSION - Section-based editing to reduce cost and improve accuracy
+// FIXED VERSION - Claude-powered image identification
 
 import logger from '../utils/logger.js';
 
 class IterativeEditor {
-  /**
-   * Analyze edit request and determine what section needs to change
-   * @param {string} userPrompt - User's edit instruction
-   * @param {string} currentHTML - Current page HTML
-   * @returns {Object} - Analysis result
-   */
   analyzeEditRequest(userPrompt, currentHTML) {
     try {
       const prompt = userPrompt.toLowerCase();
-      
       let targetSection = 'specific-element';
       let elementSelector = null;
       
-      // Detect specific element mentions
-      if (prompt.includes('hero') || prompt.includes('banner') || prompt.includes('top section')) {
+      if (prompt.includes('hero') || prompt.includes('banner')) {
         targetSection = 'hero';
-      } else if (prompt.includes('header') || prompt.includes('navigation') || prompt.includes('nav')) {
+      } else if (prompt.includes('header') || prompt.includes('nav')) {
         targetSection = 'header';
       } else if (prompt.includes('footer')) {
         targetSection = 'footer';
@@ -29,23 +21,10 @@ class IterativeEditor {
       } else if (prompt.includes('image') || prompt.includes('picture') || prompt.includes('photo')) {
         targetSection = 'image';
         
-        // IMPROVED: Multiple patterns to extract which image
-        // Pattern 1: "image for X" or "image of X"
-        let imageMatch = prompt.match(/(?:image|picture|photo)\s+(?:for|of)\s+([a-z\s]+?)(?:\s+to|\s+with|$)/i);
-        
-        // Pattern 2: "the X image" or "X's image"  
-        if (!imageMatch) {
-          imageMatch = prompt.match(/(?:the\s+)?([a-z\s]+?)\s+(?:image|picture|photo)/i);
-        }
-        
-        // Pattern 3: "change/replace X image"
-        if (!imageMatch) {
-          imageMatch = prompt.match(/(?:change|replace|update)\s+(?:the\s+)?([a-z\s]+?)(?:\s+image|\s+picture|\s+photo)/i);
-        }
-        
-        if (imageMatch && imageMatch[1]) {
-          elementSelector = imageMatch[1].trim();
-          logger.log(`🔍 [EDIT] Extracted element selector: "${elementSelector}"`);
+        // Extract element name
+        const match = prompt.match(/(?:change|replace|update)\s+(?:the\s+)?(.+?)\s+(?:image|picture|photo)/i);
+        if (match && match[1]) {
+          elementSelector = match[1].trim();
         }
       } else if (prompt.includes('button')) {
         targetSection = 'button';
@@ -75,287 +54,222 @@ class IterativeEditor {
   }
 
   /**
-   * Check if this is ONLY a style change (color, size, etc)
+   * NEW METHOD: Use Claude to identify which image to change
+   * Cost: ~$0.0003-0.0005 (very cheap identification call)
    */
-  isStyleOnlyChange(prompt) {
-    const styleKeywords = ['color', 'background', 'font', 'size', 'spacing', 'padding', 'margin'];
-    const hasStyleKeyword = styleKeywords.some(keyword => prompt.includes(keyword));
-    const hasContentKeyword = prompt.includes('add') || prompt.includes('text') || prompt.includes('image');
-    
-    return hasStyleKeyword && !hasContentKeyword;
+  async identifyImageElement(instruction, html, apiKey) {
+    try {
+      logger.log('🔍 [IDENTIFY] Calling Claude to identify target image...');
+      
+      // Extract relevant sections (menu, features, etc.) to reduce tokens
+      const htmlSnippet = this.extractRelevantHTMLForIdentification(html);
+      
+      const identificationPrompt = `You are analyzing HTML to identify which image should be changed.
+
+USER INSTRUCTION: ${instruction}
+
+HTML STRUCTURE:
+${htmlSnippet}
+
+TASK: Find the exact <img> tag that matches the user's instruction.
+
+RULES:
+1. Look for headings, alt text, or nearby text that matches
+2. Return ONLY the complete <img> tag (including all attributes)
+3. If no match found, return "NOT_FOUND"
+
+Example:
+User: "Change the Truffle Carbonara image"
+You find: <h3>Truffle Carbonara</h3> nearby <img src="..." alt="...">
+Return: <img src="..." alt="Truffle Carbonara" class="...">
+
+Return ONLY the <img> tag:`;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 150, // Small - just need the img tag
+          messages: [{ role: 'user', content: identificationPrompt }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Claude API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const result = data.content[0].text.trim();
+      
+      const inputTokens = data.usage?.input_tokens || 0;
+      const outputTokens = data.usage?.output_tokens || 0;
+      const cost = this.estimateCost(inputTokens, outputTokens);
+      
+      logger.log(`💰 [IDENTIFY] Cost: $${cost.toFixed(6)} (${inputTokens}in + ${outputTokens}out tokens)`);
+      
+      if (result === 'NOT_FOUND' || !result.includes('<img')) {
+        return { success: false, cost };
+      }
+      
+      // Extract img tag from response
+      const imgMatch = result.match(/<img[^>]+>/i);
+      if (!imgMatch) {
+        return { success: false, cost };
+      }
+      
+      logger.log(`✅ [IDENTIFY] Found: ${imgMatch[0].substring(0, 100)}...`);
+      return { success: true, imageTag: imgMatch[0], cost };
+      
+    } catch (error) {
+      logger.error('❌ [IDENTIFY] Error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
-  /**
-   * Check if this is ONLY an image change
-   */
+  extractRelevantHTMLForIdentification(html) {
+    const sections = [];
+    const sectionRegex = /<section[^>]*>[\s\S]*?<\/section>/gi;
+    const foundSections = html.match(sectionRegex) || [];
+    
+    // Only include sections with images
+    for (const section of foundSections) {
+      if (section.includes('<img')) {
+        sections.push(section);
+      }
+    }
+    
+    if (sections.length > 0) {
+      const combined = sections.join('\n\n');
+      return combined.substring(0, 4000); // Limit to 4000 chars
+    }
+    
+    return html.substring(0, 4000);
+  }
+
+  isStyleOnlyChange(prompt) {
+    const styleKeywords = ['color', 'background', 'font', 'size'];
+    return styleKeywords.some(k => prompt.includes(k)) && !prompt.includes('add') && !prompt.includes('image');
+  }
+
   isImageOnlyChange(prompt) {
     return (prompt.includes('image') || prompt.includes('picture') || prompt.includes('photo')) &&
            (prompt.includes('change') || prompt.includes('replace') || prompt.includes('update'));
   }
 
-  /**
-   * Detect type of edit requested
-   */
   detectEditType(prompt) {
-    if (prompt.includes('change color') || prompt.includes('make it')) {
-      return 'style-change';
-    } else if (prompt.includes('add') || prompt.includes('include')) {
-      return 'addition';
-    } else if (prompt.includes('remove') || prompt.includes('delete')) {
-      return 'removal';
-    } else if (prompt.includes('rewrite') || prompt.includes('rephrase')) {
-      return 'content-change';
-    } else if (prompt.includes('image') && (prompt.includes('change') || prompt.includes('replace'))) {
-      return 'image-replacement';
-    }
+    if (prompt.includes('change color')) return 'style-change';
+    if (prompt.includes('add')) return 'addition';
+    if (prompt.includes('remove')) return 'removal';
+    if (prompt.includes('rewrite')) return 'content-change';
+    if (prompt.includes('image') && prompt.includes('change')) return 'image-replacement';
     return 'modification';
   }
 
-  /**
-   * Estimate complexity of edit
-   */
   estimateComplexity(prompt) {
-    if (prompt.length > 200 || prompt.includes('complete') || prompt.includes('entire')) {
-      return 'high';
-    } else if (prompt.length > 100) {
-      return 'medium';
-    }
+    if (prompt.length > 200) return 'high';
+    if (prompt.length > 100) return 'medium';
     return 'low';
   }
 
-  /**
-   * Build SMART edit prompt (section-based, not full regeneration)
-   * @param {string} currentHTML - Current page HTML
-   * @param {string} userInstruction - User's edit request
-   * @param {Object} analysis - Analysis result
-   * @returns {string} - Complete prompt for Claude
-   */
   buildSmartEditPrompt(currentHTML, userInstruction, analysis) {
-    // For simple changes, use a much lighter prompt
     if (analysis.isImageOnly || analysis.isStyleOnly || analysis.complexity === 'low') {
       return this.buildLightweightPrompt(currentHTML, userInstruction, analysis);
     }
-    
-    // For complex changes, use full prompt (but still warn about preservation)
     return this.buildFullEditPrompt(currentHTML, userInstruction);
   }
 
-  /**
-   * Build lightweight prompt for simple changes (COST SAVER)
-   */
   buildLightweightPrompt(currentHTML, userInstruction, analysis) {
-    // Extract only relevant section (not entire HTML)
     let relevantSection = this.extractRelevantSection(currentHTML, analysis);
-    
-    if (!relevantSection) {
-      relevantSection = currentHTML; // Fallback to full HTML
-    }
+    if (!relevantSection) relevantSection = currentHTML;
 
-    return `You are making a small, precise edit to a landing page.
+    return `You are making a small edit to a landing page.
 
-RELEVANT HTML SECTION:
+RELEVANT HTML:
 ${relevantSection}
 
-USER'S EDIT REQUEST:
+USER REQUEST:
 ${userInstruction}
 
-CRITICAL RULES:
+RULES:
 1. Make ONLY the requested change
-2. PRESERVE all other content exactly as-is
-3. DO NOT remove or modify any other elements
-4. If the change involves images, use format: <img src="{{IMAGE_X:[description]}}" alt="...">
-5. Return ONLY the modified HTML section
+2. PRESERVE all other content
+3. For images use: <img src="{{IMAGE_X:[description]}}" alt="...">
+4. Return ONLY the modified HTML section
 
-OUTPUT FORMAT:
-- Return just the modified section
-- Do NOT add markdown fences
-- Do NOT add explanations
-- Match the original structure exactly
-
-Generate the modified HTML now:`;
+Generate the modified HTML:`;
   }
 
-  /**
-   * Build full edit prompt (for complex changes)
-   */
   buildFullEditPrompt(currentHTML, userInstruction) {
-    return `You are editing an existing landing page. Make precise changes while preserving all other content.
+    return `Edit this landing page while preserving all content not mentioned.
 
-CURRENT HTML CODE:
+CURRENT HTML:
 ${currentHTML}
 
-USER'S EDIT REQUEST:
+USER REQUEST:
 ${userInstruction}
 
-CRITICAL RULES FOR EDITING:
-1. PRESERVE ALL EXISTING CONTENT that is not mentioned in the edit request
-2. PRESERVE ALL IMAGES - Do not remove any existing images unless specifically asked
-3. Keep ALL data-sento-form attributes (form handling)
-4. Keep ALL IDs and classes (analytics, scripts)
-5. Keep ALL existing JavaScript at bottom of page
+RULES:
+1. PRESERVE all existing content
+2. Keep data-sento-form attributes
+3. For images: <img src="{{IMAGE_X:[description]}}" alt="...">
+4. Return complete modified HTML
 
-2. IMAGES - Use EXACT same format:
-   <img src="{{IMAGE_X:[detailed 15+ word description]}}" alt="description">
-   - If replacing an image, use the SAME IMAGE NUMBER
-   - If adding new images, use next available number
-
-3. MAKE ONLY THE REQUESTED CHANGES:
-   - Apply the user's edit precisely
-   - DO NOT modify unrelated sections
-   - Preserve exact structure and styling
-
-4. OUTPUT FORMAT:
-   - Return COMPLETE modified HTML
-   - Do NOT include markdown code fences
-   - Do NOT include explanations
-   - ONLY return the HTML code
-
-Generate the complete modified HTML now:`;
+Generate modified HTML:`;
   }
 
-  /**
-   * Extract relevant section based on analysis
-   */
   extractRelevantSection(html, analysis) {
     try {
       if (analysis.targetSection === 'image' && analysis.elementSelector) {
-        // Try to find the specific section containing this element
         const searchTerm = analysis.elementSelector.toLowerCase();
-        
-        // Find sections containing this term
-        const sectionRegex = /<section[^>]*>[\s\S]*?<\/section>/gi;
-        const sections = html.match(sectionRegex) || [];
-        
+        const sections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
         for (const section of sections) {
-          if (section.toLowerCase().includes(searchTerm)) {
-            return section;
-          }
+          if (section.toLowerCase().includes(searchTerm)) return section;
         }
       }
-      
-      // Try to extract specific section types
-      if (analysis.targetSection === 'header') {
-        const match = html.match(/<header[^>]*>[\s\S]*?<\/header>/i);
-        return match ? match[0] : null;
-      }
-      
-      if (analysis.targetSection === 'hero') {
-        // Look for first main section or hero section
-        const heroMatch = html.match(/<section[^>]*hero[^>]*>[\s\S]*?<\/section>/i);
-        if (heroMatch) return heroMatch[0];
-        
-        // Fallback to first section
-        const firstSection = html.match(/<section[^>]*>[\s\S]*?<\/section>/i);
-        return firstSection ? firstSection[0] : null;
-      }
-      
-      if (analysis.targetSection === 'footer') {
-        const match = html.match(/<footer[^>]*>[\s\S]*?<\/footer>/i);
-        return match ? match[0] : null;
-      }
-      
       return null;
     } catch (error) {
-      logger.error('Section extraction error:', error);
       return null;
     }
   }
 
-  /**
-   * Validate edited HTML has required attributes
-   * @param {string} html - HTML to validate
-   * @param {string} originalHTML - Original HTML for comparison
-   * @returns {Object} - Validation result
-   */
   validateEditedHTML(html, originalHTML) {
     const issues = [];
     const warnings = [];
-
-    // Check if forms lost their attributes
-    const originalHasForms = originalHTML.includes('data-sento-form');
-    const editedHasForms = html.includes('data-sento-form');
-
-    if (originalHasForms && !editedHasForms) {
-      issues.push('Form handler attributes removed');
+    
+    if (originalHTML.includes('data-sento-form') && !html.includes('data-sento-form')) {
+      issues.push('Form handler lost');
     }
-
-    // Check for critical script removal
-    const originalScripts = (originalHTML.match(/<script/g) || []).length;
-    const editedScripts = (html.match(/<script/g) || []).length;
-
-    if (originalScripts > editedScripts) {
-      warnings.push(`Script count changed: ${originalScripts} → ${editedScripts}`);
-    }
-
-    // Check if images were accidentally removed
-    const originalImages = (originalHTML.match(/<img/g) || []).length;
-    const editedImages = (html.match(/<img/g) || []).length;
-
-    if (editedImages < originalImages - 1) { // Allow for 1 image to be removed if intentional
-      warnings.push(`Images reduced: ${originalImages} → ${editedImages}`);
-    }
-
-    // Check HTML structure
-    if (!html.includes('<!DOCTYPE') && !html.includes('<html')) {
-      issues.push('Missing HTML document structure');
-    }
-
-    return {
-      valid: issues.length === 0,
-      issues,
-      warnings
-    };
+    
+    return { valid: issues.length === 0, issues, warnings };
   }
 
-  /**
-   * Sanitize edit instruction
-   */
   sanitizeEditInstruction(instruction) {
-    if (typeof instruction !== 'string') {
-      throw new Error('Edit instruction must be a string');
-    }
-
-    return instruction
-      .replace(/IGNORE\s+.*/gi, '')
-      .replace(/SYSTEM\s*:/gi, '')
-      .replace(/```/g, '')
-      .trim()
-      .slice(0, 2000); // Limit length
+    if (typeof instruction !== 'string') throw new Error('Must be string');
+    return instruction.replace(/IGNORE\s+.*/gi, '').replace(/```/g, '').trim().slice(0, 2000);
   }
 
-  /**
-   * Create version metadata
-   */
   createVersionMetadata(userInstruction, analysis) {
     return {
       change_description: userInstruction.slice(0, 500),
       target_section: analysis.targetSection,
       edit_type: analysis.editType,
-      complexity: analysis.complexity,
       timestamp: new Date().toISOString()
     };
   }
 
-  /**
-   * Calculate token estimate for cost tracking
-   */
   estimateTokens(text) {
-    // Rough estimate: ~4 characters per token
     return Math.ceil(text.length / 4);
   }
 
-  /**
-   * Estimate cost of edit operation
-   */
   estimateCost(inputTokens, outputTokens) {
-    // Sonnet 4 pricing (as of Feb 2026)
-    const INPUT_COST_PER_1M = 3.00;  // $3 per 1M input tokens
-    const OUTPUT_COST_PER_1M = 15.00; // $15 per 1M output tokens
-    
-    const inputCost = (inputTokens / 1000000) * INPUT_COST_PER_1M;
-    const outputCost = (outputTokens / 1000000) * OUTPUT_COST_PER_1M;
-    
-    return inputCost + outputCost;
+    const INPUT_COST = 3.00;  // $ per 1M tokens
+    const OUTPUT_COST = 15.00;
+    return (inputTokens / 1000000) * INPUT_COST + (outputTokens / 1000000) * OUTPUT_COST;
   }
 }
 
