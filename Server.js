@@ -36,14 +36,12 @@ import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getImages, getContextAwareI
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
-const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Initialize Anthropic SDK
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 });
-const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 // ============================================
 // HELPER FUNCTIONS
