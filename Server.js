@@ -3083,65 +3083,159 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     // FAST PATH 1: IMAGE-ONLY CHANGES (NO CLAUDE API CALL) 💰
     // ====================================================================
     if (analysis.isImageOnly && analysis.elementSelector) {
-      logger.log('🖼️ [EDIT] Image-only change detected - using FAST PATH (no API call)');
+  logger.log('🖼️ [EDIT] Image-only change detected - using FAST PATH (no API call)');
+  
+  try {
+    const searchTerm = analysis.elementSelector.toLowerCase();
+    logger.log(`🔍 [EDIT] Looking for element: "${searchTerm}"`);
+    
+    let modifiedHTML = currentHTML;
+    let imageFound = false;
+    
+    // STRATEGY 1: Find by heading text (most reliable)
+    // Look for <h1-h6> tag containing the search term, then find the nearest image
+    const headingRegex = new RegExp(
+      `<(h[1-6])[^>]*>([^<]*${searchTerm}[^<]*)<\\/\\1>`,
+      'gi'
+    );
+    
+    const headingMatch = currentHTML.match(headingRegex);
+    if (headingMatch && headingMatch.length > 0) {
+      logger.log(`✅ [EDIT] Found heading with "${searchTerm}"`);
       
-      try {
-        const searchTerm = analysis.elementSelector.toLowerCase();
+      // Get the position of the heading
+      const headingIndex = currentHTML.indexOf(headingMatch[0]);
+      
+      // Look backwards and forwards 500 chars for an image
+      const beforeHeading = currentHTML.substring(Math.max(0, headingIndex - 500), headingIndex);
+      const afterHeading = currentHTML.substring(headingIndex, headingIndex + 500);
+      
+      // Try finding image after heading first (more common)
+      const imageAfterRegex = /<img[^>]+src="([^"]+)"[^>]*>/i;
+      let imageMatch = afterHeading.match(imageAfterRegex);
+      let imageContext = afterHeading;
+      let searchStart = headingIndex;
+      
+      // If not found after, try before
+      if (!imageMatch) {
+        imageMatch = beforeHeading.match(imageAfterRegex);
+        imageContext = beforeHeading;
+        searchStart = Math.max(0, headingIndex - 500);
+      }
+      
+      if (imageMatch) {
+        const fullImageTag = imageMatch[0];
+        const oldImageSrc = imageMatch[1];
         
-        // Find and replace the specific image
-        // Look for image with alt text containing the search term
-        const imageRegex = new RegExp(
-          `(<img[^>]*alt="[^"]*${searchTerm}[^"]*"[^>]*src=")([^"]+)(")`
-          , 'gi'
-        );
+        logger.log(`✅ [EDIT] Found image near heading: ${oldImageSrc.substring(0, 50)}...`);
         
-        // Create new image placeholder based on instruction
-        const imageDescription = sanitizedInstruction.replace(/change|replace|image|for|the|to|a/gi, '').trim();
-        const newImagePlaceholder = `{{IMAGE_NEW:[${imageDescription || 'updated image'}]}}`;
+        // Create new image placeholder
+        const imageDescription = sanitizedInstruction
+          .replace(/change|replace|update|image|picture|photo|for|the|to|a|with/gi, '')
+          .trim() || 'updated image';
         
-        // Replace just this image
-        let modifiedHTML = currentHTML.replace(
-          imageRegex,
-          `$1${newImagePlaceholder}$3`
-        );
+        const newImagePlaceholder = `{{IMAGE_NEW:[${imageDescription}]}}`;
         
-        // If no match found, try broader search
-        if (modifiedHTML === currentHTML) {
-          logger.log(`⚠️ [EDIT] Specific image not found, trying broader search...`);
-          
-          // Try searching in section text content
-          const sectionRegex = new RegExp(
-            `(<section[^>]*>[\\s\\S]*?${searchTerm}[\\s\\S]*?<img[^>]*src=")([^"]+)("[^>]*>[\\s\\S]*?<\\/section>)`
-            , 'gi'
-          );
-          
-          modifiedHTML = currentHTML.replace(
-            sectionRegex,
-            `$1${newImagePlaceholder}$3`
-          );
-        }
+        // Replace this specific image tag
+        const newImageTag = fullImageTag.replace(oldImageSrc, newImagePlaceholder);
+        modifiedHTML = currentHTML.replace(fullImageTag, newImageTag);
         
-        // Verify change was made
-        if (modifiedHTML === currentHTML) {
-          logger.warn(`⚠️ [EDIT] Could not find image for "${searchTerm}", falling back to Claude`);
-          // Fall through to Claude API below
-        } else {
-          logger.log(`✅ [EDIT] Image fast-path successful - Zero API cost`);
-          
-          return res.json({
-            success: true,
-            previewHtml: modifiedHTML,
-            cost: 0.0001, // Near-zero cost (just server processing)
-            tokensUsed: 0,
-            editType: 'image_fast_path',
-            analysis
-          });
-        }
-      } catch (fastPathError) {
-        logger.error('❌ [EDIT] Fast path error:', fastPathError);
-        // Fall through to Claude API
+        imageFound = true;
+        logger.log(`✅ [EDIT] Image replaced successfully`);
       }
     }
+    
+    // STRATEGY 2: Find by alt text (fallback)
+    if (!imageFound) {
+      logger.log(`⚠️ [EDIT] No heading found, trying alt text match...`);
+      
+      const altRegex = new RegExp(
+        `<img([^>]*alt="[^"]*${searchTerm}[^"]*"[^>]*)src="([^"]+)"([^>]*)>`,
+        'gi'
+      );
+      
+      const altMatch = currentHTML.match(altRegex);
+      if (altMatch && altMatch.length > 0) {
+        const fullImageTag = altMatch[0];
+        const srcMatch = fullImageTag.match(/src="([^"]+)"/);
+        
+        if (srcMatch) {
+          const oldImageSrc = srcMatch[1];
+          logger.log(`✅ [EDIT] Found image by alt text: ${oldImageSrc.substring(0, 50)}...`);
+          
+          const imageDescription = sanitizedInstruction
+            .replace(/change|replace|update|image|picture|photo|for|the|to|a|with/gi, '')
+            .trim() || 'updated image';
+          
+          const newImagePlaceholder = `{{IMAGE_NEW:[${imageDescription}]}}`;
+          const newImageTag = fullImageTag.replace(oldImageSrc, newImagePlaceholder);
+          modifiedHTML = currentHTML.replace(fullImageTag, newImageTag);
+          
+          imageFound = true;
+          logger.log(`✅ [EDIT] Image replaced successfully via alt text`);
+        }
+      }
+    }
+    
+    // STRATEGY 3: Find in section containing search term (last resort)
+    if (!imageFound) {
+      logger.log(`⚠️ [EDIT] No alt text match, trying section search...`);
+      
+      // Find section containing the search term
+      const sectionRegex = /<section[^>]*>[\s\S]*?<\/section>/gi;
+      const sections = currentHTML.match(sectionRegex) || [];
+      
+      for (const section of sections) {
+        if (section.toLowerCase().includes(searchTerm)) {
+          logger.log(`✅ [EDIT] Found section containing "${searchTerm}"`);
+          
+          // Find first image in this section
+          const imageInSectionRegex = /<img[^>]+src="([^"]+)"[^>]*>/i;
+          const imageMatch = section.match(imageInSectionRegex);
+          
+          if (imageMatch) {
+            const fullImageTag = imageMatch[0];
+            const oldImageSrc = imageMatch[1];
+            
+            logger.log(`✅ [EDIT] Found image in section: ${oldImageSrc.substring(0, 50)}...`);
+            
+            const imageDescription = sanitizedInstruction
+              .replace(/change|replace|update|image|picture|photo|for|the|to|a|with/gi, '')
+              .trim() || 'updated image';
+            
+            const newImagePlaceholder = `{{IMAGE_NEW:[${imageDescription}]}}`;
+            const newImageTag = fullImageTag.replace(oldImageSrc, newImagePlaceholder);
+            modifiedHTML = currentHTML.replace(fullImageTag, newImageTag);
+            
+            imageFound = true;
+            logger.log(`✅ [EDIT] Image replaced successfully via section search`);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Verify change was made
+    if (!imageFound || modifiedHTML === currentHTML) {
+      logger.warn(`⚠️ [EDIT] Could not find image for "${searchTerm}", falling back to Claude`);
+      // Fall through to Claude API below
+    } else {
+      logger.log(`✅ [EDIT] Image fast-path successful - Zero API cost`);
+      
+      return res.json({
+        success: true,
+        previewHtml: modifiedHTML,
+        cost: 0.0001, // Near-zero cost (just server processing)
+        tokensUsed: 0,
+        editType: 'image_fast_path',
+        analysis
+      });
+    }
+  } catch (fastPathError) {
+    logger.error('❌ [EDIT] Fast path error:', fastPathError);
+    // Fall through to Claude API
+  }
+}
 
     // ====================================================================
     // FAST PATH 2: SIMPLE STYLE CHANGES (LIGHTWEIGHT PROMPT) 💰
