@@ -3207,27 +3207,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
         // Fall through to Claude API
       }
     }
-    if (!imageFound || modifiedHTML === currentHTML) {
-      logger.warn(`⚠️ [EDIT] Could not find image for "${searchTerm}", falling back to Claude`);
-      // Fall through to Claude API below
-    } else {
-      logger.log(`✅ [EDIT] Image fast-path successful - Zero API cost`);
-      
-      return res.json({
-        success: true,
-        previewHtml: modifiedHTML,
-        cost: 0.0001, // Near-zero cost (just server processing)
-        tokensUsed: 0,
-        editType: 'image_fast_path',
-        analysis
-      });
-    }
-  } catch (fastPathError) {
-    logger.error('❌ [EDIT] Fast path error:', fastPathError);
-    // Fall through to Claude API
-  }
-}
-
+   
     // ====================================================================
     // FAST PATH 2: SIMPLE STYLE CHANGES (LIGHTWEIGHT PROMPT) 💰
     // ====================================================================
