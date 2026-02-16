@@ -3053,13 +3053,69 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     // Sanitize instruction
     const sanitized = iterativeEditor.sanitizeEditInstruction(editInstruction);
 
-    // Analyze edit request
+    // Analyze edit request (SMART DETECTION)
     const analysis = iterativeEditor.analyzeEditRequest(sanitized, website.html_code);
 
-    // Build edit prompt
-    const editPrompt = iterativeEditor.buildEditPrompt(website.html_code, sanitized);
+    logger.log(`🎨 [EDIT] Type: ${analysis.editType}, Target: ${analysis.targetSection}, Complexity: ${analysis.complexity}`);
 
-    logger.log(`🎨 [EDIT] Processing edit for ${websiteId}: ${analysis.targetSection}`);
+    // SPECIAL CASE: Image-only changes (NO CLAUDE API CALL)
+    if (analysis.isImageOnly && analysis.elementSelector) {
+      logger.log(`🖼️ [EDIT] Image-only change detected - using fast path`);
+      
+      try {
+        // Just regenerate the image description, not the HTML
+        const { getContextAwareImages } = await import('./imageLibrary.js');
+        const newImages = await getContextAwareImages(analysis.elementSelector, 1);
+        
+        if (newImages && newImages.length > 0) {
+          // Find and replace the specific image in HTML
+          let modifiedHTML = website.html_code;
+          
+          // Find image placeholders or existing images related to this element
+          const searchTerm = analysis.elementSelector.toLowerCase().replace(/\s+/g, '.*');
+          const imageRegex = new RegExp(`<img[^>]*alt="[^"]*${searchTerm}[^"]*"[^>]*>`, 'gi');
+          
+          const match = modifiedHTML.match(imageRegex);
+          if (match && match[0]) {
+            // Replace just this image
+            modifiedHTML = modifiedHTML.replace(match[0], 
+              `<img src="${newImages[0]}" alt="${analysis.elementSelector}" class="${match[0].match(/class="([^"]*)"/)?.[1] || ''}">`
+            );
+            
+            return res.json({
+              success: true,
+              preview: modifiedHTML,
+              analysis,
+              validation: { valid: true, issues: [], warnings: [] },
+              costSavings: {
+                approach: 'image-only',
+                estimatedCost: 0.001, // Image API only
+                traditionalCost: 0.10,
+                saved: 0.099
+              },
+              message: 'Image updated using fast path (no full regeneration)'
+            });
+          }
+        }
+      } catch (imageError) {
+        logger.log(`⚠️ [EDIT] Fast path failed, falling back to full edit`);
+        // Fall through to full edit below
+      }
+    }
+
+    // Build SMART edit prompt (uses section-based approach for simple edits)
+    const editPrompt = iterativeEditor.buildSmartEditPrompt(
+      website.html_code, 
+      sanitized,
+      analysis
+    );
+
+    // Estimate tokens for cost tracking
+    const estimatedInputTokens = iterativeEditor.estimateTokens(editPrompt);
+    const estimatedOutputTokens = 2000; // Typical output size
+    const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, estimatedOutputTokens);
+
+    logger.log(`💰 [EDIT] Estimated cost: $${estimatedCost.toFixed(4)} (${estimatedInputTokens} input + ${estimatedOutputTokens} output tokens)`);
 
     // Call Claude API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -3071,7 +3127,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 6000,
+        max_tokens: analysis.complexity === 'low' ? 2000 : 6000, // Reduce tokens for simple edits
         messages: [
           {
             role: 'user',
@@ -3087,6 +3143,23 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
 
     const data = await response.json();
     let editedHTML = htmlParser.cleanHTML(data.content[0].text);
+
+    // Calculate actual cost
+    const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
+    const actualOutputTokens = data.usage?.output_tokens || estimatedOutputTokens;
+    const actualCost = iterativeEditor.estimateCost(actualInputTokens, actualOutputTokens);
+
+    logger.log(`💰 [EDIT] Actual cost: $${actualCost.toFixed(4)} (${actualInputTokens} input + ${actualOutputTokens} output tokens)`);
+
+    // If we only edited a section, merge it back into full HTML
+    if (analysis.complexity === 'low' && editedHTML.length < website.html_code.length / 2) {
+      logger.log(`🔀 [EDIT] Merging section back into full HTML`);
+      // Try to find and replace the section
+      const relevantSection = iterativeEditor.extractRelevantSection(website.html_code, analysis);
+      if (relevantSection) {
+        editedHTML = website.html_code.replace(relevantSection, editedHTML);
+      }
+    }
 
     // Validate edited HTML
     const validation = iterativeEditor.validateEditedHTML(editedHTML, website.html_code);
@@ -3111,6 +3184,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     }
 
     if (descriptions.length > 0) {
+      logger.log(`🖼️ [EDIT] Processing ${descriptions.length} images`);
       const { getContextAwareImages } = await import('./imageLibrary.js');
       const images = await getContextAwareImages(sanitized, descriptions.length);
       
@@ -3129,6 +3203,12 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       preview: editedHTML,
       analysis,
       validation,
+      cost: {
+        inputTokens: actualInputTokens,
+        outputTokens: actualOutputTokens,
+        totalCost: actualCost,
+        approach: analysis.complexity === 'low' ? 'section-based' : 'full-regeneration'
+      },
       message: 'Edit preview ready - review before applying'
     });
 
@@ -3136,11 +3216,11 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     logger.error('❌ [EDIT] Preview error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to generate edit preview'
+      error: 'Failed to generate edit preview',
+      details: error.message
     });
   }
 });
-
 // 💾 APPLY EDIT: Save and deploy edited version
 app.post('/api/edit/:websiteId/apply', requireAuth, async (req, res) => {
   try {
