@@ -40,7 +40,7 @@ const PORT = process.env.PORT || 3000;
 
 // Initialize Anthropic SDK
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
+  apiKey: process.env.CLAUDE_API_KEY
 });
 app.set('trust proxy', 1);
 // ============================================
