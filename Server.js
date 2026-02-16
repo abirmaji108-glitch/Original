@@ -3056,63 +3056,32 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     // Analyze edit request (SMART DETECTION)
     const analysis = iterativeEditor.analyzeEditRequest(sanitized, website.html_code);
 
-    logger.log(`🎨 [EDIT] Type: ${analysis.editType}, Target: ${analysis.targetSection}, Complexity: ${analysis.complexity}`);
+    // ====================================================================
+    // 🔍 COMPREHENSIVE DEBUG LOGGING - TO FIND THE REAL PROBLEM
+    // ====================================================================
+    
+    console.log('\n\n========== EDIT REQUEST DEBUG ==========');
+    console.log('📝 User instruction:', sanitized);
+    console.log('🎯 Analysis results:', JSON.stringify(analysis, null, 2));
+    console.log('📊 Full HTML length:', website.html_code.length);
+    console.log('========================================\n');
 
-    // SPECIAL CASE: Image-only changes (NO CLAUDE API CALL)
-    if (analysis.isImageOnly && analysis.elementSelector) {
-      logger.log(`🖼️ [EDIT] Image-only change detected - using fast path`);
-      
-      try {
-        // Just regenerate the image description, not the HTML
-        const { getContextAwareImages } = await import('./imageLibrary.js');
-        const newImages = await getContextAwareImages(analysis.elementSelector, 1);
-        
-        if (newImages && newImages.length > 0) {
-          // Find and replace the specific image in HTML
-          let modifiedHTML = website.html_code;
-          
-          // Find image placeholders or existing images related to this element
-          const searchTerm = analysis.elementSelector.toLowerCase().replace(/\s+/g, '.*');
-          const imageRegex = new RegExp(`<img[^>]*alt="[^"]*${searchTerm}[^"]*"[^>]*>`, 'gi');
-          
-          const match = modifiedHTML.match(imageRegex);
-          if (match && match[0]) {
-            // Replace just this image
-            modifiedHTML = modifiedHTML.replace(match[0], 
-              `<img src="${newImages[0]}" alt="${analysis.elementSelector}" class="${match[0].match(/class="([^"]*)"/)?.[1] || ''}">`
-            );
-            
-            return res.json({
-              success: true,
-              preview: modifiedHTML,
-              analysis,
-              validation: { valid: true, issues: [], warnings: [] },
-              costSavings: {
-                approach: 'image-only',
-                estimatedCost: 0.001, // Image API only
-                traditionalCost: 0.10,
-                saved: 0.099
-              },
-              message: 'Image updated using fast path (no full regeneration)'
-            });
-          }
-        }
-      } catch (imageError) {
-        logger.log(`⚠️ [EDIT] Fast path failed, falling back to full edit`);
-        // Fall through to full edit below
-      }
-    }
-
-    // Build SMART edit prompt (uses section-based approach for simple edits)
+    // Build SMART edit prompt
     const editPrompt = iterativeEditor.buildSmartEditPrompt(
       website.html_code, 
       sanitized,
       analysis
     );
 
-    // Estimate tokens for cost tracking
+    console.log('📤 PROMPT SENT TO CLAUDE:');
+    console.log('Length:', editPrompt.length);
+    console.log('First 500 chars:', editPrompt.substring(0, 500));
+    console.log('Last 300 chars:', editPrompt.substring(editPrompt.length - 300));
+    console.log('\n');
+
+    // Estimate tokens
     const estimatedInputTokens = iterativeEditor.estimateTokens(editPrompt);
-    const estimatedOutputTokens = 2000; // Typical output size
+    const estimatedOutputTokens = 2000;
     const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, estimatedOutputTokens);
 
     logger.log(`💰 [EDIT] Estimated cost: $${estimatedCost.toFixed(4)} (${estimatedInputTokens} input + ${estimatedOutputTokens} output tokens)`);
@@ -3127,7 +3096,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: analysis.complexity === 'low' ? 2000 : 6000, // Reduce tokens for simple edits
+        max_tokens: analysis.complexity === 'low' ? 2000 : 6000,
         messages: [
           {
             role: 'user',
@@ -3144,6 +3113,12 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     const data = await response.json();
     let editedHTML = htmlParser.cleanHTML(data.content[0].text);
 
+    console.log('📥 CLAUDE RESPONSE:');
+    console.log('Length:', editedHTML.length);
+    console.log('First 500 chars:', editedHTML.substring(0, 500));
+    console.log('Last 300 chars:', editedHTML.substring(editedHTML.length - 300));
+    console.log('\n');
+
     // Calculate actual cost
     const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
     const actualOutputTokens = data.usage?.output_tokens || estimatedOutputTokens;
@@ -3151,16 +3126,56 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
 
     logger.log(`💰 [EDIT] Actual cost: $${actualCost.toFixed(4)} (${actualInputTokens} input + ${actualOutputTokens} output tokens)`);
 
-    // If we only edited a section, merge it back into full HTML
+    // 🔍 DEBUG: Section merging logic
+    console.log('\n========== SECTION MERGE DEBUG ==========');
+    console.log('Complexity:', analysis.complexity);
+    console.log('EditedHTML length:', editedHTML.length);
+    console.log('Full HTML length:', website.html_code.length);
+    console.log('Is section edit?', analysis.complexity === 'low' && editedHTML.length < website.html_code.length / 2);
+    
     if (analysis.complexity === 'low' && editedHTML.length < website.html_code.length / 2) {
       logger.log(`🔀 [EDIT] Merging section back into full HTML`);
-      // Try to find and replace the section
+      
       const relevantSection = iterativeEditor.extractRelevantSection(website.html_code, analysis);
+      
+      console.log('\n🔍 EXTRACTED SECTION:');
+      console.log('Section found?', relevantSection ? 'YES' : 'NO');
       if (relevantSection) {
-        editedHTML = website.html_code.replace(relevantSection, editedHTML);
+        console.log('Section length:', relevantSection.length);
+        console.log('First 300 chars:', relevantSection.substring(0, 300));
+        console.log('Last 200 chars:', relevantSection.substring(relevantSection.length - 200));
+        
+        console.log('\n🔧 ATTEMPTING REPLACE...');
+        const beforeReplace = website.html_code;
+        const afterReplace = website.html_code.replace(relevantSection, editedHTML);
+        const didChange = beforeReplace !== afterReplace;
+        
+        console.log('Replace successful?', didChange);
+        console.log('HTML changed?', didChange);
+        
+        if (didChange) {
+          console.log('✅ Section replaced successfully');
+          editedHTML = afterReplace;
+        } else {
+          console.log('❌ REPLACE FAILED - HTML unchanged');
+          console.log('Checking for differences...');
+          
+          // Check if strings are similar but not exact
+          const sectionInHTML = website.html_code.includes(relevantSection.substring(0, 100));
+          console.log('First 100 chars of section found in HTML?', sectionInHTML);
+          
+          // Check whitespace differences
+          const sectionNoWhitespace = relevantSection.replace(/\s+/g, '');
+          const editedNoWhitespace = editedHTML.replace(/\s+/g, '');
+          console.log('Lengths without whitespace - Section:', sectionNoWhitespace.length, 'Edited:', editedNoWhitespace.length);
+        }
+      } else {
+        console.log('❌ No relevant section extracted');
       }
+    } else {
+      console.log('Not a section edit - using full response as-is');
     }
-
+    console.log('========================================\n');
     // Validate edited HTML
     const validation = iterativeEditor.validateEditedHTML(editedHTML, website.html_code);
 
