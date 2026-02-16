@@ -26,12 +26,26 @@ class IterativeEditor {
         targetSection = 'footer';
       } else if (prompt.includes('form') || prompt.includes('contact')) {
         targetSection = 'form';
-      } else if (prompt.includes('image')) {
+      } else if (prompt.includes('image') || prompt.includes('picture') || prompt.includes('photo')) {
         targetSection = 'image';
-        // Try to extract which image
-        const imageMatch = prompt.match(/image for ([a-z\s]+)/i);
-        if (imageMatch) {
+        
+        // IMPROVED: Multiple patterns to extract which image
+        // Pattern 1: "image for X" or "image of X"
+        let imageMatch = prompt.match(/(?:image|picture|photo)\s+(?:for|of)\s+([a-z\s]+?)(?:\s+to|\s+with|$)/i);
+        
+        // Pattern 2: "the X image" or "X's image"
+        if (!imageMatch) {
+          imageMatch = prompt.match(/(?:the\s+)?([a-z\s]+?)\s+(?:image|picture|photo)/i);
+        }
+        
+        // Pattern 3: "change/replace X image"
+        if (!imageMatch) {
+          imageMatch = prompt.match(/(?:change|replace|update)\s+(?:the\s+)?([a-z\s]+?)(?:\s+image|\s+picture|\s+photo)/i);
+        }
+        
+        if (imageMatch && imageMatch[1]) {
           elementSelector = imageMatch[1].trim();
+          logger.log(`🔍 [EDIT] Extracted element selector: "${elementSelector}"`);
         }
       } else if (prompt.includes('button')) {
         targetSection = 'button';
@@ -76,7 +90,7 @@ class IterativeEditor {
    */
   isImageOnlyChange(prompt) {
     return (prompt.includes('image') || prompt.includes('picture') || prompt.includes('photo')) &&
-           (prompt.includes('change') || prompt.includes('replace'));
+           (prompt.includes('change') || prompt.includes('replace') || prompt.includes('update'));
   }
 
   /**
