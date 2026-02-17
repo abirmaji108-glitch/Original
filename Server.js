@@ -3076,7 +3076,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
         if (identification.success && identification.imageTag) {
           // Step 2: Extract new image description from instruction
           const descMatch = sanitized.match(/(?:to|with|a)\s+(.+?)(?:\s+image|\s+picture|$)/i);
-          const newImageDesc = descMatch ? descMatch[1].trim() : sanitized.replace(/change|replace|update|the|image|picture|photo|different|dish|pasta/gi, '').trim();
+          const newImageDesc = descMatch ? descMatch[1].trim() : sanitized.replace(/change|replace|update|the|image|picture|photo|to|with|a|an/gi, '').trim();
           
           // Step 3: Create new img tag with placeholder
           const oldImgTag = identification.imageTag;
