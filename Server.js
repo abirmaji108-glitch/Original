@@ -3684,6 +3684,113 @@ app.post('/api/edit/:websiteId/revert/:versionNumber', requireAuth, async (req, 
     });
   }
 });
+// 🖼️ REPLACE IMAGE: Swap one image src for another (zero AI cost)
+app.post('/api/edit/:websiteId/replace-image', requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const { oldSrc, newSrc, unsplashId } = req.body;
+    const userId = req.user.id;
+
+    if (!oldSrc || !newSrc) {
+      return res.status(400).json({ success: false, error: 'oldSrc and newSrc required' });
+    }
+
+    const { data: website, error: fetchError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !website) {
+      return res.status(404).json({ success: false, error: 'Website not found' });
+    }
+
+    // Simple src swap - no Claude needed
+    const updatedHTML = website.html_code.replace(
+      new RegExp(oldSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+      newSrc
+    );
+
+    // Trigger Unsplash download endpoint (required by their API guidelines)
+    if (unsplashId) {
+      try {
+        await fetch(`https://api.unsplash.com/photos/${unsplashId}/download`, {
+          headers: { 'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` }
+        });
+      } catch (e) {
+        // Non-fatal - don't block the save
+        logger.warn('Unsplash download trigger failed:', e.message);
+      }
+    }
+
+    // Save immediately
+    const { error: updateError } = await supabase
+      .from('websites')
+      .update({
+        html_code: updatedHTML,
+        last_edited_at: new Date().toISOString()
+      })
+      .eq('id', websiteId);
+
+    if (updateError) throw updateError;
+
+    // Redeploy if live
+    if (website.deployment_status === 'live') {
+      try {
+        const { url } = await vercelDeploy.deployPage(updatedHTML, website.name);
+        await supabase.from('websites').update({ deployment_url: url }).eq('id', websiteId);
+      } catch (e) {
+        logger.warn('Redeploy after image replace failed:', e.message);
+      }
+    }
+
+    logger.log(`🖼️ [IMAGE] Replaced image in website ${websiteId}`);
+
+    return res.json({ success: true, message: 'Image replaced successfully' });
+
+  } catch (error) {
+    logger.error('❌ [IMAGE] Replace error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to replace image' });
+  }
+});
+
+// 🔍 SEARCH IMAGES: Unsplash search for image picker
+app.get('/api/images/search', requireAuth, async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Query required' });
+    }
+
+    const response = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=20&orientation=landscape`,
+      { headers: { 'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}` } }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Unsplash API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    const images = data.results.map(photo => ({
+      id: photo.id,
+      url: photo.urls.regular,
+      thumb: photo.urls.small,
+      photographer: photo.user.name,
+      photographerUrl: photo.user.links.html,
+      downloadUrl: photo.links.download_location
+    }));
+
+    return res.json({ success: true, images });
+
+  } catch (error) {
+    logger.error('❌ [IMAGE] Search error:', error);
+    return res.status(500).json({ success: false, error: 'Image search failed' });
+  }
+});
 
 // ============================================
 // END OF ITERATIVE EDITING ENDPOINTS
