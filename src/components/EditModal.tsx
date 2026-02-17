@@ -1,5 +1,5 @@
 // components/EditModal.tsx
-// Full-screen AI editing interface with live preview
+// Full-screen AI editing interface with live preview + Phase 3 Image Picker
 
 import { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, Undo, AlertCircle, CheckCircle2, History, Eye } from 'lucide-react';
@@ -40,12 +40,52 @@ export function EditModal({
   const [editHistory, setEditHistory] = useState<EditHistoryItem[]>([]);
   const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
+  // ── Phase 3: Image Picker State ──
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [pickerImages, setPickerImages] = useState<any[]>([]);
+  const [clickedImageSrc, setClickedImageSrc] = useState('');
+  const [isSearchingImages, setIsSearchingImages] = useState(false);
+  const [imageSearchQuery, setImageSearchQuery] = useState('');
+  // ────────────────────────────────
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 
   const backgroundColor = isDarkMode ? '#1a1a1a' : '#ffffff';
   const textColor = isDarkMode ? '#ffffff' : '#000000';
   const borderColor = isDarkMode ? '#333333' : '#e5e7eb';
+
+  // ── Phase 3: Listen for pencil icon clicks from inside iframe ──
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'IMAGE_CLICK') {
+        const src = event.data.src;
+        const alt = event.data.alt || 'professional business';
+        setClickedImageSrc(src);
+        setShowImagePicker(true);
+        setIsSearchingImages(true);
+        setPickerImages([]);
+        setImageSearchQuery(alt);
+
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const response = await fetch(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/images/search?query=${encodeURIComponent(alt)}`,
+            { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
+          );
+          const data = await response.json();
+          if (data.success) setPickerImages(data.images);
+        } catch (e) {
+          console.error('Image search failed:', e);
+        } finally {
+          setIsSearchingImages(false);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [websiteId]);
+  // ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (isOpen) {
@@ -55,6 +95,85 @@ export function EditModal({
       setEditInstruction('');
     }
   }, [isOpen]);
+
+  // ── Phase 3: Inject pencil overlay into iframe HTML ──
+  const injectPencilOverlay = (html: string): string => {
+    const script = `
+<script>
+(function() {
+  function addPencilOverlays() {
+    document.querySelectorAll('img').forEach(function(img) {
+      if (img.dataset.pencilAdded) return;
+      img.dataset.pencilAdded = 'true';
+
+      var parent = img.parentNode;
+      var wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:relative;display:inline-block;width:100%;';
+      parent.insertBefore(wrapper, img);
+      wrapper.appendChild(img);
+
+      var btn = document.createElement('button');
+      btn.innerHTML = '&#9998;';
+      btn.title = 'Change image';
+      btn.style.cssText = [
+        'position:absolute',
+        'top:8px',
+        'right:8px',
+        'width:36px',
+        'height:36px',
+        'border-radius:50%',
+        'background:rgba(0,0,0,0.65)',
+        'border:2px solid rgba(255,255,255,0.8)',
+        'cursor:pointer',
+        'font-size:16px',
+        'display:none',
+        'align-items:center',
+        'justify-content:center',
+        'z-index:9999',
+        'color:white',
+        'transition:transform 0.15s'
+      ].join(';');
+      wrapper.appendChild(btn);
+
+      wrapper.addEventListener('mouseenter', function() {
+        btn.style.display = 'flex';
+      });
+      wrapper.addEventListener('mouseleave', function() {
+        btn.style.display = 'none';
+      });
+      btn.addEventListener('mouseenter', function() {
+        btn.style.transform = 'scale(1.1)';
+      });
+      btn.addEventListener('mouseleave', function() {
+        btn.style.transform = 'scale(1)';
+      });
+
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.parent.postMessage({
+          type: 'IMAGE_CLICK',
+          src: img.src,
+          alt: img.alt || ''
+        }, '*');
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addPencilOverlays);
+  } else {
+    addPencilOverlays();
+  }
+})();
+</script>`;
+
+    if (html.includes('</body>')) {
+      return html.replace('</body>', script + '</body>');
+    }
+    return html + script;
+  };
+  // ────────────────────────────────────────────────────
 
   const generatePreview = async () => {
     if (!editInstruction.trim() || editInstruction.length < 10) {
@@ -260,6 +379,27 @@ export function EditModal({
     }
   };
 
+  // ── Phase 3: Search images helper (used by search bar Enter key) ──
+  const searchImages = async (query: string) => {
+    if (!query.trim()) return;
+    setIsSearchingImages(true);
+    setPickerImages([]);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/images/search?query=${encodeURIComponent(query)}`,
+        { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
+      );
+      const data = await response.json();
+      if (data.success) setPickerImages(data.images);
+    } catch (e) {
+      console.error('Image search failed:', e);
+    } finally {
+      setIsSearchingImages(false);
+    }
+  };
+  // ────────────────────────────────────────────────────────────────
+
   if (!isOpen) return null;
 
   return (
@@ -437,7 +577,7 @@ export function EditModal({
           <div className="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden">
             <iframe
               ref={iframeRef}
-              srcDoc={previewHTML || currentHTML}
+              srcDoc={injectPencilOverlay(previewHTML || currentHTML)}
               className="w-full h-full border-0"
               title="Preview"
               sandbox="allow-scripts allow-same-origin"
@@ -445,6 +585,130 @@ export function EditModal({
           </div>
         </div>
       </div>
+
+      {/* ── Phase 3: Image Picker Modal ── */}
+      {showImagePicker && (
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-20">
+          <div className="w-full max-w-3xl max-h-[85vh] rounded-2xl overflow-hidden flex flex-col bg-white shadow-2xl">
+
+            {/* Header */}
+            <div className="flex justify-between items-center p-5 border-b">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Choose a new image</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Hover any photo to preview, click to replace</p>
+              </div>
+              <button
+                onClick={() => setShowImagePicker(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Search bar */}
+            <div className="p-4 border-b bg-gray-50">
+              <input
+                type="text"
+                value={imageSearchQuery}
+                onChange={(e) => setImageSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') searchImages(imageSearchQuery);
+                }}
+                placeholder="Search photos and press Enter..."
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+              />
+            </div>
+
+            {/* Image grid */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {isSearchingImages ? (
+                <div className="flex items-center justify-center h-48">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                  <span className="ml-3 text-gray-500 text-sm">Searching photos...</span>
+                </div>
+              ) : pickerImages.length > 0 ? (
+                <div className="grid grid-cols-4 gap-3">
+                  {pickerImages.map((img) => (
+                    <button
+                      key={img.id}
+                      onClick={async () => {
+                        // Replace in active HTML
+                        const activeHTML = previewHTML || currentHTML;
+                        const updatedHTML = activeHTML.replace(
+                          new RegExp(clickedImageSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+                          img.url
+                        );
+
+                        // Save to server (fire and forget)
+                        try {
+                          const { data: { session } } = await supabase.auth.getSession();
+                          await fetch(
+                            `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/edit/${websiteId}/replace-image`,
+                            {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session?.access_token}`
+                              },
+                              body: JSON.stringify({
+                                oldSrc: clickedImageSrc,
+                                newSrc: img.url,
+                                unsplashId: img.id
+                              })
+                            }
+                          );
+                        } catch (e) {
+                          console.error('Image save failed:', e);
+                        }
+
+                        setPreviewHTML(updatedHTML);
+                        setShowImagePicker(false);
+                        toast({
+                          title: "🖼️ Image replaced",
+                          description: "Saved automatically",
+                        });
+                      }}
+                      className="group relative rounded-xl overflow-hidden aspect-video bg-gray-100 hover:ring-2 hover:ring-purple-500 transition-all duration-150 shadow-sm hover:shadow-md"
+                    >
+                      <img
+                        src={img.thumb}
+                        alt={`Photo by ${img.photographer}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                      {/* Photographer credit — visible on hover only */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
+                        <p className="text-white text-xs truncate">📷 {img.photographer}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 text-gray-400">
+                  <p className="text-5xl mb-4">🔍</p>
+                  <p className="font-medium">No photos found</p>
+                  <p className="text-sm mt-1">Try a different search term above</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer — Unsplash attribution (required) */}
+            <div className="p-3 border-t bg-gray-50 text-center">
+              <p className="text-xs text-gray-400">
+                Photos by{' '}
+                <a
+                  href="https://unsplash.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-gray-600 transition-colors"
+                >
+                  Unsplash
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ─────────────────────────────── */}
 
       {/* Version History Modal */}
       {showVersions && (
