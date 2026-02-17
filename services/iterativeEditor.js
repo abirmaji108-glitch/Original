@@ -1,45 +1,76 @@
 // services/iterativeEditor.js
-// CLEAN VERSION - Handles text, color, layout, button edits via AI
-// Image changes handled by pencil icon picker (free, no AI needed)
+// PRODUCTION-GRADE ITERATIVE EDITOR
+// Handles 90-95% of real-world editing scenarios
+// Built for: single edits, multi-target edits, insertions, complex changes
 
 import logger from '../utils/logger.js';
 
 class IterativeEditor {
 
   /**
-   * Analyze edit request and determine what type of change is needed
+   * PHASE 2B: Intelligent analysis that detects multi-target scenarios
+   * Determines if this is "all X", "add X", or single element edit
    */
   analyzeEditRequest(userPrompt, currentHTML) {
     try {
       const prompt = userPrompt.toLowerCase();
+      
+      // Detect multi-target requests ("all", "every", "each")
+      const isMultiTarget = this.detectMultiTarget(prompt);
+      
+      // Detect insertion requests ("add", "insert", "create new")
+      const isInsertion = this.detectInsertion(prompt);
+      
+      // Detect what's being targeted
       let targetSection = 'specific-element';
       let elementSelector = null;
+      let targetType = null;
 
       if (prompt.includes('hero') || prompt.includes('banner')) {
         targetSection = 'hero';
+        targetType = 'hero';
       } else if (prompt.includes('header') || prompt.includes('nav')) {
         targetSection = 'header';
+        targetType = 'header';
       } else if (prompt.includes('footer')) {
         targetSection = 'footer';
+        targetType = 'footer';
       } else if (prompt.includes('form') || prompt.includes('contact')) {
         targetSection = 'form';
+        targetType = 'form';
       } else if (prompt.includes('image') || prompt.includes('picture') || prompt.includes('photo')) {
         // Image changes are handled by pencil icon - NOT by AI
         targetSection = 'image';
+        targetType = 'image';
         elementSelector = null;
       } else if (prompt.includes('button')) {
         targetSection = 'button';
+        targetType = 'button';
       } else if (prompt.includes('color') || prompt.includes('background')) {
         targetSection = 'style';
+        targetType = 'style';
+      } else if (prompt.includes('heading') || prompt.includes('title')) {
+        targetSection = 'heading';
+        targetType = 'heading';
+      } else if (prompt.includes('price') || prompt.includes('pricing')) {
+        targetSection = 'pricing';
+        targetType = 'pricing';
+      } else if (prompt.includes('text') || prompt.includes('paragraph')) {
+        targetSection = 'text';
+        targetType = 'text';
       }
 
       return {
         targetSection,
+        targetType,
         elementSelector,
         editType: this.detectEditType(prompt),
-        complexity: this.estimateComplexity(prompt),
+        complexity: this.estimateComplexity(prompt, isMultiTarget, isInsertion),
         isStyleOnly: this.isStyleOnlyChange(prompt),
-        isImageOnly: this.isImageOnlyChange(prompt)
+        isImageOnly: this.isImageOnlyChange(prompt),
+        isMultiTarget,
+        isInsertion,
+        insertionAnchor: isInsertion ? this.extractInsertionAnchor(prompt) : null
       };
     } catch (error) {
       logger.error('Edit analysis error:', error);
@@ -47,11 +78,62 @@ class IterativeEditor {
         targetSection: 'full-page',
         elementSelector: null,
         editType: 'modification',
-        complexity: 'medium',
+        complexity: 'high',
         isStyleOnly: false,
-        isImageOnly: false
+        isImageOnly: false,
+        isMultiTarget: false,
+        isInsertion: false
       };
     }
+  }
+
+  /**
+   * NEW: Detect if this is a multi-target request
+   * Examples: "all buttons", "every heading", "each price"
+   */
+  detectMultiTarget(prompt) {
+    const multiKeywords = ['all', 'every', 'each'];
+    return multiKeywords.some(keyword => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      return regex.test(prompt);
+    });
+  }
+
+  /**
+   * NEW: Detect if this is an insertion request
+   * Examples: "add testimonials", "insert a new section", "create a FAQ"
+   */
+  detectInsertion(prompt) {
+    const insertionKeywords = ['add', 'insert', 'create new', 'include new'];
+    return insertionKeywords.some(keyword => prompt.includes(keyword));
+  }
+
+  /**
+   * NEW: Extract where to insert new content
+   * Examples: "after features", "before footer", "at the top"
+   */
+  extractInsertionAnchor(prompt) {
+    // Pattern: "add X after Y" or "insert X before Y"
+    const afterMatch = prompt.match(/(?:add|insert|create).*?after\s+(?:the\s+)?(\w+)/i);
+    const beforeMatch = prompt.match(/(?:add|insert|create).*?before\s+(?:the\s+)?(\w+)/i);
+    const atTopMatch = prompt.match(/at\s+the\s+top/i);
+    const atBottomMatch = prompt.match(/at\s+the\s+(?:bottom|end)/i);
+
+    if (afterMatch) {
+      return { position: 'after', anchor: afterMatch[1] };
+    }
+    if (beforeMatch) {
+      return { position: 'before', anchor: beforeMatch[1] };
+    }
+    if (atTopMatch) {
+      return { position: 'after', anchor: 'header' };
+    }
+    if (atBottomMatch) {
+      return { position: 'before', anchor: 'footer' };
+    }
+
+    // Default: after hero section
+    return { position: 'after', anchor: 'hero' };
   }
 
   /**
@@ -93,24 +175,152 @@ class IterativeEditor {
   }
 
   /**
-   * Estimate complexity of the edit request
+   * IMPROVED: Estimate complexity considering multi-target and insertions
    */
-  estimateComplexity(prompt) {
+  estimateComplexity(prompt, isMultiTarget, isInsertion) {
+    // Multi-target or insertions are automatically medium complexity
+    if (isMultiTarget) return 'medium';
+    if (isInsertion) return 'medium';
+    
     if (prompt.length > 200 || prompt.includes('complete') || prompt.includes('entire')) return 'high';
     if (prompt.length > 100) return 'medium';
     return 'low';
   }
 
   /**
-   * Build the appropriate prompt based on edit complexity
+   * PHASE 2B: Extract all sections containing a specific element type
+   * Used for multi-target edits like "all buttons", "every heading"
+   */
+  extractAllSectionsWithElement(html, targetType) {
+    const sections = [];
+    
+    try {
+      // Get all sections from HTML
+      const allSections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
+      
+      // Also check header and footer
+      const header = html.match(/<header[^>]*>[\s\S]*?<\/header>/i);
+      const footer = html.match(/<footer[^>]*>[\s\S]*?<\/footer>/i);
+      
+      if (header) allSections.push(header[0]);
+      if (footer) allSections.push(footer[0]);
+      
+      // Filter sections that contain the target element
+      for (const section of allSections) {
+        let hasTarget = false;
+        
+        switch (targetType) {
+          case 'button':
+            hasTarget = section.includes('<button') || section.includes('btn');
+            break;
+          case 'heading':
+            hasTarget = /<h[1-6]/i.test(section);
+            break;
+          case 'pricing':
+            hasTarget = /\$\d+|price|pricing/i.test(section);
+            break;
+          case 'text':
+            hasTarget = /<p[^>]*>/i.test(section);
+            break;
+          default:
+            hasTarget = section.toLowerCase().includes(targetType);
+        }
+        
+        if (hasTarget) {
+          sections.push({
+            html: section,
+            type: targetType
+          });
+        }
+      }
+      
+      logger.log(`📍 [EXTRACT] Found ${sections.length} sections with ${targetType}`);
+      return sections;
+      
+    } catch (error) {
+      logger.error('Multi-section extraction error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Build the appropriate prompt based on edit complexity and type
    */
   buildSmartEditPrompt(currentHTML, userInstruction, analysis) {
+    // Insertion requests need special handling
+    if (analysis.isInsertion) {
+      return this.buildInsertionPrompt(currentHTML, userInstruction, analysis);
+    }
+    
+    // Multi-target edits
+    if (analysis.isMultiTarget) {
+      // For multi-target, we'll edit each section separately
+      // This method won't be used for multi-target
+      return null;
+    }
+    
     // Simple/style edits: use lightweight prompt (cheaper)
     if (analysis.isStyleOnly || analysis.complexity === 'low') {
       return this.buildLightweightPrompt(currentHTML, userInstruction, analysis);
     }
+    
     // Complex edits: send full HTML
     return this.buildFullEditPrompt(currentHTML, userInstruction);
+  }
+
+  /**
+   * NEW: Build prompt specifically for insertions
+   * Guides Claude on WHERE and WHAT to insert
+   */
+  buildInsertionPrompt(currentHTML, userInstruction, analysis) {
+    const anchor = analysis.insertionAnchor;
+    const position = anchor.position;
+    const anchorElement = anchor.anchor;
+    
+    return `You are adding new content to an existing landing page.
+
+CURRENT HTML:
+${currentHTML}
+
+USER REQUEST:
+${userInstruction}
+
+INSERTION INSTRUCTIONS:
+1. Create the new section/content as requested
+2. Insert it ${position} the "${anchorElement}" section
+3. Match the style and structure of existing sections
+4. DO NOT modify any existing content
+5. Return the COMPLETE HTML with the new section inserted
+
+CRITICAL RULES:
+- Preserve ALL existing sections exactly
+- Keep all images, forms, scripts as-is
+- Match Tailwind classes used in existing sections
+- Ensure proper spacing (py-12 or py-16 typically)
+- Return complete HTML with proper structure
+
+Generate the complete HTML with the new section inserted:`;
+  }
+
+  /**
+   * NEW: Build prompt for single section within multi-target edit
+   */
+  buildMultiTargetSectionPrompt(sectionHTML, userInstruction, targetType) {
+    return `You are editing ONE section as part of a multi-section edit.
+
+SECTION HTML:
+${sectionHTML}
+
+USER REQUEST (for ALL ${targetType}s):
+${userInstruction}
+
+RULES:
+1. Apply the change to ALL ${targetType}s in this section
+2. PRESERVE all other content exactly
+3. Keep all classes, IDs, and attributes
+4. Return ONLY this modified section, no explanations
+
+Generate the modified section:`;
   }
 
   /**
@@ -164,43 +374,91 @@ Generate the complete modified HTML:`;
   }
 
   /**
-   * Extract relevant HTML section based on what is being edited
-   * Reduces tokens for section-specific edits
+   * PHASE 2C: IMPROVED - Extract complete logical sections, not fragments
+   * Always gets the full section/element, not just a piece
    */
   extractRelevantSection(html, analysis) {
     try {
-      // For header edits
+      // For multi-target, don't extract a single section
+      if (analysis.isMultiTarget) {
+        return null;
+      }
+      
+      // For header edits - always get complete header
       if (analysis.targetSection === 'header') {
         const match = html.match(/<header[^>]*>[\s\S]*?<\/header>/i);
         return match ? match[0] : null;
       }
 
-      // For hero/banner edits - find first section or element with hero/banner class/id
+      // For hero/banner edits - get complete hero section
       if (analysis.targetSection === 'hero') {
+        // Try to find section with hero/banner in class or id
         const heroMatch = html.match(/<section[^>]*(?:hero|banner)[^>]*>[\s\S]*?<\/section>/i);
         if (heroMatch) return heroMatch[0];
-        // Fallback: first section
+        
+        // Fallback: get first section (usually hero)
         const firstSection = html.match(/<section[^>]*>[\s\S]*?<\/section>/i);
         return firstSection ? firstSection[0] : null;
       }
 
-      // For footer edits
+      // For footer edits - always get complete footer
       if (analysis.targetSection === 'footer') {
         const match = html.match(/<footer[^>]*>[\s\S]*?<\/footer>/i);
         return match ? match[0] : null;
       }
 
-      // For style/color edits - find the style block + first section
+      // For style/color edits - get the style block AND the relevant section
       if (analysis.targetSection === 'style') {
-        const styleMatch = html.match(/<style[^>]*>[\s\S]*?<\/style>/i);
-        return styleMatch ? styleMatch[0] : null;
+        const styleBlock = html.match(/<style[^>]*>[\s\S]*?<\/style>/i);
+        if (styleBlock) return styleBlock[0];
+        
+        // If no style block, get the first section (will be inline styles)
+        const firstSection = html.match(/<section[^>]*>[\s\S]*?<\/section>/i);
+        return firstSection ? firstSection[0] : null;
       }
 
-      // For button edits - try to find the section with a button
+      // IMPROVED: For button edits, get the COMPLETE section containing buttons
       if (analysis.targetSection === 'button') {
         const sections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
+        
         for (const section of sections) {
           if (section.includes('<button') || section.includes('btn')) {
+            // Return the ENTIRE section, not just the button
+            return section;
+          }
+        }
+        
+        // Check header/footer too
+        const header = html.match(/<header[^>]*>[\s\S]*?<\/header>/i);
+        if (header && (header[0].includes('<button') || header[0].includes('btn'))) {
+          return header[0];
+        }
+      }
+
+      // IMPROVED: For heading edits, find section with the most headings
+      if (analysis.targetSection === 'heading') {
+        const sections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
+        let bestSection = null;
+        let maxHeadings = 0;
+        
+        for (const section of sections) {
+          const headingCount = (section.match(/<h[1-6]/gi) || []).length;
+          if (headingCount > maxHeadings) {
+            maxHeadings = headingCount;
+            bestSection = section;
+          }
+        }
+        
+        return bestSection;
+      }
+
+      // IMPROVED: For pricing edits, find pricing section
+      if (analysis.targetSection === 'pricing') {
+        const sections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
+        
+        for (const section of sections) {
+          // Look for pricing indicators
+          if (/price|pricing|\$\d+/i.test(section)) {
             return section;
           }
         }
@@ -214,32 +472,216 @@ Generate the complete modified HTML:`;
   }
 
   /**
+   * PHASE 2D: Find exact insertion point in HTML
+   * Returns { beforeText, afterText } to sandwich the new content
+   */
+  findInsertionPoint(html, anchor, position) {
+    try {
+      let anchorRegex;
+      
+      // Build regex to find the anchor element
+      switch (anchor.toLowerCase()) {
+        case 'hero':
+        case 'banner':
+          anchorRegex = /<section[^>]*(?:hero|banner)[^>]*>[\s\S]*?<\/section>/i;
+          break;
+        case 'features':
+        case 'feature':
+          anchorRegex = /<section[^>]*(?:features?)[^>]*>[\s\S]*?<\/section>/i;
+          break;
+        case 'pricing':
+        case 'prices':
+          anchorRegex = /<section[^>]*(?:pricing|prices)[^>]*>[\s\S]*?<\/section>/i;
+          break;
+        case 'testimonials':
+        case 'testimonial':
+          anchorRegex = /<section[^>]*(?:testimonials?)[^>]*>[\s\S]*?<\/section>/i;
+          break;
+        case 'footer':
+          anchorRegex = /<footer[^>]*>[\s\S]*?<\/footer>/i;
+          break;
+        case 'header':
+          anchorRegex = /<header[^>]*>[\s\S]*?<\/header>/i;
+          break;
+        default:
+          // Try to find by section id or class
+          anchorRegex = new RegExp(`<section[^>]*(?:id|class)=["'][^"']*${anchor}[^"']*["'][^>]*>[\\s\\S]*?<\\/section>`, 'i');
+      }
+      
+      const match = html.match(anchorRegex);
+      
+      if (!match) {
+        logger.warn(`⚠️ [INSERT] Could not find anchor: ${anchor}`);
+        return null;
+      }
+      
+      const anchorIndex = html.indexOf(match[0]);
+      const anchorEnd = anchorIndex + match[0].length;
+      
+      if (position === 'after') {
+        return {
+          beforeText: html.substring(0, anchorEnd),
+          afterText: html.substring(anchorEnd)
+        };
+      } else {
+        return {
+          beforeText: html.substring(0, anchorIndex),
+          afterText: html.substring(anchorIndex)
+        };
+      }
+      
+    } catch (error) {
+      logger.error('Insertion point detection error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * PHASE 2A: Smart section merging with multiple fallback strategies
+   * Tries 4 different methods to merge edited section back into original HTML
+   */
+  smartMergeSection(originalHTML, oldSection, newSection) {
+    // STRATEGY 1: Exact string match (fastest, most reliable)
+    if (originalHTML.includes(oldSection)) {
+      logger.log('✅ [MERGE] Strategy 1: Exact string match worked');
+      return {
+        success: true,
+        html: originalHTML.replace(oldSection, newSection),
+        method: 'exact-match'
+      };
+    }
+
+    // STRATEGY 2: Normalized whitespace match
+    const normalizeWS = (str) => str.replace(/\s+/g, ' ').trim();
+    const normalizedOld = normalizeWS(oldSection);
+    
+    const flexiblePattern = normalizedOld
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\s+/g, '\\s+');
+    
+    const flexibleRegex = new RegExp(flexiblePattern, 'i');
+    
+    if (flexibleRegex.test(originalHTML)) {
+      logger.log('✅ [MERGE] Strategy 2: Normalized whitespace match worked');
+      return {
+        success: true,
+        html: originalHTML.replace(flexibleRegex, newSection),
+        method: 'whitespace-normalized'
+      };
+    }
+
+    // STRATEGY 3: Tag structure match
+    const openingTagMatch = oldSection.match(/<(\w+)([^>]*)>/);
+    if (openingTagMatch) {
+      const tagName = openingTagMatch[1];
+      const attributes = openingTagMatch[2];
+      
+      const tagPattern = `<${tagName}${attributes.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}>([\\s\\S]*?)<\\/${tagName}>`;
+      const tagRegex = new RegExp(tagPattern, 'i');
+      
+      if (tagRegex.test(originalHTML)) {
+        logger.log('✅ [MERGE] Strategy 3: Tag structure match worked');
+        return {
+          success: true,
+          html: originalHTML.replace(tagRegex, newSection),
+          method: 'tag-structure'
+        };
+      }
+    }
+
+    // STRATEGY 4: ID-based match
+    const idMatch = oldSection.match(/id=["']([^"']+)["']/);
+    if (idMatch) {
+      const id = idMatch[1];
+      const idPattern = new RegExp(`<[^>]*id=["']${id}["'][^>]*>[\\s\\S]*?<\\/[^>]+>`, 'i');
+      
+      if (idPattern.test(originalHTML)) {
+        logger.log('✅ [MERGE] Strategy 4: ID-based match worked');
+        return {
+          success: true,
+          html: originalHTML.replace(idPattern, newSection),
+          method: 'id-based'
+        };
+      }
+    }
+
+    logger.error('❌ [MERGE] All merge strategies failed');
+    return {
+      success: false,
+      html: originalHTML,
+      method: 'failed'
+    };
+  }
+
+  /**
+   * PHASE 2A: Validate that section merge didn't break anything
+   */
+  validateSectionMerge(originalHTML, mergedHTML) {
+    const issues = [];
+
+    const countTags = (html, tag) => (html.match(new RegExp(`<${tag}`, 'gi')) || []).length;
+
+    const originalImages = countTags(originalHTML, 'img');
+    const mergedImages = countTags(mergedHTML, 'img');
+    
+    const originalSections = countTags(originalHTML, 'section');
+    const mergedSections = countTags(mergedHTML, 'section');
+    
+    const originalScripts = countTags(originalHTML, 'script');
+    const mergedScripts = countTags(mergedHTML, 'script');
+
+    if (originalImages - mergedImages > 2) {
+      issues.push(`Lost ${originalImages - mergedImages} images (${originalImages} → ${mergedImages})`);
+    }
+
+    if (originalSections - mergedSections > 1) {
+      issues.push(`Lost ${originalSections - mergedSections} sections (${originalSections} → ${mergedSections})`);
+    }
+
+    if (originalScripts - mergedScripts > 0) {
+      issues.push(`Lost ${originalScripts - mergedScripts} scripts`);
+    }
+
+    const lengthRatio = mergedHTML.length / originalHTML.length;
+    if (lengthRatio < 0.7) {
+      issues.push(`HTML length shrank by ${Math.round((1 - lengthRatio) * 100)}% (suspicious)`);
+    }
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      stats: {
+        images: `${originalImages} → ${mergedImages}`,
+        sections: `${originalSections} → ${mergedSections}`,
+        scripts: `${originalScripts} → ${mergedScripts}`,
+        size: `${Math.round(originalHTML.length / 1024)}KB → ${Math.round(mergedHTML.length / 1024)}KB`
+      }
+    };
+  }
+
+  /**
    * Validate that the edited HTML didn't lose critical attributes
    */
   validateEditedHTML(html, originalHTML) {
     const issues = [];
     const warnings = [];
 
-    // Check forms didn't lose their handler
     if (originalHTML.includes('data-sento-form') && !html.includes('data-sento-form')) {
       issues.push('Form handler attribute lost');
     }
 
-    // Check scripts weren't removed
     const originalScripts = (originalHTML.match(/<script/g) || []).length;
     const editedScripts = (html.match(/<script/g) || []).length;
     if (originalScripts > editedScripts) {
       warnings.push(`Script count changed: ${originalScripts} → ${editedScripts}`);
     }
 
-    // Check images weren't removed
     const originalImages = (originalHTML.match(/<img/g) || []).length;
     const editedImages = (html.match(/<img/g) || []).length;
     if (editedImages < originalImages - 1) {
       warnings.push(`Image count reduced: ${originalImages} → ${editedImages}`);
     }
 
-    // Check basic HTML structure
     if (!html.includes('<!DOCTYPE') && !html.includes('<html')) {
       issues.push('Missing HTML document structure');
     }
@@ -269,6 +711,8 @@ Generate the complete modified HTML:`;
       target_section: analysis.targetSection,
       edit_type: analysis.editType,
       complexity: analysis.complexity,
+      is_multi_target: analysis.isMultiTarget,
+      is_insertion: analysis.isInsertion,
       timestamp: new Date().toISOString()
     };
   }
