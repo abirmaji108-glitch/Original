@@ -3059,77 +3059,15 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     logger.log(`🎯 [EDIT] Type: ${analysis.editType}, Target: ${analysis.targetSection}`);
 
     // ================================================================
-    // FAST PATH: Image-Only Changes (Claude identifies + direct replace)
-    // Cost: ~$0.0003-0.001 (just identification, no regeneration)
+    // IMAGE CHANGES: Handled by pencil icon picker (free, instant)
     // ================================================================
     if (analysis.isImageOnly) {
-      try {
-        logger.log('🖼️ [EDIT] Image-only detected - using FAST PATH');
-        
-        // Step 1: Use Claude to identify which image tag (cheap call)
-        const identification = await iterativeEditor.identifyImageElement(
-          sanitized,
-          website.html_code,
-          process.env.CLAUDE_API_KEY
-        );
-        
-        if (identification.success && identification.imageTag) {
-          // Step 2: Extract new image description from instruction
-          const descMatch = sanitized.match(/(?:to|with|a)\s+(.+?)(?:\s+image|\s+picture|$)/i);
-          const newImageDesc = descMatch ? descMatch[1].trim() : sanitized.replace(/change|replace|update|the|image|picture|photo|to|with|a|an/gi, '').trim();
-          
-          // Step 3: Create new img tag with placeholder
-          const oldImgTag = identification.imageTag;
-          const newImgTag = oldImgTag.replace(
-            /src=["'][^"']*["']/i,
-            `src="{{IMAGE_NEW:[${newImageDesc || 'updated image'}]}}"`
-          );
-          
-          // Step 4: Replace in HTML
-          const modifiedHTML = website.html_code.replace(oldImgTag, newImgTag);
-          
-          if (modifiedHTML !== website.html_code) {
-            logger.log('✅ [FAST-PATH] Image replaced successfully!');
-            logger.log(`💰 [FAST-PATH] Total cost: $${identification.cost.toFixed(6)}`);
-            
-            // Process the new image placeholder
-            let finalHTML = modifiedHTML;
-            const imageMatch = finalHTML.match(/\{\{IMAGE_NEW:\[([^\]]+)\]\}\}/);
-            
-            if (imageMatch) {
-              logger.log(`🖼️ [FAST-PATH] Generating new image: "${imageMatch[1]}"`);
-              const { getContextAwareImages } = await import('./imageLibrary.js');
-              const images = await getContextAwareImages(imageMatch[1], 1);
-              
-              if (images && images[0]) {
-                finalHTML = finalHTML.replace(/\{\{IMAGE_NEW:\[[^\]]+\]\}\}/, images[0]);
-                logger.log('✅ [FAST-PATH] New image generated and inserted');
-              }
-            }
-            
-            return res.json({
-              success: true,
-              preview: finalHTML,
-              analysis,
-              validation: { valid: true, issues: [], warnings: [] },
-              cost: {
-                inputTokens: Math.round(identification.cost * 1000000 / 18),
-                outputTokens: 10,
-                totalCost: identification.cost,
-                approach: 'image_fast_path'
-              },
-              message: 'Fast-path: Image identified and replaced (ultra-low cost)'
-            });
-          } else {
-            logger.warn('⚠️ [FAST-PATH] Replace failed, falling back to full edit');
-          }
-        } else {
-          logger.warn('⚠️ [FAST-PATH] Could not identify image, falling back');
-        }
-      } catch (fastError) {
-        logger.error('❌ [FAST-PATH] Error:', fastError.message);
-        // Fall through to regular Claude edit
-      }
+      logger.log('🖼️ [EDIT] Image change requested - redirecting to image picker');
+      return res.json({
+        success: false,
+        isImageRequest: true,
+        message: 'To change an image, click the 🖊️ pencil icon that appears when you hover over any image on your page. It\'s free and instant!'
+      });
     }
 
     // ================================================================
