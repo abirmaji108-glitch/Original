@@ -627,7 +627,7 @@ export function EditModal({
             <div className="flex justify-between items-center p-5 border-b">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Choose a new image</h3>
-                <p className="text-sm text-gray-500 mt-0.5">Hover any photo to preview, click to replace</p>
+                <p className="text-sm text-gray-500 mt-0.5">Click ✏️ on any image • Search below to find specific photos</p>
               </div>
               <button
                 onClick={() => setShowImagePicker(false)}
@@ -647,7 +647,7 @@ export function EditModal({
                   if (e.key === 'Enter') searchImages(imageSearchQuery);
                 }}
                 placeholder="Search photos and press Enter..."
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
               />
             </div>
 
@@ -659,7 +659,7 @@ export function EditModal({
                   <span className="ml-3 text-gray-500 text-sm">Searching photos...</span>
                 </div>
               ) : pickerImages.length > 0 ? (
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 gap-2">
                   {pickerImages.map((img) => (
                     <button
                       key={img.id}
