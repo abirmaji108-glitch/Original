@@ -273,38 +273,51 @@ class IterativeEditor {
   }
 
   /**
-   * NEW: Build prompt specifically for insertions
-   * Guides Claude on WHERE and WHAT to insert
+   * FIXED: Build prompt for insertions.
+   * Sends ONLY a style context snippet — Claude returns ONLY the new section.
+   * Splice is done programmatically in Server.js. Footer cannot vanish.
    */
   buildInsertionPrompt(currentHTML, userInstruction, analysis) {
-    const anchor = analysis.insertionAnchor;
-    const position = anchor.position;
-    const anchorElement = anchor.anchor;
-    
-    return `You are adding new content to an existing landing page.
+    const styleContext = this.extractStyleContext(currentHTML);
 
-CURRENT HTML:
-${currentHTML}
+    return `You are a web developer adding a new section to a landing page.
 
 USER REQUEST:
 ${userInstruction}
 
-INSERTION INSTRUCTIONS:
-1. Create the new section/content as requested
-2. Insert it ${position} the "${anchorElement}" section
-3. Match the style and structure of existing sections
-4. DO NOT modify any existing content
-5. Return the COMPLETE HTML with the new section inserted
+EXISTING SECTION STYLE (match this design exactly):
+${styleContext}
 
-CRITICAL RULES:
-- Preserve ALL existing sections exactly
-- Keep all images, forms, scripts as-is
-- Match Tailwind classes used in existing sections
-- Match the card/grid structure style of existing sections (if sections use cards, use cards)
-- Ensure proper spacing (py-12 or py-16 typically)
-- Return complete HTML with proper structure
+YOUR JOB:
+Generate ONLY the new <section>...</section> HTML to insert.
 
-Generate the complete HTML with the new section inserted:`;
+STRICT RULES:
+1. Return ONLY the new section HTML — nothing else whatsoever
+2. Do NOT include <html>, <head>, <body>, or any existing page content
+3. Use the same Tailwind CSS classes as the style context above
+4. If the context uses a card grid, use a card grid
+5. If the context uses py-16, use py-16
+6. For any images needed, write: {{IMAGE_0:description of image}}
+7. No markdown, no backticks, no explanation — raw HTML only
+
+Generate the new section now:`;
+  }
+
+  /**
+   * Extracts a compact style context so Claude can match the page design.
+   * Returns the last section before footer, trimmed to ~1200 chars.
+   */
+  extractStyleContext(html) {
+    try {
+      const sections = [...(html.matchAll(/<section[^>]*>[\s\S]*?<\/section>/gi))].map(m => m[0]);
+      const lastSection = sections[sections.length - 1] || '';
+      const trimmed = lastSection.length > 1200
+        ? lastSection.substring(0, 1200) + '\n  <!-- ... -->\n</section>'
+        : lastSection;
+      return trimmed || '<!-- Use Tailwind CSS, clean modern design, py-16 sections -->';
+    } catch (e) {
+      return '<!-- Use Tailwind CSS, clean modern design, py-16 sections -->';
+    }
   }
 
   /**
