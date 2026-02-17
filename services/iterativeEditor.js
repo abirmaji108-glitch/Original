@@ -46,12 +46,13 @@ class IterativeEditor {
       } else if (prompt.includes('button')) {
         targetSection = 'button';
         targetType = 'button';
+      } else if (prompt.includes('heading') || prompt.includes('title')) {
+        // Check heading BEFORE color — "change all headings to blue color" should target headings
+        targetSection = 'heading';
+        targetType = 'heading';
       } else if (prompt.includes('color') || prompt.includes('background')) {
         targetSection = 'style';
         targetType = 'style';
-      } else if (prompt.includes('heading') || prompt.includes('title')) {
-        targetSection = 'heading';
-        targetType = 'heading';
       } else if (prompt.includes('price') || prompt.includes('pricing')) {
         targetSection = 'pricing';
         targetType = 'pricing';
@@ -211,7 +212,10 @@ class IterativeEditor {
         
         switch (targetType) {
           case 'button':
-            hasTarget = section.includes('<button') || section.includes('btn');
+            // Detect real buttons AND anchor tags styled as buttons
+            hasTarget = section.includes('<button') || 
+                        /class=["'][^"']*btn/i.test(section) ||
+                        /class=["'][^"']*button/i.test(section);
             break;
           case 'heading':
             hasTarget = /<h[1-6]/i.test(section);
@@ -296,6 +300,7 @@ CRITICAL RULES:
 - Preserve ALL existing sections exactly
 - Keep all images, forms, scripts as-is
 - Match Tailwind classes used in existing sections
+- Match the card/grid structure style of existing sections (if sections use cards, use cards)
 - Ensure proper spacing (py-12 or py-16 typically)
 - Return complete HTML with proper structure
 
@@ -642,6 +647,20 @@ Generate the complete modified HTML:`;
       issues.push(`Lost ${originalScripts - mergedScripts} scripts`);
     }
 
+    // CRITICAL: Check footer wasn't lost (footer is <footer> not <section>)
+    const originalHasFooter = /<footer/i.test(originalHTML);
+    const mergedHasFooter = /<footer/i.test(mergedHTML);
+    if (originalHasFooter && !mergedHasFooter) {
+      issues.push('Footer element was lost during merge - rejecting');
+    }
+
+    // CRITICAL: Check header wasn't lost
+    const originalHasHeader = /<header/i.test(originalHTML);
+    const mergedHasHeader = /<header/i.test(mergedHTML);
+    if (originalHasHeader && !mergedHasHeader) {
+      issues.push('Header element was lost during merge - rejecting');
+    }
+
     const lengthRatio = mergedHTML.length / originalHTML.length;
     if (lengthRatio < 0.7) {
       issues.push(`HTML length shrank by ${Math.round((1 - lengthRatio) * 100)}% (suspicious)`);
@@ -684,6 +703,14 @@ Generate the complete modified HTML:`;
 
     if (!html.includes('<!DOCTYPE') && !html.includes('<html')) {
       issues.push('Missing HTML document structure');
+    }
+
+    // Check footer/header weren't lost
+    if (originalHTML.includes('<footer') && !html.includes('<footer')) {
+      issues.push('Footer element was lost');
+    }
+    if (originalHTML.includes('<header') && !html.includes('<header')) {
+      issues.push('Header element was lost');
     }
 
     return { valid: issues.length === 0, issues, warnings };
