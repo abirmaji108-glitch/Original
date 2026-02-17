@@ -3053,38 +3053,101 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     // Sanitize instruction
     const sanitized = iterativeEditor.sanitizeEditInstruction(editInstruction);
 
-    // Analyze edit request (SMART DETECTION)
+    // Analyze edit request
     const analysis = iterativeEditor.analyzeEditRequest(sanitized, website.html_code);
-
-    // ====================================================================
-    // 🔍 COMPREHENSIVE DEBUG LOGGING - TO FIND THE REAL PROBLEM
-    // ====================================================================
     
-    console.log('\n\n========== EDIT REQUEST DEBUG ==========');
-    console.log('📝 User instruction:', sanitized);
-    console.log('🎯 Analysis results:', JSON.stringify(analysis, null, 2));
-    console.log('📊 Full HTML length:', website.html_code.length);
-    console.log('========================================\n');
+    logger.log(`🎯 [EDIT] Type: ${analysis.editType}, Target: ${analysis.targetSection}`);
 
-    // Build SMART edit prompt
+    // ================================================================
+    // FAST PATH: Image-Only Changes (Claude identifies + direct replace)
+    // Cost: ~$0.0003-0.001 (just identification, no regeneration)
+    // ================================================================
+    if (analysis.isImageOnly) {
+      try {
+        logger.log('🖼️ [EDIT] Image-only detected - using FAST PATH');
+        
+        // Step 1: Use Claude to identify which image tag (cheap call)
+        const identification = await iterativeEditor.identifyImageElement(
+          sanitized,
+          website.html_code,
+          process.env.CLAUDE_API_KEY
+        );
+        
+        if (identification.success && identification.imageTag) {
+          // Step 2: Extract new image description from instruction
+          const descMatch = sanitized.match(/(?:to|with|a)\s+(.+?)(?:\s+image|\s+picture|$)/i);
+          const newImageDesc = descMatch ? descMatch[1].trim() : sanitized.replace(/change|replace|update|the|image|picture|photo|different|dish|pasta/gi, '').trim();
+          
+          // Step 3: Create new img tag with placeholder
+          const oldImgTag = identification.imageTag;
+          const newImgTag = oldImgTag.replace(
+            /src=["'][^"']*["']/i,
+            `src="{{IMAGE_NEW:[${newImageDesc || 'updated image'}]}}"`
+          );
+          
+          // Step 4: Replace in HTML
+          const modifiedHTML = website.html_code.replace(oldImgTag, newImgTag);
+          
+          if (modifiedHTML !== website.html_code) {
+            logger.log('✅ [FAST-PATH] Image replaced successfully!');
+            logger.log(`💰 [FAST-PATH] Total cost: $${identification.cost.toFixed(6)}`);
+            
+            // Process the new image placeholder
+            let finalHTML = modifiedHTML;
+            const imageMatch = finalHTML.match(/\{\{IMAGE_NEW:\[([^\]]+)\]\}\}/);
+            
+            if (imageMatch) {
+              logger.log(`🖼️ [FAST-PATH] Generating new image: "${imageMatch[1]}"`);
+              const { getContextAwareImages } = await import('./imageLibrary.js');
+              const images = await getContextAwareImages(imageMatch[1], 1);
+              
+              if (images && images[0]) {
+                finalHTML = finalHTML.replace(/\{\{IMAGE_NEW:\[[^\]]+\]\}\}/, images[0]);
+                logger.log('✅ [FAST-PATH] New image generated and inserted');
+              }
+            }
+            
+            return res.json({
+              success: true,
+              preview: finalHTML,
+              analysis,
+              validation: { valid: true, issues: [], warnings: [] },
+              cost: {
+                inputTokens: Math.round(identification.cost * 1000000 / 18),
+                outputTokens: 10,
+                totalCost: identification.cost,
+                approach: 'image_fast_path'
+              },
+              message: 'Fast-path: Image identified and replaced (ultra-low cost)'
+            });
+          } else {
+            logger.warn('⚠️ [FAST-PATH] Replace failed, falling back to full edit');
+          }
+        } else {
+          logger.warn('⚠️ [FAST-PATH] Could not identify image, falling back');
+        }
+      } catch (fastError) {
+        logger.error('❌ [FAST-PATH] Error:', fastError.message);
+        // Fall through to regular Claude edit
+      }
+    }
+
+    // ================================================================
+    // REGULAR PATH: Full Claude Edit (section-based for cost efficiency)
+    // Cost: ~$0.01-0.03 depending on complexity
+    // ================================================================
+    logger.log('📝 [EDIT] Using standard Claude edit path');
+
+    // Build prompt
     const editPrompt = iterativeEditor.buildSmartEditPrompt(
-      website.html_code, 
+      website.html_code,
       sanitized,
       analysis
     );
 
-    console.log('📤 PROMPT SENT TO CLAUDE:');
-    console.log('Length:', editPrompt.length);
-    console.log('First 500 chars:', editPrompt.substring(0, 500));
-    console.log('Last 300 chars:', editPrompt.substring(editPrompt.length - 300));
-    console.log('\n');
-
-    // Estimate tokens
     const estimatedInputTokens = iterativeEditor.estimateTokens(editPrompt);
-    const estimatedOutputTokens = 2000;
-    const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, estimatedOutputTokens);
-
-    logger.log(`💰 [EDIT] Estimated cost: $${estimatedCost.toFixed(4)} (${estimatedInputTokens} input + ${estimatedOutputTokens} output tokens)`);
+    const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, 2000);
+    logger.log(`💰 [EDIT] Estimated cost: $${estimatedCost.toFixed(4)}`);
 
     // Call Claude API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -3097,12 +3160,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: analysis.complexity === 'low' ? 2000 : 6000,
-        messages: [
-          {
-            role: 'user',
-            content: editPrompt
-          }
-        ]
+        messages: [{ role: 'user', content: editPrompt }]
       })
     });
 
@@ -3113,75 +3171,31 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     const data = await response.json();
     let editedHTML = htmlParser.cleanHTML(data.content[0].text);
 
-    console.log('📥 CLAUDE RESPONSE:');
-    console.log('Length:', editedHTML.length);
-    console.log('First 500 chars:', editedHTML.substring(0, 500));
-    console.log('Last 300 chars:', editedHTML.substring(editedHTML.length - 300));
-    console.log('\n');
-
     // Calculate actual cost
     const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
-    const actualOutputTokens = data.usage?.output_tokens || estimatedOutputTokens;
+    const actualOutputTokens = data.usage?.output_tokens || 2000;
     const actualCost = iterativeEditor.estimateCost(actualInputTokens, actualOutputTokens);
+    logger.log(`💰 [EDIT] Actual cost: $${actualCost.toFixed(4)}`);
 
-    logger.log(`💰 [EDIT] Actual cost: $${actualCost.toFixed(4)} (${actualInputTokens} input + ${actualOutputTokens} output tokens)`);
-
-    // 🔍 DEBUG: Section merging logic
-    console.log('\n========== SECTION MERGE DEBUG ==========');
-    console.log('Complexity:', analysis.complexity);
-    console.log('EditedHTML length:', editedHTML.length);
-    console.log('Full HTML length:', website.html_code.length);
-    console.log('Is section edit?', analysis.complexity === 'low' && editedHTML.length < website.html_code.length / 2);
-    
+    // If section edit, merge back into full HTML
     if (analysis.complexity === 'low' && editedHTML.length < website.html_code.length / 2) {
-      logger.log(`🔀 [EDIT] Merging section back into full HTML`);
+      logger.log('🔀 [EDIT] Merging edited section back into full HTML');
       
       const relevantSection = iterativeEditor.extractRelevantSection(website.html_code, analysis);
       
-      console.log('\n🔍 EXTRACTED SECTION:');
-      console.log('Section found?', relevantSection ? 'YES' : 'NO');
-      if (relevantSection) {
-        console.log('Section length:', relevantSection.length);
-        console.log('First 300 chars:', relevantSection.substring(0, 300));
-        console.log('Last 200 chars:', relevantSection.substring(relevantSection.length - 200));
-        
-        console.log('\n🔧 ATTEMPTING REPLACE...');
-        const beforeReplace = website.html_code;
-        const afterReplace = website.html_code.replace(relevantSection, editedHTML);
-        const didChange = beforeReplace !== afterReplace;
-        
-        console.log('Replace successful?', didChange);
-        console.log('HTML changed?', didChange);
-        
-        if (didChange) {
-          console.log('✅ Section replaced successfully');
-          editedHTML = afterReplace;
-        } else {
-          console.log('❌ REPLACE FAILED - HTML unchanged');
-          console.log('Checking for differences...');
-          
-          // Check if strings are similar but not exact
-          const sectionInHTML = website.html_code.includes(relevantSection.substring(0, 100));
-          console.log('First 100 chars of section found in HTML?', sectionInHTML);
-          
-          // Check whitespace differences
-          const sectionNoWhitespace = relevantSection.replace(/\s+/g, '');
-          const editedNoWhitespace = editedHTML.replace(/\s+/g, '');
-          console.log('Lengths without whitespace - Section:', sectionNoWhitespace.length, 'Edited:', editedNoWhitespace.length);
-        }
+      if (relevantSection && website.html_code.includes(relevantSection)) {
+        editedHTML = website.html_code.replace(relevantSection, editedHTML);
+        logger.log('✅ [EDIT] Section merged successfully');
       } else {
-        console.log('❌ No relevant section extracted');
+        logger.warn('⚠️ [EDIT] Could not merge section, using edited HTML as-is');
       }
-    } else {
-      console.log('Not a section edit - using full response as-is');
     }
-    console.log('========================================\n');
+
     // Validate edited HTML
     const validation = iterativeEditor.validateEditedHTML(editedHTML, website.html_code);
 
     if (!validation.valid) {
       logger.log(`⚠️ [EDIT] Validation issues: ${validation.issues.join(', ')}`);
-      // Try to preserve critical attributes
       editedHTML = htmlParser.preserveCriticalAttributes(editedHTML, website.html_code);
     }
 
@@ -3226,7 +3240,6 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       },
       message: 'Edit preview ready - review before applying'
     });
-
   } catch (error) {
     logger.error('❌ [EDIT] Preview error:', error);
     return res.status(500).json({
