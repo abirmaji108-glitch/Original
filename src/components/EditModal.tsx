@@ -101,13 +101,18 @@ if (!rawAlt) {
   // ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (isOpen) {
-      // Reset state when modal opens
-      setPreviewHTML('');
-      setEditHistory([]);
-      setEditInstruction('');
-    }
-  }, [isOpen]);
+  if (isOpen) {
+    // Reset state when modal opens
+    setPreviewHTML('');
+    setEditHistory([]);
+    setEditInstruction('');
+    // Push a history entry so browser back closes the modal instead of leaving the page
+    window.history.pushState({ editModal: true }, '');
+    const handlePopState = () => onClose();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }
+}, [isOpen]);
 
   // ── Phase 3: Inject pencil overlay into iframe HTML ──
   const injectPencilOverlay = (html: string): string => {
