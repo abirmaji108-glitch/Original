@@ -59,17 +59,35 @@ export function EditModal({
     const handleMessage = async (event: MessageEvent) => {
       if (event.data?.type === 'IMAGE_CLICK') {
         const src = event.data.src;
-        const alt = event.data.alt || 'professional business';
+        const rawAlt = (event.data.alt || '').trim();
         setClickedImageSrc(src);
         setShowImagePicker(true);
         setIsSearchingImages(true);
         setPickerImages([]);
-        setImageSearchQuery(alt);
+
+        // Build a smart search query
+        // If alt looks like a person's name (1-3 words, no spaces like "professional") → use portrait query
+        // If alt is empty → use generic business
+        // Otherwise use the alt text as-is but append "photo" for better results
+        const wordCount = rawAlt.split(' ').length;
+        let query = 'professional business';
+        if (!rawAlt) {
+          query = 'professional business';
+        } else if (wordCount <= 2 && /^[A-Z]/.test(rawAlt)) {
+          // Looks like a person name e.g. "Sarah Chen", "Marcus Rodriguez"
+          query = 'professional portrait headshot';
+        } else if (rawAlt.toLowerCase().includes('logo') || rawAlt.toLowerCase().includes('icon')) {
+          query = 'professional business technology';
+        } else {
+          // Use alt text but clean it up
+          query = rawAlt.replace(/[^a-zA-Z0-9 ]/g, ' ').trim() || 'professional business';
+        }
+        setImageSearchQuery(query);
 
         try {
           const { data: { session } } = await supabase.auth.getSession();
           const response = await fetch(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/images/search?query=${encodeURIComponent(alt)}`,
+            `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/images/search?query=${encodeURIComponent(query)}`,
             { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
           );
           const data = await response.json();
@@ -185,6 +203,18 @@ export function EditModal({
       return;
     }
 
+    // Detect if user is trying to change an image via text
+    const imageKeywords = ['change image', 'replace image', 'swap image', 'change photo', 'replace photo', 'change picture', 'replace picture', 'change the image', 'change the photo', 'change the picture', 'different image', 'different photo', 'new image', 'new photo'];
+    const lowerInstruction = editInstruction.toLowerCase();
+    if (imageKeywords.some(kw => lowerInstruction.includes(kw))) {
+      toast({
+        title: "💡 Use the image picker instead",
+        description: "Hover over any image in the preview and click the ✏️ pencil icon to replace it — it's free and instant!",
+        duration: 6000,
+      });
+      return;
+    }
+
     setIsGeneratingPreview(true);
 
     try {
@@ -262,6 +292,8 @@ export function EditModal({
       }
 
       const lastEdit = editHistory[editHistory.length - 1];
+      // Guard: image-only changes have no text edit history
+      const instruction = lastEdit?.instruction || 'Image replacement';
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/edit/${websiteId}/apply`, {
         method: 'POST',
@@ -271,7 +303,7 @@ export function EditModal({
         },
         body: JSON.stringify({
           editedHTML: previewHTML,
-          editInstruction: lastEdit.instruction
+          editInstruction: instruction
         })
       });
 
