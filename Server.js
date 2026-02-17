@@ -3020,39 +3020,6 @@ app.get('/api/analytics/:websiteId', requireAuth, async (req, res) => {
 // ITERATIVE EDITING - AI-POWERED PAGE UPDATES
 // ============================================
 
-// 🎨 EDIT ENDPOINT: Preview edit without saving
-app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
-  try {
-    const { websiteId } = req.params;
-    const { editInstruction } = req.body;
-    const userId = req.user.id;
-
-    // Validate input
-    if (!editInstruction || editInstruction.length < 10) {
-      return res.status(400).json({
-        success: false,
-        error: 'Edit instruction must be at least 10 characters'
-      });
-    }
-
-    // Get current website
-    const { data: website, error: fetchError } = await supabase
-      .from('websites')
-      .select('*')
-      .eq('id', websiteId)
-      .eq('user_id', userId)
-      .single();
-
-    if (fetchError || !website) {
-      return res.status(404).json({
-        success: false,
-        error: 'Website not found'
-      });
-    }
-
-    // SERVER.JS - COMPLETE EDIT ENDPOINT
-// Replace the entire edit preview endpoint (from line ~3053 to ~3180)
-// This handles: single edits, multi-target edits, insertions
 
 app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
   try {
