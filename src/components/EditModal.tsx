@@ -69,19 +69,14 @@ export function EditModal({
         // If alt looks like a person's name (1-3 words, no spaces like "professional") → use portrait query
         // If alt is empty → use generic business
         // Otherwise use the alt text as-is but append "photo" for better results
-        const wordCount = rawAlt.split(' ').length;
         let query = 'professional business';
-        if (!rawAlt) {
-          query = 'professional business';
-        } else if (wordCount <= 2 && /^[A-Z]/.test(rawAlt)) {
-          // Looks like a person name e.g. "Sarah Chen", "Marcus Rodriguez"
-          query = 'professional portrait headshot';
-        } else if (rawAlt.toLowerCase().includes('logo') || rawAlt.toLowerCase().includes('icon')) {
-          query = 'professional business technology';
-        } else {
-          // Use alt text but clean it up
-          query = rawAlt.replace(/[^a-zA-Z0-9 ]/g, ' ').trim() || 'professional business';
-        }
+if (!rawAlt) {
+  query = 'professional business';
+} else {
+  // Use alt text directly — most context-aware option
+  // Only override for empty/icon alts
+  query = rawAlt.replace(/[^a-zA-Z0-9 ]/g, ' ').trim() || 'professional business';
+}
         setImageSearchQuery(query);
 
         try {
