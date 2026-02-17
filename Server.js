@@ -3057,6 +3057,17 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     const analysis = iterativeEditor.analyzeEditRequest(sanitized, website.html_code);
     
     logger.log(`🎯 [EDIT] Type: ${analysis.editType}, Target: ${analysis.targetSection}`);
+    // ================================================================
+    // IMAGE CHANGES: Handled by pencil icon picker (free, instant)
+    // ================================================================
+    if (analysis.isImageOnly) {
+      logger.log('🖼️ [EDIT] Image change requested - redirecting to image picker');
+      return res.json({
+        success: false,
+        isImageRequest: true,
+        message: 'To change an image, click the 🖊️ pencil icon that appears when you hover over any image on your page. It\'s free and instant!'
+      });
+    }
 
     
     // ================================================================
