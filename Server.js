@@ -3050,13 +3050,42 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       });
     }
 
-    // Sanitize instruction
-    const sanitized = iterativeEditor.sanitizeEditInstruction(editInstruction);
+    // SERVER.JS - COMPLETE EDIT ENDPOINT
+// Replace the entire edit preview endpoint (from line ~3053 to ~3180)
+// This handles: single edits, multi-target edits, insertions
 
-    // Analyze edit request
+app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
+  try {
+    const { websiteId } = req.params;
+    const { editInstruction } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!editInstruction) {
+      return res.status(400).json({
+        success: false,
+        error: 'Edit instruction is required'
+      });
+    }
+
+    // Get website
+    const website = await Website.findOne({
+      where: { id: websiteId, user_id: userId }
+    });
+
+    if (!website) {
+      return res.status(404).json({
+        success: false,
+        error: 'Website not found'
+      });
+    }
+
+    // Sanitize and analyze
+    const sanitized = iterativeEditor.sanitizeEditInstruction(editInstruction);
     const analysis = iterativeEditor.analyzeEditRequest(sanitized, website.html_code);
     
     logger.log(`🎯 [EDIT] Type: ${analysis.editType}, Target: ${analysis.targetSection}`);
+    logger.log(`🎯 [EDIT] Multi-target: ${analysis.isMultiTarget}, Insertion: ${analysis.isInsertion}`);
 
     // ================================================================
     // IMAGE CHANGES: Redirect to pencil icon picker (free, instant)
@@ -3069,13 +3098,240 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
         message: 'To change an image, hover over any image on your page and click the pencil icon that appears. It\'s free and instant!'
       });
     }
-    // ================================================================
-    // REGULAR PATH: Full Claude Edit (section-based for cost efficiency)
-    // Cost: ~$0.01-0.03 depending on complexity
-    // ================================================================
-    logger.log('📝 [EDIT] Using standard Claude edit path');
 
-    // Build prompt
+    // ================================================================
+    // INSERTION EDITS: Add new content at precise location
+    // ================================================================
+    if (analysis.isInsertion) {
+      logger.log('➕ [EDIT] Insertion detected - using precision insertion');
+      
+      try {
+        // Step 1: Find insertion point
+        const insertionPoint = iterativeEditor.findInsertionPoint(
+          website.html_code,
+          analysis.insertionAnchor.anchor,
+          analysis.insertionAnchor.position
+        );
+        
+        if (!insertionPoint) {
+          logger.warn('⚠️ [INSERT] Could not find insertion point, using full HTML edit');
+          // Fall through to regular edit
+        } else {
+          // Step 2: Build insertion prompt
+          const insertionPrompt = iterativeEditor.buildInsertionPrompt(
+            website.html_code,
+            sanitized,
+            analysis
+          );
+          
+          const estimatedInputTokens = iterativeEditor.estimateTokens(insertionPrompt);
+          const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, 4000);
+          logger.log(`💰 [INSERT] Estimated cost: $${estimatedCost.toFixed(4)}`);
+          
+          // Step 3: Call Claude for complete HTML with insertion
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.CLAUDE_API_KEY,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 6000,
+              messages: [{ role: 'user', content: insertionPrompt }]
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Claude API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          let editedHTML = htmlParser.cleanHTML(data.content[0].text);
+          
+          const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
+          const actualOutputTokens = data.usage?.output_tokens || 4000;
+          const actualCost = iterativeEditor.estimateCost(actualInputTokens, actualOutputTokens);
+          
+          logger.log(`💰 [INSERT] Actual cost: $${actualCost.toFixed(4)}`);
+          
+          // Validate the insertion
+          const validation = iterativeEditor.validateEditedHTML(editedHTML, website.html_code);
+          
+          // Process images if any
+          const descriptions = [];
+          const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
+          let match;
+
+          while ((match = regex.exec(editedHTML)) !== null) {
+            descriptions.push({
+              index: parseInt(match[1]),
+              description: match[2].trim(),
+              placeholder: match[0]
+            });
+          }
+
+          if (descriptions.length > 0) {
+            logger.log(`🖼️ [INSERT] Processing ${descriptions.length} new images`);
+            const { getContextAwareImages } = await import('./imageLibrary.js');
+            const images = await getContextAwareImages(sanitized, descriptions.length);
+            
+            descriptions.forEach((desc, idx) => {
+              if (images[idx]) {
+                const escapedPlaceholder = desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                editedHTML = editedHTML.replace(new RegExp(escapedPlaceholder, 'g'), images[idx]);
+              }
+            });
+          }
+          
+          logger.log('✅ [INSERT] New section inserted successfully');
+          
+          return res.json({
+            success: true,
+            preview: editedHTML,
+            analysis,
+            validation,
+            cost: {
+              inputTokens: actualInputTokens,
+              outputTokens: actualOutputTokens,
+              totalCost: actualCost,
+              approach: 'precision-insertion'
+            },
+            message: 'New section added - review before applying'
+          });
+        }
+      } catch (insertError) {
+        logger.error('❌ [INSERT] Error:', insertError.message);
+        // Fall through to regular edit
+      }
+    }
+
+    // ================================================================
+    // MULTI-TARGET EDITS: Edit multiple sections separately
+    // ================================================================
+    if (analysis.isMultiTarget && analysis.targetType) {
+      logger.log(`🎯 [MULTI] Multi-target edit detected for: ${analysis.targetType}`);
+      
+      try {
+        // Step 1: Extract all sections with the target element
+        const sections = iterativeEditor.extractAllSectionsWithElement(
+          website.html_code,
+          analysis.targetType
+        );
+        
+        if (sections.length === 0) {
+          logger.warn('⚠️ [MULTI] No sections found with target, using full edit');
+          // Fall through to regular edit
+        } else if (sections.length === 1) {
+          logger.log('ℹ️ [MULTI] Only 1 section found, treating as single edit');
+          // Fall through to regular edit (more efficient)
+        } else {
+          logger.log(`📍 [MULTI] Editing ${sections.length} sections separately`);
+          
+          let editedHTML = website.html_code;
+          let totalCost = 0;
+          let totalInputTokens = 0;
+          let totalOutputTokens = 0;
+          let successCount = 0;
+          
+          // Step 2: Edit each section separately
+          for (let i = 0; i < sections.length; i++) {
+            const section = sections[i];
+            logger.log(`🔄 [MULTI] Editing section ${i + 1}/${sections.length}`);
+            
+            // Build prompt for this specific section
+            const sectionPrompt = iterativeEditor.buildMultiTargetSectionPrompt(
+              section.html,
+              sanitized,
+              analysis.targetType
+            );
+            
+            // Call Claude for this section
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.CLAUDE_API_KEY,
+                'anthropic-version': '2023-06-01'
+              },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 2000,
+                messages: [{ role: 'user', content: sectionPrompt }]
+              })
+            });
+
+            if (!response.ok) {
+              logger.error(`❌ [MULTI] Section ${i + 1} failed: ${response.status}`);
+              continue;
+            }
+
+            const data = await response.json();
+            const editedSection = htmlParser.cleanHTML(data.content[0].text);
+            
+            totalInputTokens += data.usage?.input_tokens || 0;
+            totalOutputTokens += data.usage?.output_tokens || 0;
+            
+            // Merge this edited section back
+            const mergeResult = iterativeEditor.smartMergeSection(
+              editedHTML,
+              section.html,
+              editedSection
+            );
+            
+            if (mergeResult.success) {
+              editedHTML = mergeResult.html;
+              successCount++;
+              logger.log(`✅ [MULTI] Section ${i + 1} merged using: ${mergeResult.method}`);
+            } else {
+              logger.error(`❌ [MULTI] Section ${i + 1} merge failed`);
+            }
+          }
+          
+          totalCost = iterativeEditor.estimateCost(totalInputTokens, totalOutputTokens);
+          logger.log(`💰 [MULTI] Total cost: $${totalCost.toFixed(4)} for ${sections.length} sections`);
+          logger.log(`📊 [MULTI] Success rate: ${successCount}/${sections.length} sections`);
+          
+          if (successCount === 0) {
+            throw new Error('All multi-target sections failed to merge');
+          }
+          
+          // Validate final result
+          const validation = iterativeEditor.validateSectionMerge(website.html_code, editedHTML);
+          
+          if (!validation.valid) {
+            logger.warn(`⚠️ [MULTI] Validation issues: ${validation.issues.join(', ')}`);
+          }
+          
+          logger.log('✅ [MULTI] Multi-target edit complete');
+          
+          return res.json({
+            success: true,
+            preview: editedHTML,
+            analysis,
+            validation,
+            cost: {
+              inputTokens: totalInputTokens,
+              outputTokens: totalOutputTokens,
+              totalCost: totalCost,
+              approach: `multi-target (${sections.length} sections)`,
+              successRate: `${successCount}/${sections.length}`
+            },
+            message: `Edited ${successCount} sections - review before applying`
+          });
+        }
+      } catch (multiError) {
+        logger.error('❌ [MULTI] Error:', multiError.message);
+        // Fall through to regular edit
+      }
+    }
+
+    // ================================================================
+    // REGULAR PATH: Single-section or full HTML edit
+    // ================================================================
+    logger.log('📝 [EDIT] Using standard edit path');
+
     const editPrompt = iterativeEditor.buildSmartEditPrompt(
       website.html_code,
       sanitized,
@@ -3108,23 +3364,45 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
     const data = await response.json();
     let editedHTML = htmlParser.cleanHTML(data.content[0].text);
 
-    // Calculate actual cost
     const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
     const actualOutputTokens = data.usage?.output_tokens || 2000;
     const actualCost = iterativeEditor.estimateCost(actualInputTokens, actualOutputTokens);
     logger.log(`💰 [EDIT] Actual cost: $${actualCost.toFixed(4)}`);
 
-    // If section edit, merge back into full HTML
+    // If section edit, merge back into full HTML with SMART MERGING
     if (analysis.complexity === 'low' && editedHTML.length < website.html_code.length / 2) {
-      logger.log('🔀 [EDIT] Merging edited section back into full HTML');
+      logger.log('🔀 [EDIT] Attempting to merge edited section back into full HTML');
       
       const relevantSection = iterativeEditor.extractRelevantSection(website.html_code, analysis);
       
-      if (relevantSection && website.html_code.includes(relevantSection)) {
-        editedHTML = website.html_code.replace(relevantSection, editedHTML);
-        logger.log('✅ [EDIT] Section merged successfully');
+      if (relevantSection) {
+        const mergeResult = iterativeEditor.smartMergeSection(
+          website.html_code,
+          relevantSection,
+          editedHTML
+        );
+        
+        if (mergeResult.success) {
+          logger.log(`✅ [EDIT] Section merged successfully using: ${mergeResult.method}`);
+          
+          const mergeValidation = iterativeEditor.validateSectionMerge(
+            website.html_code,
+            mergeResult.html
+          );
+          
+          if (mergeValidation.valid) {
+            editedHTML = mergeResult.html;
+            logger.log(`✅ [MERGE] Validation passed: ${JSON.stringify(mergeValidation.stats)}`);
+          } else {
+            logger.error(`❌ [MERGE] Validation failed: ${mergeValidation.issues.join(', ')}`);
+            logger.warn('⚠️ [MERGE] Using full Claude response instead of merged version');
+          }
+        } else {
+          logger.error('❌ [EDIT] All merge strategies failed');
+          logger.warn('⚠️ [EDIT] Using Claude response as-is (might be incomplete page)');
+        }
       } else {
-        logger.warn('⚠️ [EDIT] Could not merge section, using edited HTML as-is');
+        logger.warn('⚠️ [EDIT] Could not extract relevant section, using Claude response as-is');
       }
     }
 
@@ -3136,7 +3414,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       editedHTML = htmlParser.preserveCriticalAttributes(editedHTML, website.html_code);
     }
 
-    // Process images (same as generation)
+    // Process images
     const descriptions = [];
     const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
     let match;
@@ -3177,6 +3455,7 @@ app.post('/api/edit/:websiteId', requireAuth, async (req, res) => {
       },
       message: 'Edit preview ready - review before applying'
     });
+
   } catch (error) {
     logger.error('❌ [EDIT] Preview error:', error);
     return res.status(500).json({
