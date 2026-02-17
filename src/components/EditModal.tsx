@@ -47,12 +47,46 @@ export function EditModal({
   const [isSearchingImages, setIsSearchingImages] = useState(false);
   const [imageSearchQuery, setImageSearchQuery] = useState('');
   // ────────────────────────────────
+  // ── Engaging loading state ──
+  const [loadingStep, setLoadingStep] = useState(0);
+  const SIMPLE_STEPS = [
+    'Analyzing your request...',
+    'Finding the right section...',
+    'Applying changes...',
+    'Almost done! ✨'
+  ];
+  const COMPLEX_STEPS = [
+    'Reading your page...',
+    'Planning the changes...',
+    'Writing the new content...',
+    'Matching your style...',
+    'Polishing the details... ✨',
+    'Almost there!'
+  ];
+  const isComplexEdit = (instr: string) =>
+    /add|insert|create|new section|all buttons|all heading|every|each/i.test(instr);
+  // ───────────────────────────
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 
   const backgroundColor = isDarkMode ? '#1a1a1a' : '#ffffff';
   const textColor = isDarkMode ? '#ffffff' : '#000000';
   const borderColor = isDarkMode ? '#333333' : '#e5e7eb';
+
+  // ── Engaging loading step cycler ──────────────────────────────────────────
+  useEffect(() => {
+    if (!isGeneratingPreview) {
+      setLoadingStep(0);
+      return;
+    }
+    const steps = isComplexEdit(editInstruction) ? COMPLEX_STEPS : SIMPLE_STEPS;
+    const interval = isComplexEdit(editInstruction) ? 8000 : 5000;
+    const timer = setInterval(() => {
+      setLoadingStep(prev => Math.min(prev + 1, steps.length - 1));
+    }, interval);
+    return () => clearInterval(timer);
+  }, [isGeneratingPreview, editInstruction]);
+  // ─────────────────────────────────────────────────────────────────────────
 
   // ── Phase 3: Listen for pencil icon clicks from inside iframe ──
   useEffect(() => {
@@ -551,8 +585,10 @@ if (!rawAlt) {
             >
               {isGeneratingPreview ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" />
+                  <span className="truncate transition-all duration-500">
+                    {(isComplexEdit(editInstruction) ? COMPLEX_STEPS : SIMPLE_STEPS)[loadingStep]}
+                  </span>
                 </>
               ) : (
                 <>
@@ -587,6 +623,11 @@ if (!rawAlt) {
           <p className="text-xs opacity-60 text-center" style={{ color: textColor }}>
             Press Ctrl+Enter to preview • Min 10 characters
           </p>
+          {isGeneratingPreview && isComplexEdit(editInstruction) && (
+            <p className="text-xs text-center text-purple-400 animate-pulse">
+              Complex edits take ~30–45 seconds ☕
+            </p>
+          )}
         </div>
       </div>
 
