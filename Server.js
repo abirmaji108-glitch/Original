@@ -3036,11 +3036,14 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
     }
 
     // Get website
-    const website = await Website.findOne({
-      where: { id: websiteId, user_id: userId }
-    });
+    const { data: website, error: fetchError } = await supabase
+      .from('websites')
+      .select('*')
+      .eq('id', websiteId)
+      .eq('user_id', userId)
+      .single();
 
-    if (!website) {
+    if (fetchError || !website) {
       return res.status(404).json({
         success: false,
         error: 'Website not found'
