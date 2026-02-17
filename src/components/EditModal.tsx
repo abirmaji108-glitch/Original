@@ -75,7 +75,7 @@ export function EditModal({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/edit/${websiteId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/edit/${websiteId}/preview`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
