@@ -21,11 +21,9 @@ class IterativeEditor {
       } else if (prompt.includes('image') || prompt.includes('picture') || prompt.includes('photo')) {
         targetSection = 'image';
         
-        // Extract element name
-        const match = prompt.match(/(?:change|replace|update)\s+(?:the\s+)?(.+?)\s+(?:image|picture|photo)/i);
-        if (match && match[1]) {
-          elementSelector = match[1].trim();
-        }
+        // Let Claude identify the image element universally
+        // Regex cannot handle all naming conventions, capitalization, etc.
+        elementSelector = null;
       } else if (prompt.includes('button')) {
         targetSection = 'button';
       } else if (prompt.includes('color') || prompt.includes('background')) {
