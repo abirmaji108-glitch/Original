@@ -3118,7 +3118,29 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
           }
 
           const data = await response.json();
-          let editedHTML = htmlParser.cleanHTML(data.content[0].text);
+          let newSectionHTML = data.content[0].text.trim()
+            .replace(/^```[\w]*\n?/m, '').replace(/\n?```$/m, '').trim();
+
+          // Process image placeholders in new section only
+          const descriptions = [];
+          const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
+          let match;
+          while ((match = regex.exec(newSectionHTML)) !== null) {
+            descriptions.push({ index: parseInt(match[1]), description: match[2].trim(), placeholder: match[0] });
+          }
+          if (descriptions.length > 0) {
+            const { getContextAwareImages } = await import('./imageLibrary.js');
+            const images = await getContextAwareImages(sanitized, descriptions.length);
+            descriptions.forEach((desc, idx) => {
+              if (images[idx]) {
+                const escaped = desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                newSectionHTML = newSectionHTML.replace(new RegExp(escaped, 'g'), images[idx]);
+              }
+            });
+          }
+
+          // Splice in programmatically — footer lives in afterText, Claude never touched it
+          let editedHTML = insertionPoint.beforeText + '\n' + newSectionHTML + '\n' + insertionPoint.afterText;
           
           const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
           const actualOutputTokens = data.usage?.output_tokens || 4000;
@@ -3129,31 +3151,7 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
           // Validate the insertion
           const validation = iterativeEditor.validateEditedHTML(editedHTML, website.html_code);
           
-          // Process images if any
-          const descriptions = [];
-          const regex = /\{\{IMAGE_(\d+):([^}]+)\}\}/g;
-          let match;
-
-          while ((match = regex.exec(editedHTML)) !== null) {
-            descriptions.push({
-              index: parseInt(match[1]),
-              description: match[2].trim(),
-              placeholder: match[0]
-            });
-          }
-
-          if (descriptions.length > 0) {
-            logger.log(`🖼️ [INSERT] Processing ${descriptions.length} new images`);
-            const { getContextAwareImages } = await import('./imageLibrary.js');
-            const images = await getContextAwareImages(sanitized, descriptions.length);
-            
-            descriptions.forEach((desc, idx) => {
-              if (images[idx]) {
-                const escapedPlaceholder = desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                editedHTML = editedHTML.replace(new RegExp(escapedPlaceholder, 'g'), images[idx]);
-              }
-            });
-          }
+          
           
           logger.log('✅ [INSERT] New section inserted successfully');
           
