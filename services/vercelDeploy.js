@@ -137,7 +137,7 @@ class VercelDeployService {
       // The unique per-deployment URLs (e.g. ...9s6b2yz6h.vercel.app) are Vercel immutable
       // snapshots — they cannot be updated, which is why we don't use or store them.
       return {
-        url: `https://${safeName}.vercel.app`,
+        url: deploymentUrl,
         deploymentId: data.id || data.uid
       };
 
