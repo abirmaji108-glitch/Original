@@ -3495,7 +3495,7 @@ app.post('/api/edit/:websiteId/apply', requireAuth, async (req, res) => {
 
     // If published, redeploy
     let deploymentResult = null;
-    if (website.deployment_status === 'live' && website.deployment_url) {
+    if (website.deployment_url && ['live', 'deployed', 'published'].includes(website.deployment_status)) {
       try {
         logger.log(`🚀 [EDIT] Redeploying edited page...`);
         
