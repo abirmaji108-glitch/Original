@@ -7,9 +7,9 @@ class VercelDeployService {
     this.teamId = process.env.VERCEL_TEAM_ID || null;
     
     if (!this.token) {
-      console.error('❌ VERCEL_TOKEN not found in environment variables');
+      console.error('âŒ VERCEL_TOKEN not found in environment variables');
     } else {
-      console.log('✅ Vercel token loaded successfully');
+      console.log('âœ… Vercel token loaded successfully');
     }
   }
 
@@ -38,7 +38,7 @@ class VercelDeployService {
   .replace(/^-|-$/g, '')        // Remove leading/trailing dashes
   .slice(0, 90)}`;              // Ensure under 100 chars total
       
-      console.log(`📤 Deploying to Vercel: ${safeName}`);
+      console.log(`ðŸ“¤ Deploying to Vercel: ${safeName}`);
 
       // Calculate SHA hash of the content
       const sha = crypto.createHash('sha1').update(htmlContent).digest('hex');
@@ -49,12 +49,11 @@ class VercelDeployService {
       // Prepare deployment payload
       const deploymentData = {
         name: safeName,
-        alias: [`${safeName}.vercel.app`],  // ✅ Lock stable URL — Vercel updates this alias on every redeploy
         files: [
           {
             file: 'index.html',
             data: base64Content,
-            encoding: 'base64'  // ✅ Explicitly specify encoding
+            encoding: 'base64'  // âœ… Explicitly specify encoding
           }
         ],
         projectSettings: {
@@ -62,7 +61,7 @@ class VercelDeployService {
           buildCommand: null,
           outputDirectory: null
         },
-        public: true,  // ⭐ Force public access - bypass protection
+        public: true,  // â­ Force public access - bypass protection
         target: 'production'
       };
 
@@ -71,7 +70,7 @@ class VercelDeployService {
         ? `https://api.vercel.com/v13/deployments?teamId=${this.teamId}`
         : 'https://api.vercel.com/v13/deployments';
 
-      console.log(`🔗 Deploying to: ${url}`);
+      console.log(`ðŸ”— Deploying to: ${url}`);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -85,23 +84,23 @@ class VercelDeployService {
       if (!response.ok) {
         const data = await response.json();
         const errorMsg = data.error?.message || data.message || JSON.stringify(data);
-        console.error('❌ Vercel API error:', errorMsg);
+        console.error('âŒ Vercel API error:', errorMsg);
         throw new Error(`Vercel deployment failed: ${errorMsg}`);
       }
 
       const data = await response.json();
       
       if (!data.url) {
-        console.error('❌ No URL in response:', data);
+        console.error('âŒ No URL in response:', data);
         throw new Error('Deployment succeeded but no URL returned');
       }
 
       const deploymentUrl = `https://${data.url}`;
-      console.log(`✅ Deployed successfully: ${deploymentUrl}`);
+      console.log(`âœ… Deployed successfully: ${deploymentUrl}`);
 
-      // 🔓 AUTOMATICALLY DISABLE VERCEL AUTHENTICATION
+      // ðŸ”“ AUTOMATICALLY DISABLE VERCEL AUTHENTICATION
       try {
-        console.log(`🔓 Attempting to disable protection for project: ${safeName}`);
+        console.log(`ðŸ”“ Attempting to disable protection for project: ${safeName}`);
         
         const protectionUrl = this.teamId
           ? `https://api.vercel.com/v9/projects/${safeName}?teamId=${this.teamId}`
@@ -120,24 +119,24 @@ class VercelDeployService {
         });
 
         if (protectionResponse.ok) {
-          console.log(`✅ Protection disabled successfully for ${safeName}`);
+          console.log(`âœ… Protection disabled successfully for ${safeName}`);
         } else {
           const protectionError = await protectionResponse.json();
-          console.warn(`⚠️ Could not disable protection:`, protectionError);
+          console.warn(`âš ï¸ Could not disable protection:`, protectionError);
           // Don't fail deployment - this is a nice-to-have
         }
       } catch (protectionError) {
-        console.warn(`⚠️ Protection disable failed (non-critical):`, protectionError.message);
+        console.warn(`âš ï¸ Protection disable failed (non-critical):`, protectionError.message);
         // Continue anyway - deployment already succeeded
       }
 
       return {
-        url: `https://${safeName}.vercel.app`,  // ✅ Stable URL — alias set in payload guarantees this works
+        url: deploymentUrl,
         deploymentId: data.id || data.uid
       };
 
     } catch (error) {
-      console.error('❌ Deployment error:', error.message);
+      console.error('âŒ Deployment error:', error.message);
       throw error;
     }
   }
@@ -165,11 +164,11 @@ class VercelDeployService {
         throw new Error(`Failed to delete deployment: ${errorMsg}`);
       }
 
-      console.log(`✅ Deployment ${deploymentId} deleted successfully`);
+      console.log(`âœ… Deployment ${deploymentId} deleted successfully`);
       return { success: true };
 
     } catch (error) {
-      console.error('❌ Delete error:', error.message);
+      console.error('âŒ Delete error:', error.message);
       throw error;
     }
   }
