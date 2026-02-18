@@ -130,12 +130,6 @@ class VercelDeployService {
         // Continue anyway - deployment already succeeded
       }
 
-      // ✅ Return the stable production URL.
-      // Because every deployment uses the same `name` (safeName) and target: 'production',
-      // Vercel automatically routes https://{safeName}.vercel.app to the latest deployment.
-      // This means every edit redeploys and this one stable URL always shows the latest version.
-      // The unique per-deployment URLs (e.g. ...9s6b2yz6h.vercel.app) are Vercel immutable
-      // snapshots — they cannot be updated, which is why we don't use or store them.
       return {
         url: deploymentUrl,
         deploymentId: data.id || data.uid
