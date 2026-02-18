@@ -19,17 +19,6 @@ class VercelDeployService {
     }
 
     try {
-      // Add cache-busting headers to prevent browser caching
-      const cacheHeaders = `
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">`;
-      
-      // Inject cache headers into <head> if it exists
-      if (htmlContent.includes('<head>')) {
-        htmlContent = htmlContent.replace('<head>', '<head>' + cacheHeaders);
-      }
-
       // Create a safe project name for Vercel
       const safeName = `sento-${projectName
   .toLowerCase()
@@ -130,19 +119,8 @@ class VercelDeployService {
         // Continue anyway - deployment already succeeded
       }
 
-      // Read the stable production alias from Vercel's response.
-      // When target:'production' is used, Vercel returns data.alias[] containing
-      // the project's permanent URL — same URL on every future redeploy.
-      // This is the same principle as the auth bypass: API gives us the answer,
-      // we just need to read the right field. Fall back to unique URL if not found.
-      const stableAlias = Array.isArray(data.alias) && data.alias.length > 0
-        ? data.alias.find(a => a.endsWith('.vercel.app')) || data.alias[0]
-        : null;
-      const finalUrl = stableAlias ? `https://${stableAlias}` : deploymentUrl;
-      console.log(`Stable URL: ${finalUrl}`);
-
       return {
-        url: finalUrl,
+        url: deploymentUrl,
         deploymentId: data.id || data.uid
       };
 
