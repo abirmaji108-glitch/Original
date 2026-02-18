@@ -49,6 +49,7 @@ class VercelDeployService {
       // Prepare deployment payload
       const deploymentData = {
         name: safeName,
+        alias: [`${safeName}.vercel.app`],  // ✅ Lock stable URL — Vercel updates this alias on every redeploy
         files: [
           {
             file: 'index.html',
@@ -131,7 +132,7 @@ class VercelDeployService {
       }
 
       return {
-        url: deploymentUrl,
+        url: `https://${safeName}.vercel.app`,  // ✅ Stable URL — alias set in payload guarantees this works
         deploymentId: data.id || data.uid
       };
 
