@@ -130,38 +130,14 @@ class VercelDeployService {
         // Continue anyway - deployment already succeeded
       }
 
-      // 🔗 ASSIGN STABLE ALIAS — so all links (old and new) always show latest version
-      const stableAlias = `${safeName}.vercel.app`;
-      try {
-        console.log(`🔗 Assigning stable alias: ${stableAlias}`);
-
-        const aliasUrl = this.teamId
-          ? `https://api.vercel.com/v2/deployments/${data.id || data.uid}/aliases?teamId=${this.teamId}`
-          : `https://api.vercel.com/v2/deployments/${data.id || data.uid}/aliases`;
-
-        const aliasResponse = await fetch(aliasUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ alias: stableAlias })
-        });
-
-        if (aliasResponse.ok) {
-          console.log(`✅ Stable alias assigned: https://${stableAlias}`);
-        } else {
-          const aliasError = await aliasResponse.json();
-          console.warn(`⚠️ Alias assignment failed (non-critical):`, aliasError);
-          // Fall back to unique deployment URL — don't fail the deployment
-        }
-      } catch (aliasError) {
-        console.warn(`⚠️ Alias assignment failed (non-critical):`, aliasError.message);
-        // Continue anyway — deployment already succeeded
-      }
-
+      // ✅ Return the stable production URL.
+      // Because every deployment uses the same `name` (safeName) and target: 'production',
+      // Vercel automatically routes https://{safeName}.vercel.app to the latest deployment.
+      // This means every edit redeploys and this one stable URL always shows the latest version.
+      // The unique per-deployment URLs (e.g. ...9s6b2yz6h.vercel.app) are Vercel immutable
+      // snapshots — they cannot be updated, which is why we don't use or store them.
       return {
-        url: `https://${stableAlias}`,  // ✅ Stable URL — same link works after every edit
+        url: `https://${safeName}.vercel.app`,
         deploymentId: data.id || data.uid
       };
 
