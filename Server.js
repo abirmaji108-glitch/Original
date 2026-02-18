@@ -285,6 +285,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const USE_GEMINI = true; // Set to false to use Claude Sonnet 4
 logger.log(`${E.CHECK} Supabase client initialized (backend service role)`);
 // Initialize Stripe
 let stripe = null;
@@ -1110,71 +1111,196 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90000); // 90 seconds max
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-api-key': process.env.CLAUDE_API_KEY,
-    'anthropic-version': '2023-06-01'
-  },
-  body: JSON.stringify({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 6000,
-    system: `You are an elite web designer. Generate ONLY complete HTML with embedded CSS and JavaScript.
-🚨 MANDATORY IMAGE RULES - YOU MUST FOLLOW THESE EXACTLY:
-1. EVERY SINGLE IMAGE must use this EXACT format (no exceptions):
-   <img src="{{IMAGE_1:[detailed description]}}" alt="descriptive text">
-  
-2. Each description MUST be at least 15 words and include:
-   - What the image shows (person/place/thing)
-   - Who (if person: gender, age, role)
-   - Where (setting/background)
-   - Style (mood/lighting)
-3. CORRECT FORMAT EXAMPLES:
-WEDDING:
-<img src="{{IMAGE_1:romantic couple silhouette against sunset sky, golden hour lighting, dreamy atmosphere, soft focus, wedding portrait style}}" alt="Couple at sunset">
-CHARITY:
-<img src="{{IMAGE_1:diverse group of volunteers helping children in African village, smiling faces, outdoor setting, warm natural lighting, community atmosphere}}" alt="Volunteers with children">
-RESTAURANT:
-<img src="{{IMAGE_1:elegant upscale restaurant interior with wooden tables, warm ambient lighting, cozy atmosphere, customers dining}}" alt="Restaurant interior">
-HOTEL/RESORT:
-<img src="{{IMAGE_1:luxury oceanfront resort hotel exterior with palm trees, golden hour lighting, azure blue ocean, infinity pool visible, elegant architecture}}" alt="Resort exterior">
-CAR DEALERSHIP:
-<img src="{{IMAGE_1:modern luxury car showroom interior, shiny sports cars on display, bright professional lighting, glass walls, premium atmosphere}}" alt="Car showroom">
-4. CRITICAL RULES:
-   - Generate AS MANY images as needed (typically 4-15 depending on site complexity)
-   - Use sequential numbering: {{IMAGE_1:...}}, {{IMAGE_2:...}}, {{IMAGE_3:...}}, etc.
-   - NEVER use picsum.photos or placeholder.com URLs
-   - Each <img> tag MUST have proper src and alt attributes
-   - Descriptions must match your HTML content
-5. Your response MUST be valid HTML with ALL necessary image placeholders inside <img> tags.
+      let generatedText;
 
-📧 FORM RULES: If creating forms, use this format:
-<form method="POST" data-sento-form="true" class="sento-contact-form">
-  <input type="text" id="name" name="name" required placeholder="Your Name" />
-  <input type="email" id="email" name="email" required placeholder="your@email.com" />
-  <button type="submit">Send Message</button>
-  <div id="form-message" class="hidden"></div>
-</form>
-Do NOT add JavaScript for form submission - the backend handles it automatically.
+      if (USE_GEMINI) {
+        // === GEMINI 2.0 FLASH API CALL ===
+        logger.log('🧪 [TEST] Using Gemini 2.0 Flash');
+        
+        const geminiSystemPrompt = `You are an elite web designer and HTML/CSS expert. Generate complete, production-ready landing pages based on user requests.
 
-GENERATE HTML NOW:`,
-    messages: [
-      {
-        role: 'user',
-        content: sanitizedPrompt
+CRITICAL REQUIREMENTS:
+1. ALWAYS include a functional contact form with these EXACT attributes:
+   - Form must have: data-sento-form="true"
+   - Each input must have: name="fieldname" (e.g., name="name", name="email", name="phone")
+   - Form must have method="POST"
+   - Include these common fields: name, email, phone, message
+   - Add a submit button
+
+2. ALWAYS use REAL images from Unsplash:
+   - For hero sections: Use https://images.unsplash.com/photo-[id]?w=1920&q=80
+   - For features/services: Use https://images.unsplash.com/photo-[id]?w=800&q=80
+   - For team/about: Use https://images.unsplash.com/photo-[id]?w=400&q=80
+   - Choose relevant, high-quality images that match the content
+   - NEVER use placeholder.com or fake images
+
+3. MOBILE-FIRST RESPONSIVE:
+   - Use Tailwind CSS utility classes
+   - Mobile: base styles, Tablet: md: prefix, Desktop: lg: prefix
+   - Test all breakpoints
+
+4. MODERN DESIGN:
+   - Clean, professional aesthetic
+   - Proper spacing and typography
+   - Smooth transitions and hover effects
+   - Color scheme that matches the brand/niche
+
+5. COMPLETE HTML STRUCTURE:
+   - Full <!DOCTYPE html> with proper meta tags
+   - Tailwind CSS from CDN
+   - Semantic HTML5 elements
+   - Proper heading hierarchy (h1, h2, h3)
+
+6. SEO OPTIMIZED:
+   - Descriptive title and meta description
+   - Alt text for all images
+   - Proper heading structure
+   - Fast loading (optimize images)
+
+7. CONVERSION OPTIMIZED:
+   - Clear call-to-action buttons
+   - Strategic placement of forms
+   - Trust signals (testimonials, badges, etc.)
+   - Easy navigation
+
+Generate ONLY the complete HTML code. No explanations, no markdown formatting, just pure HTML.`;
+
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: geminiSystemPrompt + '\n\nUser Request:\n' + sanitizedPrompt
+                }]
+              }],
+              generationConfig: {
+                maxOutputTokens: 6000,
+                temperature: 0.7
+              }
+            }),
+            signal: controller.signal
+          }
+        );
+
+        clearTimeout(timeout);
+
+        if (!geminiResponse.ok) {
+          const errorText = await geminiResponse.text();
+          logger.error('❌ [GEMINI] API Error:', errorText);
+          
+          if (geminiResponse.status === 529) {
+            return res.status(503).json({
+              success: false,
+              error: 'The AI service is currently overloaded. Please try again in a moment.',
+              isOverloaded: true
+            });
+          }
+          
+          throw new Error(`Gemini API error ${geminiResponse.status}: ${errorText}`);
+        }
+
+        const geminiData = await geminiResponse.json();
+        generatedText = geminiData.candidates[0].content.parts[0].text;
+        logger.log('✅ [GEMINI] Generation successful');
+
+      } else {
+        // === CLAUDE SONNET 4 API CALL (ORIGINAL) ===
+        logger.log('🔵 [CLAUDE] Using Sonnet 4');
+        
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.CLAUDE_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 6000,
+            system: `You are an elite web designer and HTML/CSS expert. Generate complete, production-ready landing pages based on user requests.
+
+CRITICAL REQUIREMENTS:
+1. ALWAYS include a functional contact form with these EXACT attributes:
+   - Form must have: data-sento-form="true"
+   - Each input must have: name="fieldname" (e.g., name="name", name="email", name="phone")
+   - Form must have method="POST"
+   - Include these common fields: name, email, phone, message
+   - Add a submit button
+
+2. ALWAYS use REAL images from Unsplash:
+   - For hero sections: Use https://images.unsplash.com/photo-[id]?w=1920&q=80
+   - For features/services: Use https://images.unsplash.com/photo-[id]?w=800&q=80
+   - For team/about: Use https://images.unsplash.com/photo-[id]?w=400&q=80
+   - Choose relevant, high-quality images that match the content
+   - NEVER use placeholder.com or fake images
+
+3. MOBILE-FIRST RESPONSIVE:
+   - Use Tailwind CSS utility classes
+   - Mobile: base styles, Tablet: md: prefix, Desktop: lg: prefix
+   - Test all breakpoints
+
+4. MODERN DESIGN:
+   - Clean, professional aesthetic
+   - Proper spacing and typography
+   - Smooth transitions and hover effects
+   - Color scheme that matches the brand/niche
+
+5. COMPLETE HTML STRUCTURE:
+   - Full <!DOCTYPE html> with proper meta tags
+   - Tailwind CSS from CDN
+   - Semantic HTML5 elements
+   - Proper heading hierarchy (h1, h2, h3)
+
+6. SEO OPTIMIZED:
+   - Descriptive title and meta description
+   - Alt text for all images
+   - Proper heading structure
+   - Fast loading (optimize images)
+
+7. CONVERSION OPTIMIZED:
+   - Clear call-to-action buttons
+   - Strategic placement of forms
+   - Trust signals (testimonials, badges, etc.)
+   - Easy navigation
+
+Generate ONLY the complete HTML code. No explanations, no markdown formatting, just pure HTML.`,
+            messages: [
+              {
+                role: 'user',
+                content: sanitizedPrompt
+              }
+            ]
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          logger.error('❌ [CLAUDE] API Error:', errorText);
+          
+          if (response.status === 529) {
+            return res.status(503).json({
+              success: false,
+              error: 'The AI service is currently overloaded. Please try again in a moment.',
+              isOverloaded: true
+            });
+          }
+          
+          throw new Error(`Claude API error ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+        generatedText = data.content[0].text;
+        logger.log('✅ [CLAUDE] Generation successful');
       }
-    ]
-  }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API error ${response.status}: ${errorText}`);
-      }
-      const data = await response.json();
-      generatedCode = data.content[0].text.trim() // ✅ REMOVE 'let'
+
+      // Clean up the generated code
+      generatedCode = generatedText.trim()
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
