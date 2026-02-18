@@ -19,6 +19,17 @@ class VercelDeployService {
     }
 
     try {
+      // Add cache-busting headers to prevent browser caching
+      const cacheHeaders = `
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">`;
+      
+      // Inject cache headers into <head> if it exists
+      if (htmlContent.includes('<head>')) {
+        htmlContent = htmlContent.replace('<head>', '<head>' + cacheHeaders);
+      }
+
       // Create a safe project name for Vercel
       const safeName = `sento-${projectName
   .toLowerCase()
