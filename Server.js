@@ -1718,8 +1718,7 @@ if (userId && generatedCode) {
     
     // 🔒 ROLLBACK on any error
     if (userId) {
-      await supabase.rpc('rollback_generation', { p_user_id: userId })
-        .catch(err => console.error('Rollback failed:', err));
+      try { await supabase.rpc('rollback_generation', { p_user_id: userId }); } catch(err) { console.error('Rollback failed:', err); }
     }
     
     return res.status(500).json({
