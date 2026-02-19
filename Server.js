@@ -1166,7 +1166,7 @@ CRITICAL REQUIREMENTS:
 Generate ONLY the complete HTML code. No explanations, no markdown formatting, just pure HTML.`;
 
         const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1702,8 +1702,7 @@ if (userId && generatedCode) {
       
       // 🔒 ROLLBACK counter if generation failed
       if (userId) {
-        await supabase.rpc('rollback_generation', { p_user_id: userId })
-          .catch(err => console.error('Rollback failed:', err));
+        try { await supabase.rpc('rollback_generation', { p_user_id: userId }); } catch(err) { console.error('Rollback failed:', err); }
       }
       
       return res.status(502).json({
