@@ -3898,14 +3898,14 @@ app.get('/api/images/search', requireAuth, async (req, res) => {
     const data = await response.json();
 
     const images = data.results.map(photo => ({
-      id: photo.id,
-      url: photo.urls.regular,
-      thumb: photo.urls.small,
-      photographer: photo.user.name,
-      photographerUrl: photo.user.links.html,
-      downloadUrl: photo.links.download_location
-    }));
-
+  id: photo.id,
+  url: photo.urls.regular,
+  thumb: photo.urls.small,
+  photographer: photo.user.name,
+  username: photo.user.username,          // ← ADD THIS LINE
+  photographerUrl: photo.user.links.html,
+  downloadUrl: photo.links.download_location
+}));
     return res.json({ success: true, images });
 
   } catch (error) {
