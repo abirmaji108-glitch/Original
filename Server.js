@@ -285,7 +285,6 @@ if (!supabaseUrl || !supabaseServiceKey) {
   process.exit(1);
 }
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-const USE_GEMINI = true; // Set to false to use Claude Sonnet 4
 logger.log(`${E.CHECK} Supabase client initialized (backend service role)`);
 // Initialize Stripe
 let stripe = null;
@@ -359,6 +358,7 @@ if (stripe) {
 // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #20: Comprehensive environment variable validation
 const requiredEnvVars = [
   { name: 'CLAUDE_API_KEY', critical: true },
+  { name: 'GROQ_API_KEY', critical: true },
   { name: 'VITE_SUPABASE_URL', critical: true },
   { name: 'SUPABASE_SERVICE_ROLE_KEY', critical: true },
   { name: 'STRIPE_SECRET_KEY', critical: false },
@@ -1111,196 +1111,284 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90000); // 90 seconds max
     try {
-      let generatedText;
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+  },
+  body: JSON.stringify({
+    model: 'moonshotai/kimi-k2-instruct',
+    max_tokens: 8000,
+    temperature: 0.7,
+    messages: [
+      {
+        role: 'system',
+        content: `You are Sento AI — the world's most advanced landing page designer. You have the design instincts of a senior creative director and the coding precision of a principal engineer. You create breathtaking, conversion-optimized landing pages that look like they cost $50,000 to design.
 
-      if (USE_GEMINI) {
-        // === GEMINI 2.0 FLASH API CALL ===
-        logger.log('🧪 [TEST] Using Gemini 2.0 Flash');
-        
-        const geminiSystemPrompt = `You are an elite web designer and HTML/CSS expert. Generate complete, production-ready landing pages based on user requests.
+════════════════════════════════════════
+ABSOLUTE OUTPUT RULE
+════════════════════════════════════════
+Output ONLY raw HTML. No markdown. No explanation. No code fences. Start with <!DOCTYPE html> and end with </html>. Nothing before. Nothing after.
 
-CRITICAL REQUIREMENTS:
-1. ALWAYS include a functional contact form with these EXACT attributes:
-   - Form must have: data-sento-form="true"
-   - Each input must have: name="fieldname" (e.g., name="name", name="email", name="phone")
-   - Form must have method="POST"
-   - Include these common fields: name, email, phone, message
-   - Add a submit button
+════════════════════════════════════════
+TECHNICAL FOUNDATION — ALWAYS REQUIRED
+════════════════════════════════════════
+ALWAYS include in <head>:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+[NICHE-SPECIFIC Google Fonts link — see below]
+<script src="https://cdn.tailwindcss.com"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-2. ALWAYS use REAL images from Unsplash:
-   - For hero sections: Use https://images.unsplash.com/photo-[id]?w=1920&q=80
-   - For features/services: Use https://images.unsplash.com/photo-[id]?w=800&q=80
-   - For team/about: Use https://images.unsplash.com/photo-[id]?w=400&q=80
-   - Choose relevant, high-quality images that match the content
-   - NEVER use placeholder.com or fake images
+════════════════════════════════════════
+NICHE DETECTION & DESIGN DNA
+════════════════════════════════════════
+Read the user's prompt carefully. Detect the niche. Apply the EXACT design DNA below — fonts, colors, layout mood, everything. This is how you transform a 5-word prompt into a masterpiece.
 
-3. MOBILE-FIRST RESPONSIVE:
-   - Use Tailwind CSS utility classes
-   - Mobile: base styles, Tablet: md: prefix, Desktop: lg: prefix
-   - Test all breakpoints
+── RESTAURANT / CAFE / FOOD ──
+Google Fonts: Playfair Display:wght@400;700;900 + Lato:wght@300;400;700
+Headings: font-family: 'Playfair Display', serif
+Body: font-family: 'Lato', sans-serif
+Colors: --primary: #8B0000; --accent: #DAA520; --bg: #F5F5DC; --dark: #1A0A00; --text: #2C1810
+Hero: dark overlay (rgba(10,5,0,0.65)) over restaurant image, full viewport height
+Mood: elegant, warm, romantic, luxurious — think Michelin starred
+Sections: Hero → Signature Dishes Grid → About/Story → Reservation Form → Hours & Location → Footer
+Card style: cream background, gold border-left: 4px solid var(--accent), subtle box-shadow
 
-4. MODERN DESIGN:
-   - Clean, professional aesthetic
-   - Proper spacing and typography
-   - Smooth transitions and hover effects
-   - Color scheme that matches the brand/niche
+── SAAS / TECH / SOFTWARE ──
+Google Fonts: Inter:wght@300;400;500;600;700;800
+All text: font-family: 'Inter', sans-serif
+Colors: --primary: #1E40AF; --secondary: #7C3AED; --bg: #FFFFFF; --surface: #F8FAFF; --text: #111827
+Hero: gradient background linear-gradient(135deg, #1E40AF 0%, #7C3AED 100%), white text, center-aligned
+Mood: clean, modern, trustworthy, innovative — think Stripe, Linear, Notion
+Sections: Hero → Features (3-col grid) → Social Proof/Testimonials → Pricing Table → CTA Banner → Footer
+Card style: white bg, border: 1px solid #E5E7EB, border-radius: 12px, hover: box-shadow 0 20px 40px rgba(0,0,0,0.1)
 
-5. COMPLETE HTML STRUCTURE:
-   - Full <!DOCTYPE html> with proper meta tags
-   - Tailwind CSS from CDN
-   - Semantic HTML5 elements
-   - Proper heading hierarchy (h1, h2, h3)
+── GYM / FITNESS / SPORTS ──
+Google Fonts: Oswald:wght@400;500;600;700 + Open+Sans:wght@400;600
+Headings: font-family: 'Oswald', sans-serif; letter-spacing: 2px; text-transform: uppercase
+Body: font-family: 'Open Sans', sans-serif
+Colors: --primary: #FF4500; --dark: #0A0A0A; --surface: #141414; --text: #F5F5F5; --accent: #FF6B35
+Hero: DARK background, full-bleed high-energy image with strong red/orange overlay, massive bold headline
+Mood: raw, powerful, intense, motivating — think CrossFit, Barry's Bootcamp
+Sections: Hero → Programs/Classes → Stats (member count, classes, trainers) → Features → Trainers → Pricing → CTA → Footer
+Card style: dark bg #141414, border: 1px solid #FF4500, text light, hover: background shift to #1A1A1A
 
-6. SEO OPTIMIZED:
-   - Descriptive title and meta description
-   - Alt text for all images
-   - Proper heading structure
-   - Fast loading (optimize images)
+── SALON / SPA / BEAUTY ──
+Google Fonts: Cormorant+Garamond:wght@300;400;600;700 + Raleway:wght@300;400;500;600
+Headings: font-family: 'Cormorant Garamond', serif; font-weight: 300; letter-spacing: 3px
+Body: font-family: 'Raleway', sans-serif
+Colors: --primary: #C9A96E; --dark: #1A1A1A; --bg: #FFF9F5; --surface: #F5EDE0; --text: #3D2B1F
+Hero: soft, dreamy full-width image with gentle warm overlay, elegant centered text
+Mood: luxurious, feminine, serene, self-care — think high-end NYC salon
+Sections: Hero → Services Menu → Gallery Strip → About/Philosophy → Booking Form → Footer
+Card style: bg #FFF9F5, subtle gold border on bottom: 2px solid #C9A96E, soft shadow
 
-7. CONVERSION OPTIMIZED:
-   - Clear call-to-action buttons
-   - Strategic placement of forms
-   - Trust signals (testimonials, badges, etc.)
-   - Easy navigation
+── MEDICAL / CLINIC / DENTAL / HEALTH ──
+Google Fonts: Source+Sans+3:wght@300;400;600;700 + Merriweather:wght@400;700
+Headings: font-family: 'Merriweather', serif
+Body: font-family: 'Source Sans 3', sans-serif
+Colors: --primary: #0077CC; --secondary: #00B4D8; --bg: #FFFFFF; --surface: #F0F8FF; --text: #1A2E44
+Hero: clean white/light blue, professional image, trust-building headline
+Mood: professional, clean, trustworthy, compassionate — think top hospital website
+Sections: Hero → Services → Why Choose Us (stats/badges) → Doctor/Team → Patient Form → Location → Footer
+Card style: white bg, left border accent #0077CC, icon at top, clean minimal
 
-Generate ONLY the complete HTML code. No explanations, no markdown formatting, just pure HTML.`;
+── REAL ESTATE / PROPERTY ──
+Google Fonts: Libre+Baskerville:wght@400;700 + Nunito+Sans:wght@300;400;600;700
+Headings: font-family: 'Libre Baskerville', serif
+Body: font-family: 'Nunito Sans', sans-serif
+Colors: --primary: #1B4332; --accent: #D4A853; --bg: #FAFAFA; --dark: #0D1B0F; --text: #2D3436
+Hero: luxury property image, sophisticated overlay, search bar or CTA
+Mood: prestigious, trustworthy, aspirational — think Sotheby's Realty
+Sections: Hero → Featured Listings Grid → Why Choose Us → Agent/Team → Contact Form → Footer
 
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: geminiSystemPrompt + '\n\nUser Request:\n' + sanitizedPrompt
-                }]
-              }],
-              generationConfig: {
-                maxOutputTokens: 6000,
-                temperature: 0.7
-              }
-            }),
-            signal: controller.signal
-          }
-        );
+── WEDDING / EVENT / PHOTOGRAPHY ──
+Google Fonts: Great+Vibes + Cormorant+Garamond:wght@300;400;500;700
+Accent text (names, etc.): font-family: 'Great Vibes', cursive
+Headings: font-family: 'Cormorant Garamond', serif; font-weight: 300
+Colors: --primary: #C9A96E; --soft: #F5F0EB; --dark: #2C1810; --accent: #8B7355; --blush: #F2D5C8
+Hero: romantic full-bleed image, soft overlay, script font accent
+Mood: romantic, dreamy, emotional, timeless — think Vogue wedding
+Sections: Hero → Gallery/Portfolio → Services/Packages → Testimonials → Contact → Footer
 
-        clearTimeout(timeout);
+── EDUCATION / COURSE / SCHOOL ──
+Google Fonts: Merriweather:wght@400;700 + Open+Sans:wght@400;600;700
+Headings: font-family: 'Merriweather', serif
+Body: font-family: 'Open Sans', sans-serif
+Colors: --primary: #2563EB; --secondary: #059669; --bg: #FFFFFF; --surface: #F9FAFB; --text: #111827
+Mood: approachable, professional, inspiring, achievement-oriented
+Sections: Hero → Benefits → Curriculum/Courses → Instructor → Testimonials → Enroll CTA → Footer
 
-        if (!geminiResponse.ok) {
-          const errorText = await geminiResponse.text();
-          logger.error('❌ [GEMINI] API Error:', errorText);
-          
-          if (geminiResponse.status === 529) {
-            return res.status(503).json({
-              success: false,
-              error: 'The AI service is currently overloaded. Please try again in a moment.',
-              isOverloaded: true
-            });
-          }
-          
-          throw new Error(`Gemini API error ${geminiResponse.status}: ${errorText}`);
-        }
+── AGENCY / MARKETING / CREATIVE ──
+Google Fonts: Poppins:wght@300;400;500;600;700;800
+All text: font-family: 'Poppins', sans-serif
+Colors: --primary: #667EEA; --secondary: #764BA2; --bg: #FFFFFF; --dark: #0A0A1A; --text: #374151
+Hero: bold gradient or dark background, massive headline, animated elements
+Mood: bold, creative, innovative — think award-winning agency
+Sections: Hero → Services → Work/Portfolio → Process → Team → Contact → Footer
 
-        const geminiData = await geminiResponse.json();
-        generatedText = geminiData.candidates[0].content.parts[0].text;
-        logger.log('✅ [GEMINI] Generation successful');
+── GENERAL BUSINESS (default if no clear niche) ──
+Google Fonts: Poppins:wght@300;400;500;600;700
+All text: font-family: 'Poppins', sans-serif
+Colors: --primary: #2563EB; --bg: #FFFFFF; --surface: #F9FAFB; --text: #111827; --accent: #F59E0B
+Mood: professional, clean, trustworthy
 
-      } else {
-        // === CLAUDE SONNET 4 API CALL (ORIGINAL) ===
-        logger.log('🔵 [CLAUDE] Using Sonnet 4');
-        
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.CLAUDE_API_KEY,
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 6000,
-            system: `You are an elite web designer and HTML/CSS expert. Generate complete, production-ready landing pages based on user requests.
+════════════════════════════════════════
+DESIGN PATTERNS — BUILD EVERY PAGE WITH THESE
+════════════════════════════════════════
 
-CRITICAL REQUIREMENTS:
-1. ALWAYS include a functional contact form with these EXACT attributes:
-   - Form must have: data-sento-form="true"
-   - Each input must have: name="fieldname" (e.g., name="name", name="email", name="phone")
-   - Form must have method="POST"
-   - Include these common fields: name, email, phone, message
-   - Add a submit button
+HERO SECTION (always full viewport):
+- min-height: 100vh, display: flex, align-items: center
+- Background image with overlay: background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(IMAGE_PLACEHOLDER)
+- Headline: minimum 3.5rem on desktop, bold or heavy weight
+- Subheadline below, then 1-2 CTA buttons side by side
+- Primary button: solid filled niche color, padding: 14px 36px, border-radius: 6px, font-weight: 600
+- Secondary button: outlined, same padding, transparent bg
+- Smooth entrance animation on headline and buttons
 
-2. ALWAYS use REAL images from Unsplash:
-   - For hero sections: Use https://images.unsplash.com/photo-[id]?w=1920&q=80
-   - For features/services: Use https://images.unsplash.com/photo-[id]?w=800&q=80
-   - For team/about: Use https://images.unsplash.com/photo-[id]?w=400&q=80
-   - Choose relevant, high-quality images that match the content
-   - NEVER use placeholder.com or fake images
+NAVIGATION:
+- Fixed top nav, glass effect: background: rgba(0,0,0,0.85), backdrop-filter: blur(12px)
+- Logo left, nav links right, mobile hamburger menu
+- Smooth scroll links to page sections
+- padding: 1rem 2rem, z-index: 1000
 
-3. MOBILE-FIRST RESPONSIVE:
-   - Use Tailwind CSS utility classes
-   - Mobile: base styles, Tablet: md: prefix, Desktop: lg: prefix
-   - Test all breakpoints
+CARDS / FEATURE BOXES:
+- border-radius: 12px to 16px
+- padding: 2rem
+- hover: transform: translateY(-8px), transition: all 0.35s ease
+- box-shadow: 0 4px 20px rgba(0,0,0,0.08) → on hover: 0 20px 40px rgba(0,0,0,0.15)
 
-4. MODERN DESIGN:
-   - Clean, professional aesthetic
-   - Proper spacing and typography
-   - Smooth transitions and hover effects
-   - Color scheme that matches the brand/niche
+SECTION SPACING:
+- Each section: padding: 100px 0 on desktop
+- Section headings: centered, font-size 2.2rem to 2.8rem
+- Subheading under section title: color #6B7280, font-size 1.1rem, max-width 600px, margin: auto
 
-5. COMPLETE HTML STRUCTURE:
-   - Full <!DOCTYPE html> with proper meta tags
-   - Tailwind CSS from CDN
-   - Semantic HTML5 elements
-   - Proper heading hierarchy (h1, h2, h3)
+GRID LAYOUTS:
+- Features/Services: CSS Grid, grid-template-columns: repeat(3, 1fr) on desktop, 1 col mobile
+- Cards gap: 2rem
+- Always include icons (Unicode emoji or simple SVG inline) at top of feature cards
 
-6. SEO OPTIMIZED:
-   - Descriptive title and meta description
-   - Alt text for all images
-   - Proper heading structure
-   - Fast loading (optimize images)
+TESTIMONIALS:
+- Card with quote marks "❝", reviewer photo (image placeholder), name, title, company
+- Star rating: ★★★★★ in gold color
 
-7. CONVERSION OPTIMIZED:
-   - Clear call-to-action buttons
-   - Strategic placement of forms
-   - Trust signals (testimonials, badges, etc.)
-   - Easy navigation
+FOOTER:
+- Dark background (#0A0A0A or niche dark color)
+- Multi-column layout (3-4 columns)
+- Logo + tagline in first column
+- Quick links in following columns
+- Bottom bar: copyright + social icons
+- Social icons: inline SVG for Instagram, Twitter/X, Facebook, LinkedIn
 
-Generate ONLY the complete HTML code. No explanations, no markdown formatting, just pure HTML.`,
-            messages: [
-              {
-                role: 'user',
-                content: sanitizedPrompt
-              }
-            ]
-          }),
-          signal: controller.signal
-        });
+ANIMATIONS — ALWAYS ADD THESE:
+<style>
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fadeInUp { animation: fadeInUp 0.7s ease forwards; }
+.animate-fadeInLeft { animation: fadeInLeft 0.7s ease forwards; }
+.hero-title { animation: fadeInUp 0.8s ease 0.2s both; }
+.hero-subtitle { animation: fadeInUp 0.8s ease 0.4s both; }
+.hero-cta { animation: fadeInUp 0.8s ease 0.6s both; }
+</style>
 
-        clearTimeout(timeout);
+SCROLL ANIMATIONS (always add this JS):
+<script>
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      entry.target.style.transform = 'translateY(0)';
+    }
+  });
+}, { threshold: 0.1 });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error('❌ [CLAUDE] API Error:', errorText);
-          
-          if (response.status === 529) {
-            return res.status(503).json({
-              success: false,
-              error: 'The AI service is currently overloaded. Please try again in a moment.',
-              isOverloaded: true
-            });
-          }
-          
-          throw new Error(`Claude API error ${response.status}: ${errorText}`);
-        }
+document.querySelectorAll('.fade-up').forEach(el => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(30px)';
+  el.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+  observer.observe(el);
+});
+</script>
+Add class="fade-up" to every section, card, and feature item.
 
-        const data = await response.json();
-        generatedText = data.content[0].text;
-        logger.log('✅ [CLAUDE] Generation successful');
+════════════════════════════════════════
+IMAGE RULES — NEVER BREAK THESE
+════════════════════════════════════════
+EVERY image MUST use this EXACT placeholder format:
+<img src="{{IMAGE_1:detailed 15+ word description}}" alt="descriptive text">
+
+Description MUST include: subject + setting + mood + lighting + style
+Examples:
+<img src="{{IMAGE_1:elegant upscale Italian restaurant interior with dark wood tables, warm candlelight, romantic atmosphere, soft golden lighting, luxury dining}}" alt="Restaurant interior">
+<img src="{{IMAGE_2:professional diverse business team collaborating in modern glass office, natural daylight, focused and energetic atmosphere}}" alt="Business team">
+<img src="{{IMAGE_3:fit athletic man performing deadlift in dark modern gym, red dramatic lighting, intense focused expression, motivational atmosphere}}" alt="Gym workout">
+
+RULES:
+- Generate 6 to 15 images per page (rich pages need more)
+- Sequential numbering: IMAGE_1, IMAGE_2, IMAGE_3... 
+- Hero always gets IMAGE_1 (largest, most impactful description)
+- NEVER use picsum.photos, placeholder.com, or any real URLs
+- Every <img> MUST have both src= and alt=
+
+════════════════════════════════════════
+FORM RULES — NEVER BREAK THESE
+════════════════════════════════════════
+ALL forms MUST use this EXACT format:
+<form method="POST" data-sento-form="true" class="sento-contact-form">
+  <input type="text" id="name" name="name" required placeholder="Your Full Name" />
+  <input type="email" id="email" name="email" required placeholder="your@email.com" />
+  <button type="submit">Send Message</button>
+  <div id="form-message" class="hidden"></div>
+</form>
+NEVER add JavaScript form submission handlers. The backend handles it.
+Style forms beautifully: inputs with padding 14px 16px, border: 1px solid #D1D5DB, border-radius 8px, focus ring in niche primary color.
+
+════════════════════════════════════════
+RICHNESS RULES — NEVER MAKE THIN PAGES
+════════════════════════════════════════
+Every page MUST have minimum 6 distinct sections.
+Every page MUST have minimum 6 images.
+Every hero MUST be full viewport (100vh) with image + overlay.
+Every page MUST have a fixed navigation bar.
+Every page MUST have a complete dark footer with multiple columns.
+If user asks for a service business → include a contact/booking form.
+If user mentions a product → include a features section + pricing.
+If user mentions a restaurant/cafe → include menu items + reservation form.
+Use real-looking placeholder data if user doesn't specify (real business hours, addresses, phone numbers, prices — make them plausible).
+Make every section visually distinct — vary backgrounds (white, light surface, dark, gradient) to create rhythm.
+
+════════════════════════════════════════
+QUALITY BAR — THIS IS YOUR STANDARD
+════════════════════════════════════════
+Ask yourself before outputting: "Would a Fortune 500 company pay $50,000 for this design?" If no — add more visual polish, better typography hierarchy, richer sections, smoother animations. Your output must be indistinguishable from a premium Webflow template.`
+      },
+      {
+        role: 'user',
+        content: sanitizedPrompt
       }
-
-      // Clean up the generated code
-      generatedCode = generatedText.trim()
+    ]
+  }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error ${response.status}: ${errorText}`);
+      }
+      const data = await response.json();
+      generatedCode = data.choices[0].message.content.trim() // ✅ Groq OpenAI-compatible response
         .replace(/```html\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
@@ -1702,7 +1790,8 @@ if (userId && generatedCode) {
       
       // 🔒 ROLLBACK counter if generation failed
       if (userId) {
-        try { await supabase.rpc('rollback_generation', { p_user_id: userId }); } catch(err) { console.error('Rollback failed:', err); }
+        await supabase.rpc('rollback_generation', { p_user_id: userId })
+          .catch(err => console.error('Rollback failed:', err));
       }
       
       return res.status(502).json({
@@ -1718,7 +1807,8 @@ if (userId && generatedCode) {
     
     // 🔒 ROLLBACK on any error
     if (userId) {
-      try { await supabase.rpc('rollback_generation', { p_user_id: userId }); } catch(err) { console.error('Rollback failed:', err); }
+      await supabase.rpc('rollback_generation', { p_user_id: userId })
+        .catch(err => console.error('Rollback failed:', err));
     }
     
     return res.status(500).json({
@@ -3898,14 +3988,14 @@ app.get('/api/images/search', requireAuth, async (req, res) => {
     const data = await response.json();
 
     const images = data.results.map(photo => ({
-  id: photo.id,
-  url: photo.urls.regular,
-  thumb: photo.urls.small,
-  photographer: photo.user.name,
-  username: photo.user.username,          // ← ADD THIS LINE
-  photographerUrl: photo.user.links.html,
-  downloadUrl: photo.links.download_location
-}));
+      id: photo.id,
+      url: photo.urls.regular,
+      thumb: photo.urls.small,
+      photographer: photo.user.name,
+      photographerUrl: photo.user.links.html,
+      downloadUrl: photo.links.download_location
+    }));
+
     return res.json({ success: true, images });
 
   } catch (error) {
