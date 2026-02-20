@@ -1178,7 +1178,7 @@ Generate ONLY the complete HTML code. No explanations, no markdown formatting, j
               }],
               generationConfig: {
                 maxOutputTokens: 6000,
-                temperature: 0.7
+                temperature: 0.3
               }
             }),
             signal: controller.signal
