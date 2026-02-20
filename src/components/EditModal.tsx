@@ -749,8 +749,16 @@ if (!rawAlt) {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       />
                       {/* Photographer credit — visible on hover only */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-                        <p className="text-white text-xs truncate">📷 {img.photographer}</p>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2.5 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
+                        <a
+                          href={`https://unsplash.com/@${img.username || 'unsplash'}?utm_source=sento-ai&utm_medium=referral`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-white text-sm font-medium hover:underline truncate block"
+                        >
+                          📷 {img.photographer}
+                        </a>
                       </div>
                     </button>
                   ))}
@@ -765,14 +773,14 @@ if (!rawAlt) {
             </div>
 
             {/* Footer — Unsplash attribution (required) */}
-            <div className="p-3 border-t bg-gray-50 text-center">
-              <p className="text-xs text-gray-400">
+            <div className="p-4 border-t bg-gray-50 text-center">
+              <p className="text-sm font-medium text-gray-700">
                 Photos by{' '}
                 <a
-                  href="https://unsplash.com"
+                  href="https://unsplash.com/?utm_source=sento-ai&utm_medium=referral"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline hover:text-gray-600 transition-colors"
+                  className="text-blue-600 underline hover:text-blue-800 transition-colors"
                 >
                   Unsplash
                 </a>
