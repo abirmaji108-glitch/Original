@@ -1166,21 +1166,20 @@ CRITICAL REQUIREMENTS:
 Generate ONLY the complete HTML code. No explanations, no markdown formatting, just pure HTML.`;
 
         const geminiResponse = await fetch(
-          'https://api.groq.com/openai/v1/chat/completions',
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
           {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'moonshotai/kimi-k2-instruct',
-              messages: [
-                { role: 'system', content: geminiSystemPrompt },
-                { role: 'user', content: sanitizedPrompt }
-              ],
-              max_tokens: 6000,
-              temperature: 0.7
+              contents: [{
+                parts: [{
+                  text: geminiSystemPrompt + '\n\nUser Request:\n' + sanitizedPrompt
+                }]
+              }],
+              generationConfig: {
+                maxOutputTokens: 6000,
+                temperature: 0.7
+              }
             }),
             signal: controller.signal
           }
@@ -1190,13 +1189,22 @@ Generate ONLY the complete HTML code. No explanations, no markdown formatting, j
 
         if (!geminiResponse.ok) {
           const errorText = await geminiResponse.text();
-          logger.error('❌ [GROQ] API Error:', errorText);
-          throw new Error(`Groq API error ${geminiResponse.status}: ${errorText}`);
+          logger.error('❌ [GEMINI] API Error:', errorText);
+          
+          if (geminiResponse.status === 529) {
+            return res.status(503).json({
+              success: false,
+              error: 'The AI service is currently overloaded. Please try again in a moment.',
+              isOverloaded: true
+            });
+          }
+          
+          throw new Error(`Gemini API error ${geminiResponse.status}: ${errorText}`);
         }
 
         const geminiData = await geminiResponse.json();
-        generatedText = geminiData.choices[0].message.content;
-        logger.log('✅ [GROQ Kimi K2] Generation successful');
+        generatedText = geminiData.candidates[0].content.parts[0].text;
+        logger.log('✅ [GEMINI] Generation successful');
 
       } else {
         // === CLAUDE SONNET 4 API CALL (ORIGINAL) ===
