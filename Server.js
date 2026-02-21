@@ -1594,55 +1594,104 @@ try {
   const hasPicsum = generatedCode.includes('picsum.photos');
   const hasFakeUnsplash = generatedCode.includes('images.unsplash.com');
   if (descriptions.length === 0 && (hasPicsum || hasFakeUnsplash)) {
-    console.log('⚠️ [IMAGE] Kimi used direct URLs — activating rescue pipeline');
-    const topic = detectTopic(sanitizedPrompt);
-    const noiseAlts = new Set(['hero','banner','image','photo','story','report','logo','partner','background','project','agent','client','portrait','headshot','profile']);
-    
-    // Helper: detect if alt text is a person's name (e.g. "Agent Sarah Chen", "Client Emily")
-    function isPersonName(alt) {
-      return /\b(agent|client|dr|mr|mrs|ms|coach|trainer|founder|ceo|chef|doctor|attorney)\b/i.test(alt) 
-        || /^[A-Z][a-z]+ [A-Z][a-z]+/.test(alt.trim());
+    console.log('⚠️ [IMAGE] Kimi used direct URLs — asking Kimi to generate search queries');
+
+    // Collect all hardcoded URLs (both CSS backgrounds and img tags)
+    const allUrls = [];
+    const cssRx2 = /url\(['"]?(https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^'")\s]+)['"]?\)/gi;
+    const imgRx2 = /src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["']/gi;
+    let m2;
+    while ((m2 = cssRx2.exec(generatedCode)) !== null) {
+      if (!allUrls.includes(m2[1])) allUrls.push(m2[1]);
     }
-    
-    // Helper: build smart rescue query from alt text
-    function buildRescueQuery(altText) {
-      if (!altText || altText.length < 3) return `${topic} professional`;
-      if (isPersonName(altText)) {
-        // For person images, use generic professional headshot query based on topic
-        return `professional person smiling headshot business`;
+    while ((m2 = imgRx2.exec(generatedCode)) !== null) {
+      if (!allUrls.includes(m2[1])) allUrls.push(m2[1]);
+    }
+
+    if (allUrls.length > 0) {
+      // Build a compact context map: for each URL, grab surrounding 600 chars of HTML
+      const contextMap = allUrls.map((url, i) => {
+        const pos = generatedCode.indexOf(url);
+        const surrounding = generatedCode.substring(Math.max(0, pos - 600), pos + 200);
+        // Strip tags, collapse whitespace
+        const text = surrounding.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+        return `Image ${i + 1} URL: ${url}\nContext: ${text}`;
+      }).join('\n\n');
+
+      try {
+        const queryController = new AbortController();
+        const queryTimeout = setTimeout(() => queryController.abort(), 20000);
+
+        const queryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'moonshotai/kimi-k2-instruct',
+            max_tokens: 800,
+            temperature: 0.3,
+            messages: [
+              {
+                role: 'system',
+                content: `You are an image search expert. For each image shown with its surrounding page context, output the perfect 4-6 word Unsplash search query that would find the most relevant photo for that exact position on the page.
+
+Rules:
+- For food/dishes: use the dish name + key ingredient (e.g. "truffle carbonara pasta close up")
+- For people/team: use their role + gender if clear (e.g. "woman real estate agent smiling")  
+- For hero backgrounds: use the business type + mood (e.g. "italian restaurant elegant interior dark")
+- For properties: use the property type (e.g. "luxury waterfront condo interior")
+- For locations/cities: use the specific place (e.g. "chicago downtown skyline aerial")
+- Never use brand names or personal names in queries
+- Output ONLY valid JSON, no explanation, no markdown
+
+Format: [{"url":"exact_url_here","query":"your search query"},...]`
+              },
+              {
+                role: 'user',
+                content: `Generate Unsplash search queries for these images:\n\n${contextMap}`
+              }
+            ]
+          }),
+          signal: queryController.signal
+        });
+
+        clearTimeout(queryTimeout);
+
+        if (queryResponse.ok) {
+          const queryData = await queryResponse.json();
+          let rawJson = queryData.choices[0].message.content.trim()
+            .replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          
+          const parsed = JSON.parse(rawJson);
+          let ri = 1;
+          for (const item of parsed) {
+            if (item.url && item.query) {
+              const isCssUrl = generatedCode.includes(`url('${item.url}')`) || 
+                               generatedCode.includes(`url("${item.url}")`);
+              descriptions.push({
+                index: ri++,
+                description: item.query,
+                placeholder: item.url,
+                isRescue: true,
+                isCss: isCssUrl
+              });
+            }
+          }
+          console.log(`🚑 [IMAGE] Kimi generated ${descriptions.length} smart queries`);
+        }
+      } catch (queryErr) {
+        console.error('❌ [IMAGE] Query generation failed, using topic fallback:', queryErr.message);
+        // Simple fallback: use topic for all images
+        const topic = detectTopic(sanitizedPrompt);
+        let ri = 1;
+        for (const url of allUrls) {
+          const isCssUrl = generatedCode.includes(`url('${url}')`) || generatedCode.includes(`url("${url}")`);
+          descriptions.push({ index: ri++, description: `${topic} professional`, placeholder: url, isRescue: true, isCss: isCssUrl });
+        }
       }
-      const cleaned = smartQuery(altText);
-      const words = cleaned.split(' ').filter(w => !noiseAlts.has(w.toLowerCase()));
-      return words.length > 2 ? `${words.join(' ')}` : `${topic} ${sanitizedPrompt.split(' ').slice(0, 3).join(' ')}`;
     }
-
-    let ri = 1;
-
-    // FIX 1: Catch CSS background-image URLs (url('picsum...') in style attributes)
-    const cssRx = /url\(['"]?(https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^'")\s]+)['"]?\)/gi;
-    let cm;
-    while ((cm = cssRx.exec(generatedCode)) !== null) {
-      const cssUrl = cm[1];
-      // Find nearby section context from surrounding 200 chars
-      const surrounding = generatedCode.substring(Math.max(0, cm.index - 200), cm.index + 200);
-      const sectionHint = surrounding.match(/(?:id|class)=["'][^"']*["']/)?.[0] || '';
-      const query = buildRescueQuery(sectionHint + ' ' + topic + ' hero background');
-      descriptions.push({ index: ri++, description: query, placeholder: cssUrl, isRescue: true, isCss: true });
-    }
-
-    // FIX 2: Catch img tag src URLs
-    const imgRx = /src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["']/gi;
-    let pm;
-    while ((pm = imgRx.exec(generatedCode)) !== null) {
-      const imgUrl = pm[1] || pm[4];
-      const altText = (pm[2] || pm[3] || '').trim();
-      if (imgUrl) {
-        const query = buildRescueQuery(altText);
-        descriptions.push({ index: ri++, description: query, placeholder: imgUrl, isRescue: true });
-      }
-    }
-
-    console.log(`🚑 [IMAGE] Rescue found ${descriptions.length} images (CSS + img tags) to replace`);
   }
   if (descriptions.length === 0) {
     console.log('⚠️ [IMAGE] No image descriptions found anywhere — using topic fallback');
