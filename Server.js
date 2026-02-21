@@ -3813,10 +3813,10 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
     logger.log('📝 [EDIT] Using standard edit path');
 
     const editPrompt = iterativeEditor.buildSmartEditPrompt(
-      website.html_code,
-      sanitized,
-      analysis
-    );
+  website.html_code,
+  sanitized,
+  analysis
+) || iterativeEditor.buildFullEditPrompt(website.html_code, sanitized);
 
     const estimatedInputTokens = iterativeEditor.estimateTokens(editPrompt);
     const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, 2000);
