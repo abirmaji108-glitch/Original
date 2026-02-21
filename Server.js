@@ -1119,7 +1119,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   },
   body: JSON.stringify({
     model: 'moonshotai/kimi-k2-instruct',
-    max_tokens: 9000,
+    max_tokens: 9500,
     temperature: 0.65,
     messages: [
       {
