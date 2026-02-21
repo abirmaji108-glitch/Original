@@ -1614,8 +1614,15 @@ try {
   // Fetch perfect images from Unsplash for each description
   const images = [];
   const sources = [];
- 
-  
+
+  for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
+    try {
+      const query = smartQuery(desc.description);
+      console.log(`🖼️ [IMAGE ${desc.index}] Smart query: "${query}" (from: "${desc.description.substring(0, 50)}...")`);
+     
+      // Use Unsplash API with smart extracted keywords
+      const searchResponse = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&orientation=landscape`,
         {
           headers: {
             'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
