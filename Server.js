@@ -1595,25 +1595,55 @@ try {
   const hasFakeUnsplash = generatedCode.includes('images.unsplash.com');
   if (descriptions.length === 0 && (hasPicsum || hasFakeUnsplash)) {
     console.log('⚠️ [IMAGE] Kimi used direct URLs — activating rescue pipeline');
-    const picsumRx = /src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["']/gi;
-    let pm;
+    const topic = detectTopic(sanitizedPrompt);
+    const noiseAlts = new Set(['hero','banner','image','photo','story','report','logo','partner','background','project','agent','client','portrait','headshot','profile']);
+    
+    // Helper: detect if alt text is a person's name (e.g. "Agent Sarah Chen", "Client Emily")
+    function isPersonName(alt) {
+      return /\b(agent|client|dr|mr|mrs|ms|coach|trainer|founder|ceo|chef|doctor|attorney)\b/i.test(alt) 
+        || /^[A-Z][a-z]+ [A-Z][a-z]+/.test(alt.trim());
+    }
+    
+    // Helper: build smart rescue query from alt text
+    function buildRescueQuery(altText) {
+      if (!altText || altText.length < 3) return `${topic} professional`;
+      if (isPersonName(altText)) {
+        // For person images, use generic professional headshot query based on topic
+        return `professional person smiling headshot business`;
+      }
+      const cleaned = smartQuery(altText);
+      const words = cleaned.split(' ').filter(w => !noiseAlts.has(w.toLowerCase()));
+      return words.length > 2 ? `${words.join(' ')}` : `${topic} ${sanitizedPrompt.split(' ').slice(0, 3).join(' ')}`;
+    }
+
     let ri = 1;
-    while ((pm = picsumRx.exec(generatedCode)) !== null) {
-      const picsumUrl = pm[1] || pm[4];
+
+    // FIX 1: Catch CSS background-image URLs (url('picsum...') in style attributes)
+    const cssRx = /url\(['"]?(https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^'")\s]+)['"]?\)/gi;
+    let cm;
+    while ((cm = cssRx.exec(generatedCode)) !== null) {
+      const cssUrl = cm[1];
+      // Find nearby section context from surrounding 200 chars
+      const surrounding = generatedCode.substring(Math.max(0, cm.index - 200), cm.index + 200);
+      const sectionHint = surrounding.match(/(?:id|class)=["'][^"']*["']/)?.[0] || '';
+      const query = buildRescueQuery(sectionHint + ' ' + topic + ' hero background');
+      descriptions.push({ index: ri++, description: query, placeholder: cssUrl, isRescue: true, isCss: true });
+    }
+
+    // FIX 2: Catch img tag src URLs
+    const imgRx = /src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["']/gi;
+    let pm;
+    while ((pm = imgRx.exec(generatedCode)) !== null) {
+      const imgUrl = pm[1] || pm[4];
       const altText = (pm[2] || pm[3] || '').trim();
-      if (picsumUrl) {
-        // Build a smarter query: strip brand/generic words from alt, add topic context
-        const topic = detectTopic(sanitizedPrompt);
-        const altCleaned = smartQuery(altText);
-        const noiseAlts = new Set(['hero','banner','image','photo','story','report','logo','partner','background','project']);
-        const altWords = altCleaned.split(' ').filter(w => !noiseAlts.has(w.toLowerCase())).join(' ');
-        const rescueQuery = altWords.length > 3 ? `${altWords} ${topic}` : `${topic} ${sanitizedPrompt.split(' ').slice(0, 4).join(' ')}`;
-        descriptions.push({ index: ri++, description: rescueQuery, placeholder: picsumUrl, isRescue: true });
+      if (imgUrl) {
+        const query = buildRescueQuery(altText);
+        descriptions.push({ index: ri++, description: query, placeholder: imgUrl, isRescue: true });
       }
     }
-    console.log(`🚑 [IMAGE] Rescue found ${descriptions.length} picsum images to replace`);
-  }
 
+    console.log(`🚑 [IMAGE] Rescue found ${descriptions.length} images (CSS + img tags) to replace`);
+  }
   if (descriptions.length === 0) {
     console.log('⚠️ [IMAGE] No image descriptions found anywhere — using topic fallback');
     throw new Error('No image descriptions generated');
@@ -1625,12 +1655,14 @@ try {
 
   for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
     try {
-      const query = smartQuery(desc.description);
-      console.log(`🖼️ [IMAGE ${desc.index}] Smart query: "${query}" (from: "${desc.description.substring(0, 50)}...")`);
+      // Rescue descriptions are already clean queries — don't double-process
+      const query = desc.isRescue ? desc.description : smartQuery(desc.description);
+      const orient = desc.isCss ? 'landscape' : (desc.description.includes('headshot') || desc.description.includes('portrait') || desc.description.includes('person smiling') ? 'squarish' : 'landscape');
+      console.log(`🖼️ [IMAGE ${desc.index}] Query: "${query}" orient:${orient}`);
      
       // Use Unsplash API with smart extracted keywords
       const searchResponse = await fetch(
-        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&orientation=landscape`,
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&orientation=${orient}`,
         {
           headers: {
             'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
