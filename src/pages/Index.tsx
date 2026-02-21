@@ -285,7 +285,8 @@ const Index = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [monthlyDownloads, setMonthlyDownloads] = useState(0);
-  const [showUsageBanner, setShowUsageBanner] = useState(false);
+ const [showUsageBanner, setShowUsageBanner] = useState(false);
+  const [showImageTip, setShowImageTip] = useState(false);
   // ✅ ADD #13: Rate limiting state
   const [lastGenerationTime, setLastGenerationTime] = useState<number>(0);
   const GENERATION_COOLDOWN = 5000; // 5 seconds
@@ -1470,6 +1471,11 @@ if (data.success) {
     setTimeout(() => {
       setShowUsageBanner(true);
     }, 500); // Small delay to ensure website renders first
+
+    // Show image tip after website is visible
+    setTimeout(() => {
+      setShowImageTip(true);
+    }, 3500);
     
     toast({
       title: "Success! 🎉",
@@ -2621,6 +2627,44 @@ const fetchWebsites = async () => {
     tier={tier}
   />
 )}
+      {/* Image Tip Toast */}
+      {showImageTip && (
+        <div
+          className="fixed bottom-6 right-6 z-50"
+          style={{
+            animation: 'slideUpFade 0.4s cubic-bezier(0.16,1,0.3,1) both',
+          }}
+        >
+          <style>{`
+            @keyframes slideUpFade {
+              from { opacity: 0; transform: translateY(16px) scale(0.97); }
+              to   { opacity: 1; transform: translateY(0) scale(1); }
+            }
+          `}</style>
+          <div className="relative flex items-start gap-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl px-5 py-4 max-w-sm">
+            <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-base">
+              🖼️
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">
+                AI picked the images. You have veto power.
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                Not feeling a photo? Hit <span className="font-medium text-violet-600 dark:text-violet-400">✏️ Edit</span> and say <span className="italic">"change the hero image"</span> — done in seconds.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowImageTip(false)}
+              className="flex-shrink-0 ml-1 mt-0.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="relative pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
