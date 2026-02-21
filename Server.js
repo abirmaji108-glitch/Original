@@ -1230,6 +1230,20 @@ Script (include once per page):
   },{threshold:0.5});
   document.querySelectorAll('.counter').forEach(function(el){co.observe(el);});
 })();
+RULE 7 — IMAGE PLACEHOLDERS ARE MANDATORY — THIS IS NON-NEGOTIABLE:
+You MUST use {{IMAGE_N:description}} for EVERY image. This is how the backend fetches real photos.
+FORBIDDEN — never write these:
+  src="https://picsum.photos/..."
+  src="https://images.unsplash.com/..."  
+  src="https://placeholder.com/..."
+  src="" (empty)
+  src="any-real-url"
+CORRECT — always write exactly this format:
+  <img src="{{IMAGE_1:muscular athlete barbell squat dark gym red lighting}}" alt="Gym workout">
+  <img src="{{IMAGE_2:professional chef plating food fine dining kitchen}}" alt="Chef cooking">
+If you use picsum, placeholder, or any real URL instead of {{IMAGE_N:...}}, the entire image system breaks. The backend REQUIRES the {{IMAGE_N:description}} format to fetch photos from Unsplash.
+
+
 
 ════════════════════════════════════════
 VAGUE PROMPT MASTERY — READ THIS CAREFULLY
@@ -1535,6 +1549,27 @@ if (!generatedCode.startsWith('<!DOCTYPE')) {
         // We'll get websiteId after saving to database, so we'll inject it later
         console.log('✅ Form detected - will inject handler after website is saved');
       }
+      // Smart query extractor — must be defined before try block for rescue access
+  function smartQuery(description) {
+    const noiseWords = new Set([
+      'cinematic','moody','atmospheric','dramatic','ethereal','intimate','aesthetic',
+      'vibes','style','feel','tone','warm','soft','bright','dark','light','bold',
+      'modern','elegant','luxury','premium','professional','beautiful','stunning',
+      'perfect','amazing','incredible','natural','organic','clean','minimalist',
+      'cozy','rustic','vintage','classic','contemporary','sleek','polished',
+      'ambient','gentle','harsh','vivid','rich','deep','crisp','sharp',
+      'golden','silver','white','black','blue','green','red','purple','pink',
+      'hour','lighting','light','glow','shadow','contrast','texture','pattern',
+      'background','foreground','setting','scene','moment','atmosphere','mood',
+      'focus','blur','bokeh','angle','shot','view','perspective','composition',
+      'portrait','lifestyle','stock','photo','image','picture','shot'
+    ]);
+    const words = description.toLowerCase()
+      .replace(/[,\.;:!?()]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !noiseWords.has(w));
+    return words.slice(0, 5).join(' ') || description.split(' ').slice(0, 4).join(' ');
+  }
      // 🎯 UNIVERSAL: Extract descriptions and get perfect images
 try {
   console.log('🔍 [IMAGE] Processing images for:', sanitizedPrompt.substring(0, 50));
@@ -1554,8 +1589,25 @@ try {
  
   console.log(`📋 [IMAGE] Found ${descriptions.length} image descriptions`);
  
+  // KIMI RESCUE: Kimi sometimes uses picsum instead of {{IMAGE_N:...}} placeholders
+  // Extract alt texts from picsum img tags and treat them as descriptions
+  if (descriptions.length === 0 && generatedCode.includes('picsum.photos')) {
+    console.log('⚠️ [IMAGE] Kimi used picsum — activating alt-text rescue pipeline');
+    const picsumRx = /src=["'](https?:\/\/picsum\.photos[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/picsum\.photos[^"']+)["']/gi;
+    let pm;
+    let ri = 1;
+    while ((pm = picsumRx.exec(generatedCode)) !== null) {
+      const picsumUrl = pm[1] || pm[4];
+      const altText = (pm[2] || pm[3] || '').trim();
+      if (picsumUrl) {
+        descriptions.push({ index: ri++, description: altText || sanitizedPrompt.slice(0, 40), placeholder: picsumUrl, isRescue: true });
+      }
+    }
+    console.log(`🚑 [IMAGE] Rescue found ${descriptions.length} picsum images to replace`);
+  }
+
   if (descriptions.length === 0) {
-    console.log('⚠️ [IMAGE] No descriptions found - Claude may not have followed instructions');
+    console.log('⚠️ [IMAGE] No image descriptions found anywhere — using topic fallback');
     throw new Error('No image descriptions generated');
   }
  
@@ -1563,43 +1615,7 @@ try {
   const images = [];
   const sources = [];
  
-  // Smart query extractor: distills Kimi's long descriptions to Unsplash-friendly keywords
-  function smartQuery(description) {
-    // Remove pure mood/style words that confuse Unsplash
-    const noiseWords = new Set([
-      'cinematic','moody','atmospheric','dramatic','ethereal','intimate','aesthetic',
-      'vibes','style','feel','tone','warm','soft','bright','dark','light','bold',
-      'modern','elegant','luxury','premium','professional','beautiful','stunning',
-      'perfect','amazing','incredible','natural','organic','clean','minimalist',
-      'cozy','rustic','vintage','classic','contemporary','sleek','polished',
-      'ambient','gentle','harsh','vivid','rich','deep','crisp','sharp',
-      'natural','raw','authentic','genuine','real','true','pure','fresh',
-      'golden','silver','white','black','blue','green','red','purple','pink',
-      'hour','lighting','light','glow','shadow','contrast','texture','pattern',
-      'background','foreground','setting','scene','moment','atmosphere','mood',
-      'focus','blur','bokeh','angle','shot','view','perspective','composition',
-      'style','look','feel','vibe','energy','spirit','essence','character',
-      'portrait','lifestyle','stock','photo','image','picture','shot'
-    ]);
-
-    const words = description.toLowerCase()
-      .replace(/[,\.;:!?()]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length > 2 && !noiseWords.has(w));
-
-    // Keep first 5 meaningful words — these are always the most concrete
-    const keywords = words.slice(0, 5).join(' ');
-    return keywords || description.split(' ').slice(0, 4).join(' ');
-  }
-
-  for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
-    try {
-      const query = smartQuery(desc.description);
-      console.log(`🖼️ [IMAGE ${desc.index}] Smart query: "${query}" (from: "${desc.description.substring(0, 50)}...")`);
-     
-      // Use Unsplash API with smart extracted keywords
-      const searchResponse = await fetch(
-        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&orientation=landscape`,
+  
         {
           headers: {
             'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
