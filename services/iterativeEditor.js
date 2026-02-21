@@ -314,7 +314,7 @@ Generate the new section now:`;
    */
   extractStyleContext(html) {
     try {
-      const sections = [...(html.matchAll(/<section[^>]*>[\s\S]*?<\/section>/gi))].map(m => m[0]);
+      const sections = this.findAllSections(html).map(s => s.html);
       const lastSection = sections[sections.length - 1] || '';
       const trimmed = lastSection.length > 1200
         ? lastSection.substring(0, 1200) + '\n  <!-- ... -->\n</section>'
@@ -566,65 +566,57 @@ Generate the complete modified HTML:`;
    * Returns { beforeText, afterText } to sandwich the new content
    */
   findInsertionPoint(html, anchor, position) {
-    try {
-      let anchorRegex;
-      
-      // Build regex to find the anchor element
-      switch (anchor.toLowerCase()) {
-        case 'hero':
-        case 'banner':
-          anchorRegex = /<section[^>]*(?:hero|banner)[^>]*>[\s\S]*?<\/section>/i;
-          break;
-        case 'features':
-        case 'feature':
-          anchorRegex = /<section[^>]*(?:features?)[^>]*>[\s\S]*?<\/section>/i;
-          break;
-        case 'pricing':
-        case 'prices':
-          anchorRegex = /<section[^>]*(?:pricing|prices)[^>]*>[\s\S]*?<\/section>/i;
-          break;
-        case 'testimonials':
-        case 'testimonial':
-          anchorRegex = /<section[^>]*(?:testimonials?)[^>]*>[\s\S]*?<\/section>/i;
-          break;
-        case 'footer':
-          anchorRegex = /<footer[^>]*>[\s\S]*?<\/footer>/i;
-          break;
-        case 'header':
-          anchorRegex = /<header[^>]*>[\s\S]*?<\/header>/i;
-          break;
-        default:
-          // Try to find by section id or class
-          anchorRegex = new RegExp(`<section[^>]*(?:id|class)=["'][^"']*${anchor}[^"']*["'][^>]*>[\\s\\S]*?<\\/section>`, 'i');
+  try {
+    // Find the anchor element using balanced extraction (handles nested sections)
+    let startIdx = -1;
+    const anchorLower = anchor.toLowerCase();
+
+    if (anchorLower === 'footer') {
+      startIdx = html.indexOf('<footer');
+    } else if (anchorLower === 'header') {
+      startIdx = html.indexOf('<header');
+    } else {
+      // Find section by id/class matching the anchor word
+      const sectionPattern = new RegExp(
+        `<section[^>]*(?:id|class)=["'][^"']*${anchorLower}[^"']*["']`,
+        'i'
+      );
+      const sectionMatch = html.match(sectionPattern);
+      if (sectionMatch) {
+        startIdx = html.indexOf(sectionMatch[0]);
       }
-      
-      const match = html.match(anchorRegex);
-      
-      if (!match) {
-        logger.warn(`⚠️ [INSERT] Could not find anchor: ${anchor}`);
-        return null;
-      }
-      
-      const anchorIndex = html.indexOf(match[0]);
-      const anchorEnd = anchorIndex + match[0].length;
-      
-      if (position === 'after') {
-        return {
-          beforeText: html.substring(0, anchorEnd),
-          afterText: html.substring(anchorEnd)
-        };
-      } else {
-        return {
-          beforeText: html.substring(0, anchorIndex),
-          afterText: html.substring(anchorIndex)
-        };
-      }
-      
-    } catch (error) {
-      logger.error('Insertion point detection error:', error);
+    }
+
+    if (startIdx === -1) {
+      logger.warn(`⚠️ [INSERT] Could not find anchor: ${anchor}`);
       return null;
     }
+
+    const fullBlock = this.extractBalancedTag(html, startIdx);
+    if (!fullBlock) {
+      logger.warn(`⚠️ [INSERT] Could not extract balanced block for anchor: ${anchor}`);
+      return null;
+    }
+
+    const anchorEnd = startIdx + fullBlock.length;
+
+    if (position === 'after') {
+      return {
+        beforeText: html.substring(0, anchorEnd),
+        afterText: html.substring(anchorEnd)
+      };
+    } else {
+      return {
+        beforeText: html.substring(0, startIdx),
+        afterText: html.substring(startIdx)
+      };
+    }
+
+  } catch (error) {
+    logger.error('Insertion point detection error:', error);
+    return null;
   }
+}
 
   /**
    * PHASE 2A: Smart section merging with multiple fallback strategies
