@@ -1563,13 +1563,43 @@ try {
   const images = [];
   const sources = [];
  
+  // Smart query extractor: distills Kimi's long descriptions to Unsplash-friendly keywords
+  function smartQuery(description) {
+    // Remove pure mood/style words that confuse Unsplash
+    const noiseWords = new Set([
+      'cinematic','moody','atmospheric','dramatic','ethereal','intimate','aesthetic',
+      'vibes','style','feel','tone','warm','soft','bright','dark','light','bold',
+      'modern','elegant','luxury','premium','professional','beautiful','stunning',
+      'perfect','amazing','incredible','natural','organic','clean','minimalist',
+      'cozy','rustic','vintage','classic','contemporary','sleek','polished',
+      'ambient','gentle','harsh','vivid','rich','deep','crisp','sharp',
+      'natural','raw','authentic','genuine','real','true','pure','fresh',
+      'golden','silver','white','black','blue','green','red','purple','pink',
+      'hour','lighting','light','glow','shadow','contrast','texture','pattern',
+      'background','foreground','setting','scene','moment','atmosphere','mood',
+      'focus','blur','bokeh','angle','shot','view','perspective','composition',
+      'style','look','feel','vibe','energy','spirit','essence','character',
+      'portrait','lifestyle','stock','photo','image','picture','shot'
+    ]);
+
+    const words = description.toLowerCase()
+      .replace(/[,\.;:!?()]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !noiseWords.has(w));
+
+    // Keep first 5 meaningful words — these are always the most concrete
+    const keywords = words.slice(0, 5).join(' ');
+    return keywords || description.split(' ').slice(0, 4).join(' ');
+  }
+
   for (const desc of descriptions.sort((a, b) => a.index - b.index)) {
     try {
-      console.log(`🖼️ [IMAGE ${desc.index}] Searching: "${desc.description.substring(0, 60)}..."`);
+      const query = smartQuery(desc.description);
+      console.log(`🖼️ [IMAGE ${desc.index}] Smart query: "${query}" (from: "${desc.description.substring(0, 50)}...")`);
      
-      // Use Unsplash API directly with description
+      // Use Unsplash API with smart extracted keywords
       const searchResponse = await fetch(
-        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(desc.description)}&per_page=1&orientation=landscape`,
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=3&orientation=landscape`,
         {
           headers: {
             'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`
@@ -1584,7 +1614,9 @@ try {
       const searchData = await searchResponse.json();
      
       if (searchData.results && searchData.results.length > 0) {
-        const imageUrl = searchData.results[0].urls.regular;
+        // Pick randomly from top 3 results for variety across generations
+        const pick = Math.floor(Math.random() * Math.min(3, searchData.results.length));
+        const imageUrl = searchData.results[pick].urls.regular;
         images.push(imageUrl);
         sources.push('unsplash');
         console.log(`✅ [IMAGE ${desc.index}] Found perfect match`);
