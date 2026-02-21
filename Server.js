@@ -1626,14 +1626,10 @@ try {
       const pos = generatedCode.indexOf(imgUrl);
       const before = generatedCode.substring(Math.max(0, pos - 600), pos);
       const after = generatedCode.substring(pos, Math.min(generatedCode.length, pos + 200));
-      const afterWide = generatedCode.substring(pos, Math.min(generatedCode.length, pos + 500));
       const headingMatch = before.match(/<h[1-6][^>]*>([^<]{3,60})<\/h[1-6]>/gi);
-      const afterHeadingMatch = afterWide.match(/<h[1-6][^>]*>([^<]{3,60})<\/h[1-6]>/gi);
-      const rawHeading = (headingMatch ? headingMatch[headingMatch.length - 1] : '') || (afterHeadingMatch ? afterHeadingMatch[0] : '');
-      const lastHeading = rawHeading.replace(/<[^>]+>/g, '').replace(/^(the|your|our|a|an)\s+/i, '').trim();
+      const lastHeading = headingMatch ? headingMatch[headingMatch.length - 1].replace(/<[^>]+>/g, '').trim() : '';
       const paraMatch = before.match(/<p[^>]*>([^<]{10,100})<\/p>/gi);
-      const afterParaMatch = afterWide.match(/<p[^>]*>([^<]{10,100})<\/p>/gi);
-      const lastPara = ((paraMatch ? paraMatch[paraMatch.length - 1] : '') || (afterParaMatch ? afterParaMatch[0] : '')).replace(/<[^>]+>/g, '').trim();
+      const lastPara = paraMatch ? paraMatch[paraMatch.length - 1].replace(/<[^>]+>/g, '').trim() : '';
       const isHero = before.slice(-300).includes('min-h-screen') || /id=["']?(hero|home|banner)["']?/i.test(before.slice(-300));
       const isRoundImg = after.includes('rounded-full') || before.slice(-100).includes('rounded-full');
       if (isHero) return `${lastHeading || topic} lifestyle product modern`;
