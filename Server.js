@@ -1629,24 +1629,53 @@ try {
       const pos = generatedCode.indexOf(imgUrl);
       const before = generatedCode.substring(Math.max(0, pos - 600), pos);
       const after = generatedCode.substring(pos, Math.min(generatedCode.length, pos + 200));
+
+      // Get nearest heading before AND after the image
       const headingMatch = before.match(/<h[1-6][^>]*>([^<]{3,60})<\/h[1-6]>/gi);
-      const lastHeading = headingMatch ? headingMatch[headingMatch.length - 1].replace(/<[^>]+>/g, '').trim() : '';
+      const afterHeadingMatch = after.match(/<h[1-6][^>]*>([^<]{3,60})<\/h[1-6]>/gi);
+      const rawHeading = (headingMatch ? headingMatch[headingMatch.length - 1] : '') || (afterHeadingMatch ? afterHeadingMatch[0] : '');
+      // Strip "The Art of / The Science of / The Power of" noise prefixes
+      const lastHeading = rawHeading.replace(/<[^>]+>/g, '').replace(/^(the\s+)?(art|science|power|beauty|magic|story|world)\s+of\s+/i, '').replace(/^(the|your|our|a|an)\s+/i, '').trim();
+
       const paraMatch = before.match(/<p[^>]*>([^<]{10,100})<\/p>/gi);
       const lastPara = paraMatch ? paraMatch[paraMatch.length - 1].replace(/<[^>]+>/g, '').trim() : '';
-      const isHero = before.slice(-300).includes('min-h-screen') || /id=["']?(hero|home|banner)["']?/i.test(before.slice(-300));
-      const isRoundImg = after.includes('rounded-full') || before.slice(-100).includes('rounded-full');
-      if (isHero) return `${lastHeading || topic} lifestyle product modern`;
-      if (isRoundImg) {
-        const roleMatch = before.match(/\b(trainer|coach|doctor|chef|agent|specialist|founder|ceo|attorney)\b/i);
-        const role = roleMatch ? roleMatch[1] : 'professional';
-        return `${role} person smiling portrait professional`;
+
+      // Hero detection — covers both Tailwind and inline styles
+      const isHero = before.slice(-400).includes('min-h-screen')
+        || before.slice(-400).includes('min-height:100vh')
+        || before.slice(-400).includes('min-height: 100vh')
+        || /id=["']?(hero|home|banner|main-hero)["']?/i.test(before.slice(-400));
+
+      // Person/avatar detection — rounded image near a name
+      const isRoundImg = after.includes('rounded-full') || before.slice(-150).includes('rounded-full');
+
+      // FIX 1: Hero — use heading + topic, never "lifestyle product modern"
+      if (isHero) {
+        const heroQuery = lastHeading || sanitizedPrompt.split(' ').slice(0, 5).join(' ');
+        return `${heroQuery} ${topic} interior`;
       }
-      if (lastHeading && lastHeading.length > 4 && !/^(featured|shop|our|meet|client|customer)/i.test(lastHeading)) {
+
+      // FIX 2: Person — detect gender from nearby name, use role not "person"
+      if (isRoundImg) {
+        const roleMatch = before.match(/\b(trainer|coach|doctor|chef|agent|specialist|founder|ceo|attorney|therapist|esthetician|practitioner|consultant|instructor|director)\b/i);
+        const role = roleMatch ? roleMatch[1] : 'professional';
+        // Look for female/male name cues in surrounding 300 chars
+        const nameContext = before.slice(-300) + after;
+        const isFemale = /\b(sarah|jessica|emily|maria|anna|jennifer|lisa|amanda|rachel|priya|sophie|claire|emma|olivia|natalie|diana|elena|nina|amanda|lee)\b/i.test(nameContext);
+        const isMale = /\b(marcus|david|john|james|carlos|michael|robert|tyler|ahmed|daniel|kevin|ryan|chris|matthew|jason|peter|simon|tom|david|kim)\b/i.test(nameContext);
+        const gender = isFemale ? 'woman' : isMale ? 'man' : 'person';
+        return `${gender} ${role} smiling portrait professional headshot`;
+      }
+
+      // FIX 3: Content images — heading + paragraph gives best context
+      if (lastHeading && lastHeading.length > 4 && !/^(featured|shop|our|meet|client|customer|welcome|about)/i.test(lastHeading)) {
         return lastPara ? `${lastHeading} ${lastPara.slice(0, 40)}` : `${lastHeading} ${topic}`;
       }
-      if (altText && altText.length > 4 && !/^(product \d|user|image|photo|home|wellness|electronics|accessories)$/i.test(altText)) {
+
+      if (altText && altText.length > 4 && !/^(product \d|user|image|photo|home|wellness|electronics|accessories|client|hero|banner)$/i.test(altText)) {
         return `${altText} ${topic}`;
       }
+
       return `${topic} professional`;
     }
 
