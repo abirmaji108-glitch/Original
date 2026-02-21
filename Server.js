@@ -1622,19 +1622,29 @@ try {
       return /\b(agent|client|dr|mr|mrs|ms|coach|trainer|founder|ceo|chef|doctor|attorney|specialist|therapist|consultant)\b/i.test(alt);
     }
 
-    function buildRescueQuery(altText) {
-      if (!altText || altText.length < 3) return `${topic} professional`;
-      if (isPersonName(altText)) {
-        const isWoman = /\b(sarah|jessica|emily|maria|anna|jennifer|lisa|amanda|rachel|priya)\b/i.test(altText);
-        const isMan = /\b(marcus|david|john|james|carlos|michael|robert|tyler|ahmed)\b/i.test(altText);
-        const gender = isWoman ? 'woman' : isMan ? 'man' : 'person';
-        const roleMatch = altText.match(/\b(coach|trainer|doctor|attorney|specialist|chef|agent|therapist|consultant|instructor)\b/i);
-        const role = roleMatch ? roleMatch[1] : topic;
-        return `${gender} ${role} smiling professional portrait`;
+    function buildRescueQuery(altText, imgUrl) {
+      const pos = generatedCode.indexOf(imgUrl);
+      const before = generatedCode.substring(Math.max(0, pos - 600), pos);
+      const after = generatedCode.substring(pos, Math.min(generatedCode.length, pos + 200));
+      const headingMatch = before.match(/<h[1-6][^>]*>([^<]{3,60})<\/h[1-6]>/gi);
+      const lastHeading = headingMatch ? headingMatch[headingMatch.length - 1].replace(/<[^>]+>/g, '').trim() : '';
+      const paraMatch = before.match(/<p[^>]*>([^<]{10,100})<\/p>/gi);
+      const lastPara = paraMatch ? paraMatch[paraMatch.length - 1].replace(/<[^>]+>/g, '').trim() : '';
+      const isHero = before.slice(-300).includes('min-h-screen') || /id=["']?(hero|home|banner)["']?/i.test(before.slice(-300));
+      const isRoundImg = after.includes('rounded-full') || before.slice(-100).includes('rounded-full');
+      if (isHero) return `${lastHeading || topic} lifestyle product modern`;
+      if (isRoundImg) {
+        const roleMatch = before.match(/\b(trainer|coach|doctor|chef|agent|specialist|founder|ceo|attorney)\b/i);
+        const role = roleMatch ? roleMatch[1] : 'professional';
+        return `${role} person smiling portrait professional`;
       }
-      const cleaned = smartQuery(altText);
-      const words = cleaned.split(' ').filter(w => !noiseAlts.has(w.toLowerCase()));
-      return words.length > 2 ? words.join(' ') : `${topic} ${sanitizedPrompt.split(' ').slice(0, 3).join(' ')}`;
+      if (lastHeading && lastHeading.length > 4 && !/^(featured|shop|our|meet|client|customer)/i.test(lastHeading)) {
+        return lastPara ? `${lastHeading} ${lastPara.slice(0, 40)}` : `${lastHeading} ${topic}`;
+      }
+      if (altText && altText.length > 4 && !/^(product \d|user|image|photo|home|wellness|electronics|accessories)$/i.test(altText)) {
+        return `${altText} ${topic}`;
+      }
+      return `${topic} professional`;
     }
 
     let ri = 1;
@@ -1657,7 +1667,7 @@ try {
       const imgUrl = pm[1] || pm[4];
       const altText = (pm[2] || pm[3] || '').trim();
       if (imgUrl) {
-        const query = buildRescueQuery(altText);
+        const query = buildRescueQuery(altText, imgUrl);
         descriptions.push({ index: ri++, description: query, placeholder: imgUrl, isRescue: true });
       }
     }
