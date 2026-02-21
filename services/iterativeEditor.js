@@ -196,43 +196,48 @@ class IterativeEditor {
     const sections = [];
     
     try {
-      // Get all sections from HTML
-      const allSections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
+      // Use balanced extractor instead of broken non-greedy regex
+      const allSections = this.findAllSections(html);
       
       // Also check header and footer
-      const header = html.match(/<header[^>]*>[\s\S]*?<\/header>/i);
-      const footer = html.match(/<footer[^>]*>[\s\S]*?<\/footer>/i);
-      
-      if (header) allSections.push(header[0]);
-      if (footer) allSections.push(footer[0]);
+      const headerIdx = html.indexOf('<header');
+      if (headerIdx !== -1) {
+        const header = this.extractBalancedTag(html, headerIdx);
+        if (header) allSections.push({ html: header, startIndex: headerIdx });
+      }
+      const footerIdx = html.indexOf('<footer');
+      if (footerIdx !== -1) {
+        const footer = this.extractBalancedTag(html, footerIdx);
+        if (footer) allSections.push({ html: footer, startIndex: footerIdx });
+      }
       
       // Filter sections that contain the target element
       for (const section of allSections) {
         let hasTarget = false;
+        const sectionHtml = section.html;
         
         switch (targetType) {
           case 'button':
-            // Detect real buttons AND anchor tags styled as buttons
-            hasTarget = section.includes('<button') || 
-                        /class=["'][^"']*btn/i.test(section) ||
-                        /class=["'][^"']*button/i.test(section);
+            hasTarget = sectionHtml.includes('<button') || 
+                        /class=["'][^"']*btn/i.test(sectionHtml) ||
+                        /class=["'][^"']*button/i.test(sectionHtml);
             break;
           case 'heading':
-            hasTarget = /<h[1-6]/i.test(section);
+            hasTarget = /<h[1-6]/i.test(sectionHtml);
             break;
           case 'pricing':
-            hasTarget = /\$\d+|price|pricing/i.test(section);
+            hasTarget = /\$\d+|price|pricing/i.test(sectionHtml);
             break;
           case 'text':
-            hasTarget = /<p[^>]*>/i.test(section);
+            hasTarget = /<p[^>]*>/i.test(sectionHtml);
             break;
           default:
-            hasTarget = section.toLowerCase().includes(targetType);
+            hasTarget = sectionHtml.toLowerCase().includes(targetType);
         }
         
         if (hasTarget) {
           sections.push({
-            html: section,
+            html: sectionHtml,
             type: targetType
           });
         }
@@ -392,6 +397,78 @@ Generate the complete modified HTML:`;
   }
 
   /**
+   * CORE FIX: Properly extract a balanced HTML tag block (handles nested tags).
+   * Replaces the broken non-greedy regex [\s\S]*? which stops at the FIRST
+   * closing tag instead of the MATCHING one when sections are nested.
+   */
+  extractBalancedTag(html, startIndex) {
+    const tagMatch = html.slice(startIndex).match(/^<([a-zA-Z][a-zA-Z0-9]*)/);
+    if (!tagMatch) return null;
+    const tagName = tagMatch[1].toLowerCase();
+
+    const firstTagEnd = html.indexOf('>', startIndex);
+    if (firstTagEnd === -1) return null;
+
+    // Handle self-closing tags
+    if (html[firstTagEnd - 1] === '/') return html.slice(startIndex, firstTagEnd + 1);
+
+    let depth = 1;
+    let i = firstTagEnd + 1;
+    const openStr  = `<${tagName}`;
+    const closeStr = `</${tagName}>`;
+
+    while (i < html.length && depth > 0) {
+      const nextOpen  = html.indexOf(openStr,  i);
+      const nextClose = html.indexOf(closeStr, i);
+
+      if (nextClose === -1) break;
+
+      if (nextOpen !== -1 && nextOpen < nextClose) {
+        // Make sure it's really an opening tag (next char is space or >)
+        const charAfter = html[nextOpen + openStr.length];
+        if (charAfter === '>' || charAfter === ' ' || charAfter === '\n' || charAfter === '\t') {
+          depth++;
+          i = nextOpen + openStr.length;
+        } else {
+          i = nextOpen + 1;
+        }
+      } else {
+        depth--;
+        i = nextClose + closeStr.length;
+        if (depth === 0) return html.slice(startIndex, i);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * CORE FIX: Find all top-level <section> blocks using balanced extraction.
+   * Replaces the broken /<section[^>]*>[\s\S]*?<\/section>/gi regex.
+   */
+  findAllSections(html) {
+    const sections = [];
+    let i = 0;
+    while (i < html.length) {
+      const idx = html.indexOf('<section', i);
+      if (idx === -1) break;
+      // Make sure it's an opening tag
+      const charAfter = html[idx + 8]; // '<section' is 8 chars
+      if (charAfter !== '>' && charAfter !== ' ' && charAfter !== '\n' && charAfter !== '\t') {
+        i = idx + 1;
+        continue;
+      }
+      const fullSection = this.extractBalancedTag(html, idx);
+      if (fullSection) {
+        sections.push({ html: fullSection, startIndex: idx });
+        i = idx + fullSection.length;
+      } else {
+        i = idx + 1;
+      }
+    }
+    return sections;
+  }
+
+  /**
    * PHASE 2C: IMPROVED - Extract complete logical sections, not fragments
    * Always gets the full section/element, not just a piece
    */
@@ -401,84 +478,79 @@ Generate the complete modified HTML:`;
       if (analysis.isMultiTarget) {
         return null;
       }
-      
-      // For header edits - always get complete header
+
+      // For header edits - always get complete header (balanced)
       if (analysis.targetSection === 'header') {
-        const match = html.match(/<header[^>]*>[\s\S]*?<\/header>/i);
-        return match ? match[0] : null;
+        const idx = html.indexOf('<header');
+        if (idx === -1) return null;
+        return this.extractBalancedTag(html, idx);
       }
 
-      // For hero/banner edits - get complete hero section
+      // For hero/banner edits - get complete hero section (balanced)
       if (analysis.targetSection === 'hero') {
         // Try to find section with hero/banner in class or id
-        const heroMatch = html.match(/<section[^>]*(?:hero|banner)[^>]*>[\s\S]*?<\/section>/i);
-        if (heroMatch) return heroMatch[0];
-        
-        // Fallback: get first section (usually hero)
-        const firstSection = html.match(/<section[^>]*>[\s\S]*?<\/section>/i);
-        return firstSection ? firstSection[0] : null;
+        const heroIdx = html.search(/<section[^>]*(?:hero|banner)[^>]*>/i);
+        if (heroIdx !== -1) {
+          const result = this.extractBalancedTag(html, heroIdx);
+          if (result) return result;
+        }
+        // Fallback: get first section (usually hero) — use balanced extractor
+        const allSections = this.findAllSections(html);
+        return allSections.length > 0 ? allSections[0].html : null;
       }
 
-      // For footer edits - always get complete footer
+      // For footer edits - always get complete footer (balanced)
       if (analysis.targetSection === 'footer') {
-        const match = html.match(/<footer[^>]*>[\s\S]*?<\/footer>/i);
-        return match ? match[0] : null;
+        const idx = html.indexOf('<footer');
+        if (idx === -1) return null;
+        return this.extractBalancedTag(html, idx);
       }
 
       // For style/color edits - get the style block AND the relevant section
       if (analysis.targetSection === 'style') {
         const styleBlock = html.match(/<style[^>]*>[\s\S]*?<\/style>/i);
         if (styleBlock) return styleBlock[0];
-        
         // If no style block, get the first section (will be inline styles)
-        const firstSection = html.match(/<section[^>]*>[\s\S]*?<\/section>/i);
-        return firstSection ? firstSection[0] : null;
+        const allSections = this.findAllSections(html);
+        return allSections.length > 0 ? allSections[0].html : null;
       }
 
-      // IMPROVED: For button edits, get the COMPLETE section containing buttons
+      // IMPROVED: For button edits, get the COMPLETE section containing buttons (balanced)
       if (analysis.targetSection === 'button') {
-        const sections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
-        
-        for (const section of sections) {
-          if (section.includes('<button') || section.includes('btn')) {
-            // Return the ENTIRE section, not just the button
-            return section;
+        const allSections = this.findAllSections(html);
+        for (const sec of allSections) {
+          if (sec.html.includes('<button') || sec.html.includes('btn')) {
+            return sec.html;
           }
         }
-        
-        // Check header/footer too
-        const header = html.match(/<header[^>]*>[\s\S]*?<\/header>/i);
-        if (header && (header[0].includes('<button') || header[0].includes('btn'))) {
-          return header[0];
+        // Check header too
+        const headerIdx = html.indexOf('<header');
+        if (headerIdx !== -1) {
+          const header = this.extractBalancedTag(html, headerIdx);
+          if (header && (header.includes('<button') || header.includes('btn'))) return header;
         }
       }
 
-      // IMPROVED: For heading edits, find section with the most headings
+      // IMPROVED: For heading edits, find section with the most headings (balanced)
       if (analysis.targetSection === 'heading') {
-        const sections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
+        const allSections = this.findAllSections(html);
         let bestSection = null;
         let maxHeadings = 0;
-        
-        for (const section of sections) {
-          const headingCount = (section.match(/<h[1-6]/gi) || []).length;
+        for (const sec of allSections) {
+          const headingCount = (sec.html.match(/<h[1-6]/gi) || []).length;
           if (headingCount > maxHeadings) {
             maxHeadings = headingCount;
-            bestSection = section;
+            bestSection = sec.html;
           }
         }
-        
         return bestSection;
       }
 
-      // IMPROVED: For pricing edits, find pricing section
+      // IMPROVED: For pricing edits, find pricing section (balanced)
       if (analysis.targetSection === 'pricing') {
-        const sections = html.match(/<section[^>]*>[\s\S]*?<\/section>/gi) || [];
-        
-        for (const section of sections) {
-          // Look for pricing indicators
-          if (/price|pricing|\$\d+/i.test(section)) {
-            return section;
-          }
+        const allSections = this.findAllSections(html);
+        for (const sec of allSections) {
+          if (/price|pricing|\$\d+/i.test(sec.html)) return sec.html;
         }
       }
 
@@ -621,6 +693,34 @@ Generate the complete modified HTML:`;
           method: 'id-based'
         };
       }
+    }
+
+    // STRATEGY 5: Opening-tag signature + balanced extraction
+    // Most robust fallback: find matching element by its opening tag attributes,
+    // then replace the full balanced block regardless of content differences.
+    // This handles the Kimi→Flash cross-model formatting mismatch.
+    try {
+      const openingTagMatch = oldSection.match(/^(<[a-zA-Z][^>]*>)/);
+      if (openingTagMatch) {
+        const openingTag = openingTagMatch[1];
+        const tagNameMatch = openingTag.match(/^<([a-zA-Z][a-zA-Z0-9]*)/);
+        if (tagNameMatch) {
+          const startIdx = originalHTML.indexOf(openingTag);
+          if (startIdx !== -1) {
+            const fullBlock = this.extractBalancedTag(originalHTML, startIdx);
+            if (fullBlock) {
+              logger.log('✅ [MERGE] Strategy 5: Opening-tag signature + balanced extraction worked');
+              return {
+                success: true,
+                html: originalHTML.slice(0, startIdx) + newSection + originalHTML.slice(startIdx + fullBlock.length),
+                method: 'opening-tag-signature'
+              };
+            }
+          }
+        }
+      }
+    } catch (s5err) {
+      logger.warn('⚠️ [MERGE] Strategy 5 error:', s5err.message);
     }
 
     logger.error('❌ [MERGE] All merge strategies failed');
@@ -768,8 +868,9 @@ Generate the complete modified HTML:`;
    * Calculate API cost based on token usage
    */
   estimateCost(inputTokens, outputTokens) {
-    const INPUT_COST_PER_1M  = 3.00;
-    const OUTPUT_COST_PER_1M = 15.00;
+    // Gemini 2.5 Flash pricing
+    const INPUT_COST_PER_1M  = 0.075;
+    const OUTPUT_COST_PER_1M = 0.30;
     const inputCost  = (inputTokens  / 1_000_000) * INPUT_COST_PER_1M;
     const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
     return inputCost + outputCost;
