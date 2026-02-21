@@ -1457,7 +1457,7 @@ NEVER add JavaScript form handlers. Backend handles submission.
 Submit button background is ALWAYS var(--primary). Never green (#059669) unless brand is green.
 
 ════════════════════════════════════════
-PAGE RICHNESS — MANDATORY MINIMUMS
+PAGE RICHNESS — MANDATORY MINIMUMS (TYPE A VAGUE PROMPTS ONLY — Type B/C override these completely)
 ════════════════════════════════════════
 Every page MUST have:
 ✓ 7+ distinct sections (more is always better)
