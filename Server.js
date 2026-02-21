@@ -1656,6 +1656,7 @@ try {
       const cssUrl = cm[1];
       const query = buildRescueQuery('', cssUrl);
       descriptions.push({ index: ri++, description: query, placeholder: cssUrl, isRescue: true, isCss: true });
+    }
 
     // img tag src URLs
     const imgRx = /src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["']/gi;
