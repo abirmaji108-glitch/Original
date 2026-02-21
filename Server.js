@@ -1658,9 +1658,14 @@ try {
   // Replace all placeholders with fetched images
   descriptions.forEach((desc, idx) => {
     if (images[idx]) {
-      const escapedPlaceholder = desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      generatedCode = generatedCode.replace(new RegExp(escapedPlaceholder, 'g'), images[idx]);
-      console.log(`🔄 [IMAGE ${desc.index}] Replaced with ${sources[idx]} image`);
+      if (desc.isRescue) {
+        generatedCode = generatedCode.split(desc.placeholder).join(images[idx]);
+        console.log(`🚑 [IMAGE ${desc.index}] Rescue replaced picsum with Unsplash`);
+      } else {
+        const escapedPlaceholder = desc.placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        generatedCode = generatedCode.replace(new RegExp(escapedPlaceholder, 'g'), images[idx]);
+        console.log(`🔄 [IMAGE ${desc.index}] Replaced with ${sources[idx]} image`);
+      }
     }
   });
  
