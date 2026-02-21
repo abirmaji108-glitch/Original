@@ -1529,11 +1529,14 @@ Before outputting, mentally verify every item:
 □ Section backgrounds alternate dark ↔ light with high contrast
 □ 8+ {{IMAGE_N:...}} placeholders generated
 
-Output only if all boxes checked. The result must be indistinguishable from a $50,000 Webflow template built by a top-tier agency.`
+Output only if all boxes checked. The result must be indistinguishable from a $50,000 Webflow template built by a top-tier agency.
+
+FINAL REMINDER BEFORE YOU WRITE A SINGLE LINE OF HTML:
+Every image = {{IMAGE_N:specific description}}. No Unsplash URLs. No picsum. {{IMAGE_N:...}} only.`
       },
       {
         role: 'user',
-        content: sanitizedPrompt
+        content: sanitizedPrompt + '\n\n⚠️ MANDATORY FOR IMAGES: Use {{IMAGE_1:description}}, {{IMAGE_2:description}} etc for EVERY image src and CSS background url(). Example: <img src="{{IMAGE_1:chef cooking in professional kitchen}}" alt="Chef">. Hardcoded Unsplash/picsum URLs are forbidden.'
       }
     ]
   }),
