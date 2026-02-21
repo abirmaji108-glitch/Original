@@ -3529,6 +3529,43 @@ app.get('/api/analytics/:websiteId', requireAuth, async (req, res) => {
   }
 });
 // ============================================
+// ================================================================
+// GEMINI FLASH 2.5 HELPER — used exclusively for iterative editing
+// ================================================================
+async function callGeminiFlash(prompt, maxTokens = 6000) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: maxTokens
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    throw new Error(`Gemini API error: ${response.status} — ${errBody}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.candidates || !data.candidates[0]) {
+    throw new Error('Gemini returned no candidates');
+  }
+
+  const text = data.candidates[0].content.parts.map(p => p.text || '').join('');
+  const inputTokens  = data.usageMetadata?.promptTokenCount     || 0;
+  const outputTokens = data.usageMetadata?.candidatesTokenCount || 0;
+
+  return { text, inputTokens, outputTokens };
+}
+
 // ITERATIVE EDITING - AI-POWERED PAGE UPDATES
 // ============================================
 
@@ -3610,27 +3647,9 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
           const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, 4000);
           logger.log(`💰 [INSERT] Estimated cost: $${estimatedCost.toFixed(4)}`);
           
-          // Step 3: Call Claude for complete HTML with insertion
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': process.env.CLAUDE_API_KEY,
-              'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 6000,
-              messages: [{ role: 'user', content: insertionPrompt }]
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Claude API error: ${response.status}`);
-          }
-
-          const data = await response.json();
-          let newSectionHTML = data.content[0].text.trim()
+          // Step 3: Call Gemini Flash 2.5 for new section HTML
+          const geminiInsert = await callGeminiFlash(insertionPrompt, 6000);
+          let newSectionHTML = geminiInsert.text.trim()
             .replace(/^```[\w]*\n?/m, '').replace(/\n?```$/m, '').trim();
 
           // Process image placeholders in new section only
@@ -3654,8 +3673,8 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
           // Splice in programmatically — footer lives in afterText, Claude never touched it
           let editedHTML = insertionPoint.beforeText + '\n' + newSectionHTML + '\n' + insertionPoint.afterText;
           
-          const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
-          const actualOutputTokens = data.usage?.output_tokens || 4000;
+          const actualInputTokens  = geminiInsert.inputTokens  || estimatedInputTokens;
+          const actualOutputTokens = geminiInsert.outputTokens || 4000;
           const actualCost = iterativeEditor.estimateCost(actualInputTokens, actualOutputTokens);
           
           logger.log(`💰 [INSERT] Actual cost: $${actualCost.toFixed(4)}`);
@@ -3727,31 +3746,12 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
               analysis.targetType
             );
             
-            // Call Claude for this section
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': process.env.CLAUDE_API_KEY,
-                'anthropic-version': '2023-06-01'
-              },
-              body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 2000,
-                messages: [{ role: 'user', content: sectionPrompt }]
-              })
-            });
+            // Call Gemini Flash 2.5 for this section
+            const geminiSection = await callGeminiFlash(sectionPrompt, 2000);
+            const editedSection = htmlParser.cleanHTML(geminiSection.text);
 
-            if (!response.ok) {
-              logger.error(`❌ [MULTI] Section ${i + 1} failed: ${response.status}`);
-              continue;
-            }
-
-            const data = await response.json();
-            const editedSection = htmlParser.cleanHTML(data.content[0].text);
-            
-            totalInputTokens += data.usage?.input_tokens || 0;
-            totalOutputTokens += data.usage?.output_tokens || 0;
+            totalInputTokens  += geminiSection.inputTokens;
+            totalOutputTokens += geminiSection.outputTokens;
             
             // Merge this edited section back
             const mergeResult = iterativeEditor.smartMergeSection(
@@ -3822,30 +3822,20 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
     const estimatedCost = iterativeEditor.estimateCost(estimatedInputTokens, 2000);
     logger.log(`💰 [EDIT] Estimated cost: $${estimatedCost.toFixed(4)}`);
 
-    // Call Claude API
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: analysis.complexity === 'low' ? 2000 : 6000,
-        messages: [{ role: 'user', content: editPrompt }]
-      })
-    });
+    // Call Gemini Flash 2.5
+    const geminiEdit = await callGeminiFlash(
+      editPrompt,
+      analysis.complexity === 'low' ? 2000 : 6000
+    );
 
-    if (!response.ok) {
-      throw new Error(`Claude API error: ${response.status}`);
+    if (!geminiEdit.text) {
+      throw new Error('Gemini returned empty response');
     }
 
-    const data = await response.json();
-    let editedHTML = htmlParser.cleanHTML(data.content[0].text);
+    let editedHTML = htmlParser.cleanHTML(geminiEdit.text);
 
-    const actualInputTokens = data.usage?.input_tokens || estimatedInputTokens;
-    const actualOutputTokens = data.usage?.output_tokens || 2000;
+    const actualInputTokens  = geminiEdit.inputTokens  || estimatedInputTokens;
+    const actualOutputTokens = geminiEdit.outputTokens || 2000;
     const actualCost = iterativeEditor.estimateCost(actualInputTokens, actualOutputTokens);
     logger.log(`💰 [EDIT] Actual cost: $${actualCost.toFixed(4)}`);
 
