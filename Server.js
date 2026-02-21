@@ -1234,7 +1234,7 @@ RULE 7 — IMAGE PLACEHOLDERS ARE MANDATORY — THIS IS NON-NEGOTIABLE:
 You MUST use {{IMAGE_N:description}} for EVERY image. This is how the backend fetches real photos.
 FORBIDDEN — never write these:
   src="https://picsum.photos/..."
-  src="https://images.unsplash.com/..."  
+  src="https://images.unsplash.com/photo-..." (never hardcode Unsplash photo IDs) 
   src="https://placeholder.com/..."
   src="" (empty)
   src="any-real-url"
@@ -1591,16 +1591,24 @@ try {
  
   // KIMI RESCUE: Kimi sometimes uses picsum instead of {{IMAGE_N:...}} placeholders
   // Extract alt texts from picsum img tags and treat them as descriptions
-  if (descriptions.length === 0 && generatedCode.includes('picsum.photos')) {
-    console.log('⚠️ [IMAGE] Kimi used picsum — activating alt-text rescue pipeline');
-    const picsumRx = /src=["'](https?:\/\/picsum\.photos[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/picsum\.photos[^"']+)["']/gi;
+  const hasPicsum = generatedCode.includes('picsum.photos');
+  const hasFakeUnsplash = generatedCode.includes('images.unsplash.com');
+  if (descriptions.length === 0 && (hasPicsum || hasFakeUnsplash)) {
+    console.log('⚠️ [IMAGE] Kimi used direct URLs — activating rescue pipeline');
+    const picsumRx = /src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["']/gi;
     let pm;
     let ri = 1;
     while ((pm = picsumRx.exec(generatedCode)) !== null) {
       const picsumUrl = pm[1] || pm[4];
       const altText = (pm[2] || pm[3] || '').trim();
       if (picsumUrl) {
-        descriptions.push({ index: ri++, description: altText || sanitizedPrompt.slice(0, 40), placeholder: picsumUrl, isRescue: true });
+        // Build a smarter query: strip brand/generic words from alt, add topic context
+        const topic = detectTopic(sanitizedPrompt);
+        const altCleaned = smartQuery(altText);
+        const noiseAlts = new Set(['hero','banner','image','photo','story','report','logo','partner','background','project']);
+        const altWords = altCleaned.split(' ').filter(w => !noiseAlts.has(w.toLowerCase())).join(' ');
+        const rescueQuery = altWords.length > 3 ? `${altWords} ${topic}` : `${topic} ${sanitizedPrompt.split(' ').slice(0, 4).join(' ')}`;
+        descriptions.push({ index: ri++, description: rescueQuery, placeholder: picsumUrl, isRescue: true });
       }
     }
     console.log(`🚑 [IMAGE] Rescue found ${descriptions.length} picsum images to replace`);
