@@ -1654,11 +1654,8 @@ try {
     let cm;
     while ((cm = cssRx.exec(generatedCode)) !== null) {
       const cssUrl = cm[1];
-      const heroContext = generatedCode.substring(Math.max(0, cm.index - 500), cm.index).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(-200);
-      const heroHeading = heroContext.match(/[A-Z][A-Z\s]{5,50}/)?.[0]?.toLowerCase().trim() || '';
-      const query = heroHeading ? `${heroHeading} ${topic}` : `${topic} interior professional`;
+      const query = buildRescueQuery('', cssUrl);
       descriptions.push({ index: ri++, description: query, placeholder: cssUrl, isRescue: true, isCss: true });
-    }
 
     // img tag src URLs
     const imgRx = /src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["'][^>]*alt=["']([^"']*?)["']|alt=["']([^"']*?)["'][^>]*src=["'](https?:\/\/(?:picsum\.photos|images\.unsplash\.com)[^"']+)["']/gi;
