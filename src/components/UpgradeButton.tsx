@@ -12,8 +12,8 @@ export function UpgradeButton({
   size = 'md',
   variant = 'default' 
 }: UpgradeButtonProps) {
-  // Don't show if already Pro/Business
-  if (tier === 'pro' || tier === 'business') return null;
+  // Don't show if already on Pro (highest tier)
+  if (tier === 'pro') return null;
 
   const navigate = useNavigate();
 
@@ -27,7 +27,7 @@ export function UpgradeButton({
     ? 'border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50'
     : 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:from-yellow-500 hover:to-orange-600';
 
-  const tierName = tier === 'free' ? 'Basic' : 'Pro';
+  const tierName = tier === 'free' ? 'Starter' : tier === 'starter' ? 'Basic' : 'Pro';
 
   return (
     <button
