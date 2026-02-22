@@ -9,7 +9,7 @@
 // Server source of truth: server.js TIER_LIMITS
 // Database source of truth: profiles.user_tier
 // ============================================
-export type UserTier = 'free' | 'basic' | 'pro';
+export type UserTier = 'free' | 'starter' | 'basic' | 'pro';
 // ============================================
 // DISPLAY LIMITS - FOR UI ONLY
 // ============================================
@@ -19,21 +19,34 @@ export type UserTier = 'free' | 'basic' | 'pro';
 export const TIER_LIMITS = {
   free: {
     maxPromptLength: 500,
+    credits: 20,
     monthlyGenerations: 2,
     generationsPerMonth: 2,
-    // ✅ FIX: Use actual template IDs from templates.ts
     templatesAccess: [
       'restaurant', 'portfolio', 'agency', 'landing', 'ecommerce',
       'blog', 'gym', 'education', 'realestate', 'wedding'
     ],
     displayName: 'Free',
-    description: 'Perfect for trying out our service',
+    description: 'Try Sento AI — no credit card required',
+  },
+  starter: {
+    maxPromptLength: 750,
+    credits: 60,
+    monthlyGenerations: 6,
+    generationsPerMonth: 6,
+    templatesAccess: [
+      'restaurant', 'portfolio', 'agency', 'landing', 'ecommerce',
+      'blog', 'gym', 'education', 'realestate', 'wedding',
+      'saas', 'nonprofit', 'medical', 'photography', 'hotel'
+    ],
+    displayName: 'Starter',
+    description: 'Perfect for freelancers and small projects',
   },
   basic: {
     maxPromptLength: 1000,
-    monthlyGenerations: 10,
-    generationsPerMonth: 10,
-    // ✅ FIX: All basic templates (20 total)
+    credits: 130,
+    monthlyGenerations: 13,
+    generationsPerMonth: 13,
     templatesAccess: [
       'restaurant', 'portfolio', 'agency', 'landing', 'ecommerce',
       'blog', 'gym', 'education', 'realestate', 'wedding',
@@ -41,20 +54,18 @@ export const TIER_LIMITS = {
       'lawyer', 'music', 'construction', 'automotive', 'coffee'
     ],
     displayName: 'Basic',
-    description: 'Great for personal projects',
+    description: 'Most popular — unlimited projects, custom domain',
   },
   pro: {
     maxPromptLength: 2000,
-    monthlyGenerations: 25,
-generationsPerMonth: 25,
-    // ✅ FIX: All templates (basic + premium = 50 total)
+    credits: 400,
+    monthlyGenerations: 40,
+    generationsPerMonth: 40,
     templatesAccess: [
-      // Basic templates
       'restaurant', 'portfolio', 'agency', 'landing', 'ecommerce',
       'blog', 'gym', 'education', 'realestate', 'wedding',
       'saas', 'nonprofit', 'medical', 'photography', 'hotel',
       'lawyer', 'music', 'construction', 'automotive', 'coffee',
-      // Premium templates
       'luxury-hotel', 'tech-startup', 'crypto', 'ai-saas', 'fintech',
       'fashion-brand', 'architecture', 'gaming', 'podcast', 'space-tech',
       'wellness', 'vineyard', 'art-gallery', 'yacht', 'biotech',
@@ -63,39 +74,55 @@ generationsPerMonth: 25,
       'ai-avatar', 'mental-health', 'drone-services', 'vr-experience', 'robotics'
     ],
     displayName: 'Pro',
-    description: 'Unlimited creativity for professionals',
+    description: 'For agencies and power users — white-label, API access',
   },
 } as const;
 // ============================================
 // TIER METADATA - FOR DISPLAY
 // ============================================
 export const TIER_PRICES = {
- free: 0,
- basic: 9.99,
- pro: 29.99,
+  free: 0,
+  starter: 5,
+  basic: 10,
+  pro: 25,
 } as const;
 export const TIER_FEATURES = {
- free: [
-  '2 generations per month',
-  'Basic templates',
-  '500 character prompts',
-  'Community support',
- ],
- basic: [
-  '10 generations per month',
-  'Premium templates',
-  '1,000 character prompts',
-  'Email support',
-  'Custom styling options',
- ],
- pro: [
-  '25 generations per month',
-  'All templates including ultra-modern',
-  '2,000 character prompts',
-  'Priority support',
-  'Advanced customization',
-  'Early access to new features',
- ],
+  free: [
+    '20 credits (lifetime)',
+    '2 page generations',
+    'Preview only — no publishing',
+    'Basic templates',
+    'Community support',
+  ],
+  starter: [
+    '60 credits/month',
+    '6 generations or 20 edits',
+    'Publish up to 3 live pages',
+    '50 form submissions/month',
+    'Basic analytics',
+    'Remove Sento badge',
+    'Email support',
+  ],
+  basic: [
+    '130 credits/month',
+    '13 generations or 43 edits',
+    'Unlimited published pages',
+    'Unlimited form submissions',
+    '1 custom domain',
+    'Full analytics (30 days)',
+    'Export HTML code',
+    'Priority email support',
+  ],
+  pro: [
+    '400 credits/month',
+    '40 generations or 133 edits',
+    'Everything in Basic',
+    '5 custom domains',
+    'Advanced analytics (90 days)',
+    'White-label option',
+    'API access',
+    'Priority phone support',
+  ],
 } as const;
 // ============================================
 // HELPER FUNCTIONS - DISPLAY ONLY
