@@ -1980,20 +1980,17 @@ const fetchWebsites = async () => {
 };
   // Publish website to Vercel
   const handlePublish = async (websiteId: string) => {
-    const handlePublish = async (websiteId: string) => {
-  // ✅ Free users cannot publish - must upgrade
-  if (tier === 'free') {
-    toast({
-      title: "Upgrade Required 🚀",
-      description: "Free plan users can preview pages but cannot publish. Upgrade to Starter ($5/month) to publish live.",
-      variant: "destructive"
-    });
-    setShowUpgradeModal(true);
-    return;
-  }
-  
-  setPublishingId(websiteId);
-  // ... rest of function stays the same
+    // ✅ Free users cannot publish - must upgrade
+    if (tier === 'free') {
+      toast({
+        title: "Upgrade Required 🚀",
+        description: "Free plan users can preview pages but cannot publish. Upgrade to Starter ($5/month) to publish live.",
+        variant: "destructive"
+      });
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setPublishingId(websiteId);
     
     try {
