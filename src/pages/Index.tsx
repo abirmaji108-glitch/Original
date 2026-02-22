@@ -3325,7 +3325,6 @@ const fetchWebsites = async () => {
 >
   🎨 AI Edit
 </button>
-                        )}
                         
                         {/* 📧 FORM SUBMISSIONS BUTTON - Show only for published sites */}
                         {(site as any).deployment_status === 'live' && (
