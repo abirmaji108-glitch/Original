@@ -359,6 +359,7 @@ const requiredEnvVars = [
   { name: 'SUPABASE_SERVICE_ROLE_KEY', critical: true },
   { name: 'STRIPE_SECRET_KEY', critical: false },
   { name: 'STRIPE_WEBHOOK_SECRET', critical: false },
+  { name: 'STRIPE_STARTER_PRICE_ID', critical: false },
   { name: 'STRIPE_BASIC_PRICE_ID', critical: false },
   { name: 'STRIPE_PRO_PRICE_ID', critical: false },
   { name: 'FRONTEND_URL', critical: false }
@@ -2090,8 +2091,8 @@ if (userId && generatedCode) {
       
       // 🔒 ROLLBACK counter if generation failed
       if (userId) {
-        await supabase.rpc('rollback_generation', { p_user_id: userId })
-          .catch(err => console.error('Rollback failed:', err));
+        await supabase.rpc('refund_credits', { p_user_id: userId, p_amount: 10 })
+          .catch(err => console.error('Credit refund failed:', err));
       }
       
       return res.status(502).json({
@@ -2107,8 +2108,8 @@ if (userId && generatedCode) {
     
     // 🔒 ROLLBACK on any error
     if (userId) {
-      await supabase.rpc('rollback_generation', { p_user_id: userId })
-        .catch(err => console.error('Rollback failed:', err));
+      await supabase.rpc('refund_credits', { p_user_id: userId, p_amount: 10 })
+          .catch(err => console.error('Credit refund failed:', err));
     }
     
     return res.status(500).json({
@@ -2500,7 +2501,6 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
         error: 'Invalid tier',
         message: `Valid tiers: ${validTiers.join(', ')}`
       });
-    }
     }
     // Validate interval
     if (!['monthly', 'yearly'].includes(interval)) {
