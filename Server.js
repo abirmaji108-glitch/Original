@@ -17,6 +17,7 @@ import formHandler from './services/formHandler.js';
 import analyticsService from './services/analyticsService.js';
 import iterativeEditor from './services/iterativeEditor.js';
 import htmlParser from './services/htmlParser.js';
+import creditService from './services/creditService.js';
 // ADD THESE LINES:
 // Emoji constants to prevent encoding issues
 const E = {
@@ -27,9 +28,9 @@ const E = {
 // TIER LIMITS - Single source of truth
 const TIER_LIMITS = {
   free: 2,
-  basic: 10,
-  pro: 25,
-  business: 100
+  starter: 3,
+  basic: 999,
+  pro: 999
 };
 import { IMAGE_LIBRARY, detectTopic, getUnsplashUrl, getImages, getContextAwareImages, getRateLimitStatus } from './imageLibrary.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -335,6 +336,7 @@ const requireAuth = async (req, res, next) => {
 // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX: Validate all Stripe price IDs are configured at startup
 if (stripe) {
   const requiredPriceIds = [
+    { name: 'STRIPE_STARTER_PRICE_ID', value: process.env.STRIPE_STARTER_PRICE_ID },
     { name: 'STRIPE_BASIC_PRICE_ID', value: process.env.STRIPE_BASIC_PRICE_ID },
     { name: 'STRIPE_PRO_PRICE_ID', value: process.env.STRIPE_PRO_PRICE_ID }
   ];
@@ -347,13 +349,7 @@ if (stripe) {
   } else {
     logger.log(`${E.CHECK} All required Stripe price IDs configured`);
   }
-  // Optional: warn about missing yearly price IDs
-  if (!process.env.STRIPE_BASIC_YEARLY_PRICE_ID) {
-    logger.warn(`${E.WARN} STRIPE_BASIC_YEARLY_PRICE_ID not set - yearly Basic plan disabled`);
-  }
-  if (!process.env.STRIPE_PRO_YEARLY_PRICE_ID) {
-    logger.warn(`${E.WARN} STRIPE_PRO_YEARLY_PRICE_ID not set - yearly Pro plan disabled`);
-  }
+  
 }
 // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ FIX #20: Comprehensive environment variable validation
 const requiredEnvVars = [
@@ -618,6 +614,14 @@ supabase
           ]);
 
           logger.log(`✅ User ${userId} upgraded to ${tier} via invoice.payment_succeeded`);
+
+          // Reset monthly credits for paid tier renewal
+          try {
+            await creditService.resetMonthlyCredits(userId, tier, supabase);
+            logger.log(`✅ Monthly credits reset for ${userId} (${tier})`);
+          } catch (creditErr) {
+            logger.error(`⚠️ Monthly credit reset failed (non-critical):`, creditErr.message);
+          }
           break;
         }
 
@@ -731,6 +735,13 @@ supabase
     logger.log(`${E.CHECK} Profile update affected ${profileResult.data?.length || 0} rows`);
     logger.log(`${E.CHECK} Subscription update affected ${subscriptionResult.data?.length || 0} rows`);
 
+    // Allocate credits for new tier
+    try {
+      await creditService.allocateCreditsForTier(userId, tier, supabase);
+      logger.log(`${E.CHECK} Credits allocated for ${tier} tier`);
+    } catch (creditErr) {
+      logger.error(`${E.WARN} Credit allocation failed (non-critical):`, creditErr.message);
+    }
   } catch (error) {
     logger.error(`${E.CROSS} CRITICAL: Database sync failed`, {
       error: error.message,
@@ -1073,38 +1084,30 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     let generatedCode = null;
     let websiteId = null;  // 👈 ADD THIS LINE
     
-    // 🔒 STEP 5: ATOMIC INCREMENT (your existing perfect code - UNCHANGED)
-    const { data: result, error: txError } = await supabase.rpc(
-      'safe_increment_generation',
-      { p_user_id: userId }
+    // 🔒 STEP 5: CREDIT CHECK & DEDUCTION
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('user_tier, credits_balance')
+      .eq('id', userId)
+      .single();
+
+    userTier = profileData?.user_tier || 'free';
+
+    const creditResult = await creditService.checkAndDeductCredits(
+      userId, 'generation', supabase
     );
-    
-    if (txError) {
-      console.error('Transaction error:', txError);
-      return res.status(500).json({
+
+    if (!creditResult.success) {
+      return res.status(402).json({
         success: false,
-        error: 'Database error',
-        message: 'Could not process your request'
+        error: 'Insufficient credits',
+        credits_balance: creditResult.creditsBalance || 0,
+        credits_needed: creditResult.creditsNeeded || 10,
+        message: 'You need more credits to generate a page. Please top up or upgrade your plan.'
       });
     }
-    
-    if (result && result.length > 0) {
-      const txResult = result[0];
-      userTier = txResult.tier;
-      generationsThisMonth = txResult.new_count;
-      const limit = txResult.tier_limit;
-      
-      // 🔒 CHECK IF LIMIT WAS REACHED (SQL function already checked this)
-      if (txResult.limit_reached === true) {
-        return res.status(429).json({
-          success: false,
-          error: 'Monthly limit reached',
-          limit_reached: true,
-          used: generationsThisMonth,
-          limit
-        });
-      }
-    }
+
+    console.log(`✅ Credits deducted: ${creditResult.creditsUsed} used, ${creditResult.creditsAfter} remaining`);
 
     
     // FAST CLAUDE API CALL with aggressive timeout
@@ -2073,11 +2076,10 @@ if (userId && generatedCode) {
       return res.json({
         success: true,
         htmlCode: generatedCode,
-        websiteId: websiteId,  // ✅ NEW - Return the UUID from Supabase
-        usage: {
-          used: generationsThisMonth,
-          limit,
-          remaining: limit - generationsThisMonth
+        websiteId: websiteId,
+        credits: {
+          used: creditResult.creditsUsed,
+          remaining: creditResult.creditsAfter
         },
         tier: userTier,
         generationTime: `${Date.now() - startTime}ms`
@@ -2140,7 +2142,7 @@ app.get('/api/profile', async (req, res) => {
     // Fetch profile with minimal fields first
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, user_tier, generations_this_month, last_generation_reset, downloads_this_month, last_download_reset, stripe_customer_id, email, full_name')
+      .select('id, user_tier, generations_this_month, last_generation_reset, downloads_this_month, last_download_reset, stripe_customer_id, email, full_name, credits_balance, credits_used_this_month')
       .eq('id', user.id)
       .maybeSingle();
     if (profileError) {
@@ -2232,7 +2234,9 @@ app.get('/api/profile', async (req, res) => {
           downloads_this_month: downloadsThisMonth,
           remaining_downloads: Math.max(0, downloadLimit - downloadsThisMonth),
           download_limit: downloadLimit,
-          current_month: currentMonth
+          current_month: currentMonth,
+          credits_balance: profile.credits_balance || 0,
+          credits_used_this_month: profile.credits_used_this_month || 0
         }
       }
     });
@@ -2489,13 +2493,14 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
       });
     }
     // Validate tier
-    const validTiers = ['basic', 'pro', 'business'];
+    const validTiers = ['starter', 'basic', 'pro'];
     if (!validTiers.includes(tier)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid tier',
         message: `Valid tiers: ${validTiers.join(', ')}`
       });
+    }
     }
     // Validate interval
     if (!['monthly', 'yearly'].includes(interval)) {
@@ -2530,18 +2535,12 @@ app.post('/api/create-checkout-session', checkoutLimiter, async (req, res) => {
     });
     // Get price ID based on tier and interval
     let priceId;
-    if (tier === 'basic') {
-      priceId = interval === 'yearly'
-        ? process.env.STRIPE_BASIC_YEARLY_PRICE_ID
-        : process.env.STRIPE_BASIC_PRICE_ID;
+    if (tier === 'starter') {
+      priceId = process.env.STRIPE_STARTER_PRICE_ID;
+    } else if (tier === 'basic') {
+      priceId = process.env.STRIPE_BASIC_PRICE_ID;
     } else if (tier === 'pro') {
-      priceId = interval === 'yearly'
-        ? process.env.STRIPE_PRO_YEARLY_PRICE_ID
-        : process.env.STRIPE_PRO_PRICE_ID;
-    } else if (tier === 'business') {
-      priceId = interval === 'yearly'
-        ? process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID
-        : process.env.STRIPE_BUSINESS_PRICE_ID;
+      priceId = process.env.STRIPE_PRO_PRICE_ID;
     }
     if (!priceId) {
       logger.error(`${E.CROSS} [${req.id}] Missing price ID for ${tier} (${interval})`);
@@ -4295,6 +4294,92 @@ app.get('/api/images/search', requireAuth, async (req, res) => {
 // ============================================
 // END OF ITERATIVE EDITING ENDPOINTS
 // ============================================
+
+// ============================================
+// CREDIT BALANCE ENDPOINT
+// ============================================
+app.get('/api/credits/balance', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const balance = await creditService.getCreditBalance(userId, supabase);
+    return res.json({ success: true, ...balance });
+  } catch (error) {
+    logger.error(`${E.CROSS} Credits balance error:`, error);
+    return res.status(500).json({ success: false, error: 'Failed to fetch credit balance' });
+  }
+});
+
+// ============================================
+// CREDIT TOP-UP CHECKOUT SESSION
+// ============================================
+app.post('/api/credits/topup', requireAuth, async (req, res) => {
+  try {
+    const { package: pkg } = req.body; // '5', '10', '20'
+    const userId = req.user.id;
+
+    const topupPackages = {
+      '5':  { credits: 60,  price: 500  },
+      '10': { credits: 130, price: 1000 },
+      '20': { credits: 280, price: 2000 }
+    };
+
+    const selected = topupPackages[pkg];
+    if (!selected) {
+      return res.status(400).json({ success: false, error: 'Invalid package. Choose 5, 10, or 20.' });
+    }
+
+    if (!stripe) {
+      return res.status(500).json({ success: false, error: 'Payment system not configured' });
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('stripe_customer_id, email')
+      .eq('id', userId)
+      .single();
+
+    let customerId = profile?.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: profile?.email || req.user.email,
+        metadata: { userId }
+      });
+      customerId = customer.id;
+      await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `${selected.credits} Credits Top-Up`,
+            description: `Add ${selected.credits} credits to your Sento AI account`
+          },
+          unit_amount: selected.price
+        },
+        quantity: 1
+      }],
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/#/app?topup=success&credits=${selected.credits}`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/#/app`,
+      metadata: {
+        userId,
+        type: 'credit_topup',
+        credits: String(selected.credits)
+      }
+    });
+
+    logger.log(`${E.CARD} Credit top-up session created for user ${userId}: ${selected.credits} credits`);
+    return res.json({ success: true, sessionId: session.id, url: session.url });
+
+  } catch (error) {
+    logger.error(`${E.CROSS} Credit top-up error:`, error);
+    return res.status(500).json({ success: false, error: 'Failed to create top-up session' });
+  }
+});
 
 // ============================================
 // SERVE STATIC FILES (React build)
