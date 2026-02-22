@@ -319,8 +319,11 @@ const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
   tierLimits,
   isPro,
   isFree,
+  isStarter,
+  creditsBalance,
+  creditsUsed,
   refreshLimits,
-  loading  // ✅ ADD THIS LINE
+  loading
 } = useFeatureGate();
 
 
@@ -1117,6 +1120,12 @@ const error = null; // No error since we're not inserting
       });
       return;
     }
+    // ADD THIS BLOCK after the isGenerating check:
+// ✅ Credit check
+if (!canGenerateMore) {
+  setShowUpgradeModal(true);
+  return;
+}
 
     // ✅ CHECK 1: Check length BEFORE sanitization (on raw input)
 const currentInputLength = actualInput.trim().length;
@@ -1150,11 +1159,11 @@ const sanitizedPrompt = sanitizeInput(actualInput);
 
     // ✅ CHECK 3: Check max length
     const tierMaxLengths = {
-      free: 1000,
-      basic: 2000,
-      pro: 5000,
-      business: 10000
-    };
+  free: 1000,
+  starter: 1500,
+  basic: 2000,
+  pro: 5000
+};
     
     const maxLength = tierMaxLengths[tier] || 1000;
 
@@ -1971,6 +1980,20 @@ const fetchWebsites = async () => {
 };
   // Publish website to Vercel
   const handlePublish = async (websiteId: string) => {
+    const handlePublish = async (websiteId: string) => {
+  // ✅ Free users cannot publish - must upgrade
+  if (tier === 'free') {
+    toast({
+      title: "Upgrade Required 🚀",
+      description: "Free plan users can preview pages but cannot publish. Upgrade to Starter ($5/month) to publish live.",
+      variant: "destructive"
+    });
+    setShowUpgradeModal(true);
+    return;
+  }
+  
+  setPublishingId(websiteId);
+  // ... rest of function stays the same
     setPublishingId(websiteId);
     
     try {
@@ -2264,11 +2287,11 @@ const fetchWebsites = async () => {
 
   // ✅ FIX #2: Use tier-based character limits
   const tierLimitsConfig = {
-    free: 1000,
-    basic: 2000,
-    pro: 5000,
-    business: 10000
-  };
+  free: 1000,
+  starter: 1500,
+  basic: 2000,
+  pro: 5000
+};
   const characterLimit = tierLimitsConfig[tier] || 1000;
   const characterCount = input.length;
 
@@ -2392,12 +2415,12 @@ const fetchWebsites = async () => {
 
       {/* Enhanced Upgrade Modal */}
       <EnhancedUpgradeModal
-        open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
-        currentTier={tier}
-        generationsUsed={generationsToday}
-        generationsLimit={tierLimits.monthlyGenerations}
-      />
+  open={showUpgradeModal}
+  onOpenChange={setShowUpgradeModal}
+  currentTier={tier}
+  generationsUsed={creditsUsed}
+  generationsLimit={tierLimits.credits}
+/>
 
       {/* Feature Lock Modal */}
       <FeatureLockModal
@@ -2504,8 +2527,13 @@ const fetchWebsites = async () => {
                 <User className="w-4 h-4" />
               </div>
               <div className="flex items-center gap-3">
-                <div className={`text-xs ${dynamicSubtleClass}`} key={`gen-${generationsToday}-${Date.now()}`}>
-  {generationsToday}/{tierLimits.monthlyGenerations} {tier === 'free' ? 'lifetime' : 'this month'}
+                <div className={`text-xs ${dynamicSubtleClass}`} key={`credits-${creditsBalance}`}>
+  <span className={creditsBalance <= 10 ? 'text-red-400 font-semibold' : ''}>
+    ⚡ {creditsBalance} credits
+  </span>
+  {!isPro && (
+    <span className="ml-1 opacity-60">/ {tierLimits.credits}</span>
+  )}
 </div>
                 <UpgradeButton tier={tier} size="sm" />
               </div>
@@ -2589,10 +2617,17 @@ const fetchWebsites = async () => {
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <div className="text-sm">
-                    <div className={dynamicTextClass}>Free Plan</div>
+                    <div className={dynamicTextClass}>
+  {tier === 'free' ? 'Free Plan' : tier === 'starter' ? 'Starter Plan' : tier === 'basic' ? 'Basic Plan' : 'Pro Plan'}
+</div>
                     <div className={`text-xs ${dynamicSubtleClass}`}>
-                      {isPro ? "Unlimited Generations" : `${generationsToday}/${tierLimits.monthlyGenerations} this month`}
-                    </div>
+  {isPro 
+    ? "Unlimited Credits" 
+    : <span className={creditsBalance <= 10 ? 'text-red-400 font-semibold' : ''}>
+        ⚡ {creditsBalance} / {tierLimits.credits} credits
+      </span>
+  }
+</div>
                   </div>
                 </div>
                 <UpgradeButton tier={tier} size="sm" />
@@ -2616,10 +2651,10 @@ const fetchWebsites = async () => {
       {/* Upgrade Banner - Shows AFTER website is displayed */}
 {showUsageBanner && (
   <UpgradeBanner 
-    generationsUsed={generationsToday} 
-    generationsLimit={tierLimits.monthlyGenerations}
-    tier={tier}
-  />
+  generationsUsed={creditsUsed} 
+  generationsLimit={tierLimits.credits}
+  tier={tier}
+/>
 )}
       {/* Main Content */}
       <main className="relative pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 sm:px-6">
@@ -2664,7 +2699,7 @@ const fetchWebsites = async () => {
     setInput(prompt);
     // Let user review the prompt before generating
   }}
-  userTier={tier}
+  userTier={tier as any}
   isDarkMode={isDarkMode}
 />
 
@@ -2764,6 +2799,36 @@ const fetchWebsites = async () => {
                       </span>
                     </Button>
                   </div>
+                  {/* Credit warning */}
+{creditsBalance <= 10 && creditsBalance > 0 && (
+  <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-500/20 border border-orange-500/30">
+    <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0" />
+    <span className="text-sm text-orange-300">
+      ⚡ Only <strong>{creditsBalance} credits</strong> left. Each generation costs 10 credits.{' '}
+      <button 
+        onClick={() => setShowUpgradeModal(true)} 
+        className="underline hover:text-orange-200"
+      >
+        Upgrade now
+      </button>
+    </span>
+  </div>
+)}
+
+{creditsBalance === 0 && (
+  <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/20 border border-red-500/30">
+    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+    <span className="text-sm text-red-300">
+      ❌ No credits left.{' '}
+      <button 
+        onClick={() => setShowUpgradeModal(true)} 
+        className="underline font-semibold hover:text-red-200"
+      >
+        Upgrade to continue generating
+      </button>
+    </span>
+  </div>
+)}
 
                   <div className={`inline-flex items-center gap-2 glass-card rounded-full px-6 py-2 transition-colors duration-300 ${dynamicGlassClass} mt-4`}>
                     <span className="text-lg">⌨️</span>
@@ -3076,7 +3141,7 @@ const fetchWebsites = async () => {
                 </Button>
                 <DownloadButton 
                   generatedCode={generatedCode}
-                  userTier={tier}
+                  userTier={tier as any}
                   onUpgrade={() => setFeatureLockModal({ isOpen: true, feature: 'download' })}
                   isDarkMode={isDarkMode}
                 />
