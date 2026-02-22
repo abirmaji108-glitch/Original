@@ -656,14 +656,7 @@ case 'checkout.session.completed': {
   if (sessionType === 'credit_topup') {
     const creditsToAdd = parseInt(session.metadata?.credits || '0');
     if (userId && creditsToAdd > 0) {
-      await supabase
-        .from('profiles')
-        .update({
-          credits_balance: supabase.rpc('credits_balance')
-        })
-        .eq('id', userId);
-
-      // Use refund_credits with negative amount to ADD credits
+      // Add credits to user balance
       await supabase.rpc('refund_credits', {
         p_user_id: userId,
         p_amount: creditsToAdd
@@ -2198,7 +2191,9 @@ app.get('/api/profile', async (req, res) => {
           generations_this_month: 0,
           downloads_this_month: 0,
           last_generation_reset: currentMonth,
-          last_download_reset: currentMonth
+          last_download_reset: currentMonth,
+          credits_balance: 20,
+          credits_used_this_month: 0
         })
         .select()
         .single();
