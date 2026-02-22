@@ -275,3 +275,4 @@ export function useFeatureGate() {
     creditsUsed: state.creditsUsed,
     isStarter: state.isStarter
   };
+}
