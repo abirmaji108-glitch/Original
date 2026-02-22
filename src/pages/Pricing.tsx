@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Check, Sparkles, Zap, Building2 } from 'lucide-react';
+import { Check, Sparkles, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 const Pricing = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null); // Track which plan is loading
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -14,14 +14,14 @@ const Pricing = () => {
     {
       id: 'free',
       name: 'Free',
-      description: 'Perfect for trying out Sento',
+      description: 'Try Sento AI — no card required',
       price: { monthly: 0, yearly: 0 },
       icon: Sparkles,
       features: [
-        '2 website generations (lifetime)',
-        'Landing pages (1-3 sections)',
-        '20 basic templates',
-        'Preview only (no downloads)',
+        '20 credits (lifetime)',
+        '2 page generations',
+        'Preview only — no publishing',
+        'Basic templates',
         'Community support'
       ],
       cta: 'Get Started',
@@ -29,70 +29,71 @@ const Pricing = () => {
       color: 'from-gray-400 to-gray-600'
     },
     {
-      id: 'basic',
-      name: 'Basic',
-      description: 'For solo entrepreneurs and small businesses',
-      price: { monthly: 9, yearly: 89 },
+      id: 'starter',
+      name: 'Starter',
+      description: 'Perfect for freelancers and side projects',
+      price: { monthly: 5, yearly: 49 },
       icon: Zap,
       features: [
-        '10 generations & 10 downloads per month',
-        'Landing pages (1-3 sections)',
-        'Remove watermark',
-        'HTML/CSS export',
-        '35 templates (20 basic + 15 premium)',
-        'Unlimited saved projects'
+        '60 credits/month',
+        '6 generations or 20 edits',
+        'Publish up to 3 live pages',
+        'Basic analytics',
+        'Remove Sento badge',
+        'Email support'
+      ],
+      cta: 'Start Starter',
+      highlighted: false,
+      color: 'from-cyan-500 to-blue-500',
+      stripeLink: true
+    },
+    {
+      id: 'basic',
+      name: 'Basic',
+      description: 'Most popular — for growing businesses',
+      price: { monthly: 10, yearly: 99 },
+      icon: Zap,
+      features: [
+        '130 credits/month',
+        '13 generations or 43 edits',
+        'Unlimited published pages',
+        '1 custom domain',
+        'Full analytics (30 days)',
+        'Export HTML code',
+        'Priority email support'
       ],
       cta: 'Start Basic',
       highlighted: false,
-      color: 'from-cyan-500 to-blue-600',
+      color: 'from-blue-500 to-violet-500',
       stripeLink: true
     },
     {
       id: 'pro',
       name: 'Pro',
-      description: 'For freelancers and growing agencies',
-      price: { monthly: 22, yearly: 219 },
+      description: 'For agencies and power users',
+      price: { monthly: 25, yearly: 249 },
       icon: Zap,
       features: [
-        '25 generations & 20 downloads per month',
-        'Multi-page websites (up to 8 pages)',
-        'Remove watermark',
-        'HTML/CSS/React export',
-        'All 50 templates',
-        'Unlimited saved projects'
+        '400 credits/month',
+        '40 generations or 133 edits',
+        'Everything in Basic',
+        '5 custom domains',
+        'Advanced analytics (90 days)',
+        'White-label option',
+        'API access',
+        'Priority phone support'
       ],
       cta: 'Start Pro',
       highlighted: true,
       popular: true,
-      color: 'from-purple-500 to-purple-600',
+      color: 'from-purple-500 to-pink-500',
       stripeLink: true
-    },
-    {
-      id: 'business',
-      name: 'Business',
-      description: 'For agencies and teams',
-      price: { monthly: 49, yearly: 489 },
-      icon: Building2,
-      features: [
-        '100 generations & 40 downloads per month',
-        'Complex websites (up to 20 pages)',
-        'Remove watermark',
-        'All export formats',
-        'All 50 templates',
-        'Unlimited saved projects',
-        'Priority generation queue'
-      ],
-      cta: 'Contact Sales',
-      highlighted: false,
-      color: 'from-orange-500 to-orange-600'
     }
   ];
   const handleStartPlan = async (plan: typeof pricingTiers[0]) => {
-    // Prevent double-clicks
     if (loadingPlan) {
-      return; // Already processing a payment
+      return;
     }
-    // Validate user and user.id exist
     if (!user) {
       navigate('/signup');
       return;
@@ -106,7 +107,6 @@ const Pricing = () => {
       navigate('/login');
       return;
     }
-    // Set loading state
     setLoadingPlan(plan.id);
     // Free plan - just update tier in database
     if (plan.id === 'free') {
@@ -120,7 +120,7 @@ const Pricing = () => {
           title: "Welcome to Free Plan!",
           description: "You're all set to start creating.",
         });
-        navigate('/app'); // Changed from /dashboard to /app
+        navigate('/app');
       } catch (error) {
         console.error('Error updating tier:', error);
         toast({
@@ -129,46 +129,25 @@ const Pricing = () => {
           variant: "destructive"
         });
       } finally {
-        setLoadingPlan(null); // Reset loading state
+        setLoadingPlan(null);
       }
       return;
     }
-    // Business plan - contact sales
-    if (plan.id === 'business') {
-      window.location.href = 'mailto:sales@sento.ai?subject=Business Plan Inquiry';
-      setLoadingPlan(null);
-      return;
-    }
-    // Paid plans (Basic & Pro) - redirect to Stripe checkout
+    // Paid plans (Starter, Basic, Pro) - redirect to Stripe checkout
     if (plan.stripeLink) {
       try {
-        // Determine correct price ID based on billing cycle and plan
         let priceId;
-        // Add support for Business plan
-        if (billingCycle === 'monthly') {
-          // Monthly pricing
-          if (plan.id === 'basic') {
-            priceId = import.meta.env.VITE_STRIPE_BASIC_PRICE_ID;
-          } else if (plan.id === 'pro') {
-            priceId = import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
-          } else if (plan.id === 'business') {
-            priceId = import.meta.env.VITE_STRIPE_BUSINESS_PRICE_ID;
-          }
-        } else {
-          // Yearly pricing
-          if (plan.id === 'basic') {
-            priceId = import.meta.env.VITE_STRIPE_BASIC_YEARLY_PRICE_ID;
-          } else if (plan.id === 'pro') {
-            priceId = import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID;
-          } else if (plan.id === 'business') {
-            priceId = import.meta.env.VITE_STRIPE_BUSINESS_YEARLY_PRICE_ID;
-          }
+        if (plan.id === 'starter') {
+          priceId = import.meta.env.VITE_STRIPE_STARTER_PRICE_ID;
+        } else if (plan.id === 'basic') {
+          priceId = import.meta.env.VITE_STRIPE_BASIC_PRICE_ID;
+        } else if (plan.id === 'pro') {
+          priceId = import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
         }
         if (!priceId) {
-          throw new Error(`Stripe price ID not configured for ${plan.id} ${billingCycle}`);
+          throw new Error(`Stripe price ID not configured for ${plan.id}`);
         }
-        console.log(`💳 Starting checkout: ${plan.name} (${billingCycle}) - Price ID: ${priceId}`);
-        // Never fallback to localhost in production
+        console.log(`💳 Starting checkout: ${plan.name} - Price ID: ${priceId}`);
         const backendUrl = import.meta.env.VITE_BACKEND_URL;
         if (!backendUrl) {
           console.error('❌ VITE_BACKEND_URL not configured!');
@@ -177,31 +156,30 @@ const Pricing = () => {
             description: "Payment system configuration error. Please contact support.",
             variant: "destructive"
           });
-          setLoadingPlan(null); // ← ADD THIS LINE
+          setLoadingPlan(null);
           return;
         }
         const {
-  data: { session },
-} = await supabase.auth.getSession();
-if (!session?.access_token) {
-  throw new Error("Authentication token missing. Please log in again.");
-}
-const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${session.access_token}`,
-  },
-  body: JSON.stringify({
-    tier: plan.id, // backend expects "tier"
-    interval: billingCycle, // backend expects "interval"
-  }),
-});
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error("Authentication token missing. Please log in again.");
+        }
+        const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            tier: plan.id,
+            interval: billingCycle,
+          }),
+        });
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || 'Failed to create checkout session');
         }
-        // Better validation and error messages
         const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
         if (!stripePublishableKey) {
           throw new Error('Stripe publishable key not configured. Please contact support.');
@@ -226,23 +204,22 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
           description: error.message || "Please try again or contact support.",
           variant: "destructive"
         });
-        setLoadingPlan(null); // Reset loading state
+        setLoadingPlan(null);
       }
     }
-    // Reset loading state if we didn't redirect
     setLoadingPlan(null);
   };
   const savings = {
-    basic: 9 * 12 - 89,
-    pro: 22 * 12 - 219,
-    business: 49 * 12 - 489
+    starter: 5 * 12 - 49,
+    basic: 10 * 12 - 99,
+    pro: 25 * 12 - 249
   };
   const comparisonFeatures = [
-    { name: 'Monthly Generations', free: '2 lifetime', basic: '10', pro: '25', business: '100' },
-    { name: 'Monthly Downloads', free: '0', basic: '10', pro: '20', business: '40' },
-    { name: 'Website Complexity', free: '3-5 sections', basic: '1-3 sections', pro: 'Up to 8 pages', business: 'Up to 20 pages' },
-    { name: 'Custom Domains', free: '0', basic: '1', pro: '3', business: 'Unlimited' },
-    { name: 'Templates', free: '20 basic', basic: '35 (20+15)', pro: 'All 50', business: 'All 50' }
+    { name: 'Credits', free: '20 lifetime', starter: '60/mo', basic: '130/mo', pro: '400/mo' },
+    { name: 'Page Generations', free: '2', starter: '6', basic: '13', pro: '40' },
+    { name: 'AI Edits', free: '0', starter: '20', basic: '43', pro: '133' },
+    { name: 'Published Pages', free: 'Preview only', starter: '3', basic: 'Unlimited', pro: 'Unlimited' },
+    { name: 'Custom Domains', free: '0', starter: '0', basic: '1', pro: '5' }
   ];
   const faqs = [
     {
@@ -250,8 +227,8 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
       answer: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we\'ll prorate any differences.'
     },
     {
-      question: 'What happens if I exceed my download limit?',
-      answer: 'You can still generate and preview websites, but downloads will be disabled until next month or you can upgrade to a higher tier for immediate access.'
+      question: 'What happens when I run out of credits?',
+      answer: 'You can still view your existing pages, but generating or editing will be paused until you upgrade or your credits reset next month.'
     },
     {
       question: 'Do you offer refunds?',
@@ -289,7 +266,7 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
             >
               Yearly
               <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
-                Save up to $99
+                Save up to $51
               </span>
             </button>
           </div>
@@ -326,7 +303,7 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
                   <div className="mb-3">
                     <span className="text-4xl font-bold">${displayPrice}</span>
                     <span className="text-gray-400 text-sm ml-1">
-                      {billingCycle === 'yearly' && plan.id !== 'free' ? '/mo' : '/month'}
+                      {plan.id === 'free' ? '' : billingCycle === 'yearly' ? '/mo' : '/month'}
                     </span>
                   </div>
                   {billingCycle === 'yearly' && plan.id !== 'free' && (
@@ -337,7 +314,7 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
                 </div>
                 <button
                   onClick={() => handleStartPlan(plan)}
-                  disabled={loadingPlan !== null} // Disable all buttons while loading
+                  disabled={loadingPlan !== null}
                   className={`w-full py-2.5 rounded-lg font-semibold transition-all mb-6 text-sm ${
                     plan.highlighted
                       ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
@@ -367,9 +344,9 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
                 <tr className="border-b border-gray-700">
                   <th className="text-left py-4 px-4 text-gray-400 font-medium">Feature</th>
                   <th className="text-center py-4 px-4 text-gray-400 font-medium">Free</th>
-                  <th className="text-center py-4 px-4 text-gray-400 font-medium">Basic</th>
-                  <th className="text-center py-4 px-4 text-purple-400 font-medium">Pro</th>
-                  <th className="text-center py-4 px-4 text-gray-400 font-medium">Business</th>
+                  <th className="text-center py-4 px-4 text-cyan-400 font-medium">Starter</th>
+                  <th className="text-center py-4 px-4 text-blue-400 font-medium">Basic</th>
+                  <th className="text-center py-4 px-4 text-purple-400 font-medium">Pro ⭐</th>
                 </tr>
               </thead>
               <tbody>
@@ -377,9 +354,9 @@ const response = await fetch(`${backendUrl}/api/create-checkout-session`, {
                   <tr key={index} className="border-b border-gray-800/50">
                     <td className="py-4 px-4 text-gray-300 font-medium">{feature.name}</td>
                     <td className="text-center py-4 px-4 text-gray-400">{feature.free}</td>
-                    <td className="text-center py-4 px-4 text-gray-300">{feature.basic}</td>
+                    <td className="text-center py-4 px-4 text-cyan-300">{feature.starter}</td>
+                    <td className="text-center py-4 px-4 text-blue-300">{feature.basic}</td>
                     <td className="text-center py-4 px-4 text-purple-300 font-medium">{feature.pro}</td>
-                    <td className="text-center py-4 px-4 text-gray-300">{feature.business}</td>
                   </tr>
                 ))}
               </tbody>
