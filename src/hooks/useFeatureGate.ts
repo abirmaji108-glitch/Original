@@ -13,13 +13,17 @@ interface FeatureGateState {
   canCreateProject: boolean;
   isPro: boolean;
   isFree: boolean;
+  isStarter: boolean;
   generationsToday: number;
+  creditsBalance: number;
+  creditsUsed: number;
   userId?: string;
   tierLimits: {
     monthlyGenerations: number;
     maxProjects: number;
     customDomain: boolean;
     prioritySupport: boolean;
+    credits: number;
   };
 }
 
@@ -34,12 +38,16 @@ export function useFeatureGate() {
     canCreateProject: true,
     isPro: false,
     isFree: true,
+    isStarter: false,
     generationsToday: 0,
+    creditsBalance: 20,
+    creditsUsed: 0,
     tierLimits: {
       monthlyGenerations: 2,
       maxProjects: 1,
       customDomain: false,
-      prioritySupport: false
+      prioritySupport: false,
+      credits: 20
     }
   });
 
@@ -77,13 +85,17 @@ export function useFeatureGate() {
           canCreateProject: true,
           isPro: false,
           isFree: true,
-          generationsToday: 0,
-          tierLimits: {
-            monthlyGenerations: 2,
-            maxProjects: 1,
-            customDomain: false,
-            prioritySupport: false
-          }
+      isStarter: false,
+      generationsToday: 0,
+      creditsBalance: 0,
+      creditsUsed: 0,
+      tierLimits: {
+        monthlyGenerations: 2,
+        maxProjects: 1,
+        customDomain: false,
+        prioritySupport: false,
+        credits: 20
+      }
         });
         return;
       }
@@ -109,31 +121,37 @@ export function useFeatureGate() {
             monthlyGenerations: 2,
             maxProjects: 1,
             customDomain: false,
-            prioritySupport: false
+            prioritySupport: false,
+            credits: 20
+          },
+          'starter': {
+            monthlyGenerations: 6,
+            maxProjects: 3,
+            customDomain: false,
+            prioritySupport: false,
+            credits: 60
           },
           'basic': {
-            monthlyGenerations: 10,
-            maxProjects: 5,
-            customDomain: false,
-            prioritySupport: false
+            monthlyGenerations: 13,
+            maxProjects: 999,
+            customDomain: true,
+            prioritySupport: false,
+            credits: 130
           },
           'pro': {
-            monthlyGenerations: 25,
-            maxProjects: 20,
+            monthlyGenerations: 40,
+            maxProjects: 999,
             customDomain: true,
-            prioritySupport: true
-          },
-          'business': {
-            monthlyGenerations: 200,
-            maxProjects: 100,
-            customDomain: true,
-            prioritySupport: true
+            prioritySupport: true,
+            credits: 400
           }
         };
-
         const userTier = profile.user_tier || 'free';
         const limits = tierLimitsMap[userTier];
         const generationsThisMonth = profile.generations_this_month || 0;
+
+        const creditsBalance = profile.credits_balance ?? 20;
+        const creditsUsed = profile.credits_used_this_month ?? 0;
 
         const newState: FeatureGateState = {
           loading: false,
@@ -141,11 +159,14 @@ export function useFeatureGate() {
           generationsThisMonth,
           projectCount: profile.project_count || 0,
           limit: limits.monthlyGenerations,
-          canGenerate: generationsThisMonth < limits.monthlyGenerations,
+          canGenerate: creditsBalance >= 10,
           canCreateProject: true,
-          isPro: userTier === 'pro' || userTier === 'business',
+          isPro: userTier === 'pro',
           isFree: userTier === 'free',
-          generationsToday: generationsThisMonth, // Using monthly as proxy
+          isStarter: userTier === 'starter',
+          generationsToday: generationsThisMonth,
+          creditsBalance,
+          creditsUsed,
           userId: session.user.id,
           tierLimits: limits
         };
@@ -166,13 +187,17 @@ export function useFeatureGate() {
         canCreateProject: true,
         isPro: false,
         isFree: true,
-        generationsToday: 0,
-        tierLimits: {
-          monthlyGenerations: 2,
-          maxProjects: 1,
-          customDomain: false,
-          prioritySupport: false
-        }
+      isStarter: false,
+      generationsToday: 0,
+      creditsBalance: 0,
+      creditsUsed: 0,
+      tierLimits: {
+        monthlyGenerations: 2,
+        maxProjects: 1,
+        customDomain: false,
+        prioritySupport: false,
+        credits: 20
+      }
       });
     } finally {
       isFetching.current = false;
@@ -223,13 +248,17 @@ export function useFeatureGate() {
           canCreateProject: true,
           isPro: false,
           isFree: true,
-          generationsToday: 0,
-          tierLimits: {
-            monthlyGenerations: 2,
-            maxProjects: 1,
-            customDomain: false,
-            prioritySupport: false
-          }
+      isStarter: false,
+      generationsToday: 0,
+      creditsBalance: 0,
+      creditsUsed: 0,
+      tierLimits: {
+        monthlyGenerations: 2,
+        maxProjects: 1,
+        customDomain: false,
+        prioritySupport: false,
+        credits: 20
+      }
         });
       }
     });
@@ -240,7 +269,9 @@ export function useFeatureGate() {
   return {
     ...state,
     refreshUsage: fetchUserData,
-    refreshLimits: fetchUserData, // ✅ ADD: Alias for refreshUsage
-    incrementGeneration
+    refreshLimits: fetchUserData,
+    incrementGeneration,
+    creditsBalance: state.creditsBalance,
+    creditsUsed: state.creditsUsed,
+    isStarter: state.isStarter
   };
-}
