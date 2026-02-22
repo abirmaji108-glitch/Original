@@ -159,19 +159,20 @@ export function isTemplateAvailableForTier(
  * @returns Next tier or null if already at highest
  */
 export function getNextTier(currentTier: UserTier): UserTier | null {
- if (currentTier === 'free') return 'basic';
- if (currentTier === 'basic') return 'pro';
- return null;
+  if (currentTier === 'free') return 'starter';
+  if (currentTier === 'starter') return 'basic';
+  if (currentTier === 'basic') return 'pro';
+  return null;
 }
 /**
  * Get tier comparison data for pricing page
  * @returns Array of tier information for display
  */
 export function getAllTiersComparison() {
- return (['free', 'basic', 'pro'] as const).map((tier) => ({
-  tier,
-  ...getTierInfo(tier),
- }));
+  return (['free', 'starter', 'basic', 'pro'] as const).map((tier) => ({
+    tier,
+    ...getTierInfo(tier),
+  }));
 }
 // ============================================
 // PREMIUM TEMPLATES LIST
