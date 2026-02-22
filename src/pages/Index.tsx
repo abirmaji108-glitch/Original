@@ -2524,14 +2524,13 @@ const fetchWebsites = async () => {
                 <User className="w-4 h-4" />
               </div>
               <div className="flex items-center gap-3">
-                <div className={`text-xs ${dynamicSubtleClass}`} key={`credits-${creditsBalance}`}>
-  <span className={creditsBalance <= 10 ? 'text-red-400 font-semibold' : ''}>
-    ⚡ {creditsBalance} credits
-  </span>
-  {!isPro && (
-    <span className="ml-1 opacity-60">/ {tierLimits.credits}</span>
-  )}
-</div>
+                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/40" key={`credits-${creditsBalance}`}>
+                  <span className="text-yellow-300 font-bold text-sm">⚡ {creditsBalance}</span>
+                  {!isPro && (
+                    <span className="text-yellow-400/70 text-xs font-medium">/ {tierLimits.credits}</span>
+                  )}
+                  <span className="text-yellow-300/80 text-xs font-medium">credits</span>
+                </div>
                 <UpgradeButton tier={tier} size="sm" />
               </div>
             </div>
