@@ -3314,18 +3314,17 @@ const fetchWebsites = async () => {
                           📝 Info
                         </button>
                         
-                        {/* 🎨 AI EDIT BUTTON - Only show for published sites */}
-                        {(site as any).deployment_status === 'live' && (
-                          <button
-                            onClick={() => openAIEditModal(site)}
-                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-                              isDarkMode
-                                ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 hover:shadow-lg'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:shadow-md'
-                            }`}
-                          >
-                            🎨 AI Edit
-                          </button>
+                        {/* 🎨 AI EDIT BUTTON - Show for all pages */}
+<button
+  onClick={() => openAIEditModal(site)}
+  className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+    isDarkMode
+      ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 hover:shadow-lg'
+      : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:shadow-md'
+  }`}
+>
+  🎨 AI Edit
+</button>
                         )}
                         
                         {/* 📧 FORM SUBMISSIONS BUTTON - Show only for published sites */}
