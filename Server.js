@@ -650,6 +650,36 @@ case 'checkout.session.completed': {
   const subscriptionId = session.subscription;
   const customerId = session.customer;
   const tier = session.metadata?.tier;
+  const sessionType = session.metadata?.type;
+
+  // Handle credit top-up payments separately
+  if (sessionType === 'credit_topup') {
+    const creditsToAdd = parseInt(session.metadata?.credits || '0');
+    if (userId && creditsToAdd > 0) {
+      await supabase
+        .from('profiles')
+        .update({
+          credits_balance: supabase.rpc('credits_balance')
+        })
+        .eq('id', userId);
+
+      // Use refund_credits with negative amount to ADD credits
+      await supabase.rpc('refund_credits', {
+        p_user_id: userId,
+        p_amount: creditsToAdd
+      });
+
+      await supabase.from('processed_webhooks').insert({
+        session_id: sessionId,
+        event_type: 'credit_topup',
+        user_id: userId,
+        processed_at: new Date().toISOString()
+      });
+
+      logger.log(`${E.CHECK} Credit top-up: ${creditsToAdd} credits added to user ${userId}`);
+    }
+    break;
+  }
 
   if (!customerId) {
     logger.error(`${E.CROSS} No customer ID in session`, {
@@ -3598,9 +3628,26 @@ app.post('/api/edit/:websiteId/preview', requireAuth, async (req, res) => {
       });
     }
 
-    // Sanitize and analyze
+    // Sanitize and analyze first (needed to determine credit cost)
     const sanitized = iterativeEditor.sanitizeEditInstruction(editInstruction);
     const analysis = iterativeEditor.analyzeEditRequest(sanitized, website.html_code);
+
+    // Deduct credits BEFORE calling AI (skip for image-only — those are free)
+    if (!analysis.isImageOnly) {
+      const editOperationType = creditService.getEditOperationType(analysis);
+      const editCreditResult = await creditService.checkAndDeductCredits(
+        userId, editOperationType, supabase
+      );
+      if (!editCreditResult.success) {
+        return res.status(402).json({
+          success: false,
+          error: 'Insufficient credits',
+          credits_balance: editCreditResult.creditsBalance || 0,
+          credits_needed: editCreditResult.creditsNeeded,
+          message: 'You need more credits to edit this page.'
+        });
+      }
+    }
     
     logger.log(`🎯 [EDIT] Type: ${analysis.editType}, Target: ${analysis.targetSection}`);
     logger.log(`🎯 [EDIT] Multi-target: ${analysis.isMultiTarget}, Insertion: ${analysis.isInsertion}`);
